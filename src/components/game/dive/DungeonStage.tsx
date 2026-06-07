@@ -213,9 +213,9 @@ const WORD_ART = { bam: wordBam, pow: wordPow, slash: wordSlash, crit: wordCrit,
 
 type EnemyPoseKey = "idle" | "attack" | "hurt" | "ko";
 function getEnemyPoses(kind: RoomKind, enemyId?: string): Record<EnemyPoseKey, string> {
+  if (enemyId && ENEMY_SPRITE_OVERRIDES[enemyId]) return ENEMY_SPRITE_OVERRIDES[enemyId];
   if (kind === "boss") return { idle: bossIdle, attack: bossAttack, hurt: bossHurt, ko: bossKo };
   if (kind === "miniboss") return { idle: minibossIdle, attack: minibossAttack, hurt: minibossHurt, ko: minibossKo };
-  if (enemyId && ENEMY_SPRITE_OVERRIDES[enemyId]) return ENEMY_SPRITE_OVERRIDES[enemyId];
   return { idle: enemyIdle, attack: enemyAttack, hurt: enemyHurt, ko: enemyKo };
 }
 
