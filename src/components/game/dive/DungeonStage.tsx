@@ -332,6 +332,41 @@ function PanelSplitOverlay({ k }: { k: number }) {
   );
 }
 
+function SpeechBubble({ bubble }: { bubble: { side: "cat" | "enemy"; text: string; key: number } }) {
+  const isCat = bubble.side === "cat";
+  return (
+    <div
+      key={bubble.key}
+      className={`pointer-events-none absolute z-40 top-2 md:top-4 ${isCat ? "left-3 md:left-6" : "right-3 md:right-6"} max-w-[42%] animate-bubble-pop`}
+    >
+      <div className="relative">
+        <div className="relative rounded-2xl border-[3px] border-black bg-white px-3 py-2 shadow-[3px_3px_0_0_#000]">
+          <div className="font-display text-[11px] md:text-sm uppercase leading-tight text-black tracking-wide">
+            {bubble.text}
+          </div>
+        </div>
+        {/* tail */}
+        <div
+          className={`absolute -bottom-2 ${isCat ? "left-6" : "right-6"} h-0 w-0`}
+          style={{
+            borderLeft: "8px solid transparent",
+            borderRight: "8px solid transparent",
+            borderTop: "10px solid #000",
+          }}
+        />
+        <div
+          className={`absolute -bottom-[5px] ${isCat ? "left-[26px]" : "right-[26px]"} h-0 w-0`}
+          style={{
+            borderLeft: "6px solid transparent",
+            borderRight: "6px solid transparent",
+            borderTop: "8px solid #fff",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function FloatingNumbers({ fx }: { fx: Fx[] }) {
   const clearFx = useGame(s => s.clearFx);
   useEffect(() => {
