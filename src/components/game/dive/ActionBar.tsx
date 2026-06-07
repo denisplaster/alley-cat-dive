@@ -105,7 +105,7 @@ export function ActionBar() {
     <button
       onClick={() => buySnack()}
       disabled={!canAffordSnack}
-      className={`chunky-button px-3 py-2 text-[11px] font-bold uppercase ${canAffordSnack ? "bg-accent text-black" : "bg-slate-900 opacity-60 cursor-not-allowed"}`}
+      className={`chunky-button px-3 py-1.5 text-[11px] font-bold uppercase ${canAffordSnack ? "bg-accent text-black" : "bg-slate-900 opacity-60 cursor-not-allowed"}`}
     >
       🐀 Buy Sardine — {snackPrice} 🦴 ({fishbones} avail)
     </button>
@@ -114,7 +114,7 @@ export function ActionBar() {
 }
 
 function Bar({ children }: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-3 gap-1.5 md:grid-cols-5 md:gap-2">{children}</div>;
+  return <div className="grid grid-cols-3 gap-1 md:grid-cols-5 md:gap-1.5">{children}</div>;
 }
 
 function Btn({ label, onClick, primary, big, tone = "default", highlight, disabled }: {
@@ -132,7 +132,7 @@ function Btn({ label, onClick, primary, big, tone = "default", highlight, disabl
   const dim = disabled ? "opacity-60 cursor-not-allowed" : "";
   return (
     <button onClick={onClick} disabled={disabled}
-      className={`chunky-button relative px-2 ${big ? "py-3" : "py-2"} font-display uppercase ${big ? "text-lg md:text-xl" : "text-xs md:text-sm"} ${bg} ${span} ${pulse} ${dim}`}>
+      className={`chunky-button relative px-2 ${big ? "py-2.5" : "py-1.5"} font-display uppercase ${big ? "text-lg md:text-xl" : "text-xs md:text-sm"} ${bg} ${span} ${pulse} ${dim}`}>
       {label}
     </button>
   );
