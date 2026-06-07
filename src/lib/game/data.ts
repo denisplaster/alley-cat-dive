@@ -67,9 +67,9 @@ export const ENEMIES: Record<string, Omit<Enemy, "id" | "hp" | "maxHp"> & { base
   pigeon_thief: { name: "Pigeon Thief",    baseHp: 35,  attack: 10, emoji: "🐦" },
   trash_bag:    { name: "Sentient Trash Bag", baseHp: 110, attack: 16, emoji: "🗑️" },
   // Beginner enemies for kitten/juvenile stage dives
-  garbage_beetle: { name: "Garbage Beetle", baseHp: 28, attack: 5, emoji: "🪲" },
-  dust_bunny:     { name: "Dust Bunny",     baseHp: 22, attack: 4, emoji: "🌫️" },
-  litter_mouse:   { name: "Litter Mouse",   baseHp: 18, attack: 3, emoji: "🐁" },
+  garbage_beetle: { name: "Garbage Beetle", baseHp: 95, attack: 6, emoji: "🪲" },
+  dust_bunny:     { name: "Dust Bunny",     baseHp: 75, attack: 5, emoji: "🌫️" },
+  litter_mouse:   { name: "Litter Mouse",   baseHp: 60, attack: 4, emoji: "🐁" },
 };
 
 export const DUMPSTERS: Dumpster[] = [
