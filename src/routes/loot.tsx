@@ -1,0 +1,79 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { useGame, rarityClass, rarityGlow } from "@/lib/game/store";
+
+export const Route = createFileRoute("/loot")({
+  head: () => ({
+    meta: [
+      { title: "Loot — Alley Cat Dumpster Divers" },
+      { name: "description", content: "Survey what you dragged out of the dumpster." },
+      { property: "og:title", content: "Loot Reveal" },
+      { property: "og:description", content: "Survey what you dragged out of the dumpster." },
+    ],
+  }),
+  component: LootScreen,
+});
+
+function LootScreen() {
+  const lastRewards = useGame(s => s.lastRewards);
+  const collect = useGame(s => s.collectRewards);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!lastRewards) navigate({ to: "/" });
+  }, [lastRewards, navigate]);
+
+  if (!lastRewards) return null;
+
+  return (
+    <div className="mt-6">
+      <header className="mb-6 text-center">
+        <h1 className="font-display text-5xl uppercase text-primary drop-shadow-[0_0_18px_rgba(74,222,128,0.6)] md:text-6xl">
+          {lastRewards.items.length > 0 ? "Loot Pile!" : "Empty-Pawed"}
+        </h1>
+        <p className="mt-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
+          +{lastRewards.bones} fishbones · +{lastRewards.caps} caps
+        </p>
+      </header>
+
+      {lastRewards.items.length > 0 ? (
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+          {lastRewards.items.map((it, idx) => (
+            <div
+              key={it.id}
+              className={`chunky-panel relative bg-black/80 p-4 ${rarityGlow(it.rarity)} animate-floaty`}
+              style={{ animationDelay: `${idx * 0.12}s` }}
+            >
+              <div className={`mb-2 inline-block border-2 px-2 py-0.5 text-[10px] font-bold uppercase ${rarityClass(it.rarity)}`}>{it.rarity}</div>
+              <h3 className="font-display text-lg uppercase leading-tight">{it.name}</h3>
+              <p className="mt-1 text-[11px] uppercase tracking-wider text-muted-foreground">{it.kind}</p>
+              <div className="mt-2 grid grid-cols-3 gap-1 text-center text-[10px]">
+                <Mini label="ATK" v={it.attack} />
+                <Mini label="DEF" v={it.defense} />
+                <Mini label="SPD" v={it.speed} />
+              </div>
+              <p className="mt-3 border-t-2 border-dashed border-white/10 pt-2 text-[11px] italic text-muted-foreground">{it.flavor}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-center text-muted-foreground">Better luck next bin.</p>
+      )}
+
+      <div className="mt-10 flex justify-center">
+        <button onClick={collect} className="chunky-button bg-primary px-10 py-4 font-display text-3xl uppercase text-black">
+          Take Everything
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Mini({ label, v }: { label: string; v?: number }) {
+  return (
+    <div className="border-2 border-black bg-slate-900 px-1 py-1">
+      <div className="text-[8px] font-bold uppercase text-muted-foreground">{label}</div>
+      <div className="font-display text-sm leading-none text-primary">{v ?? "—"}</div>
+    </div>
+  );
+}

@@ -9,8 +9,50 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ShopRouteImport } from './routes/shop'
+import { Route as MapRouteImport } from './routes/map'
+import { Route as LootRouteImport } from './routes/loot'
+import { Route as InventoryRouteImport } from './routes/inventory'
+import { Route as HideoutRouteImport } from './routes/hideout'
+import { Route as DiveRouteImport } from './routes/dive'
+import { Route as CrewRouteImport } from './routes/crew'
 import { Route as IndexRouteImport } from './routes/index'
 
+const ShopRoute = ShopRouteImport.update({
+  id: '/shop',
+  path: '/shop',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapRoute = MapRouteImport.update({
+  id: '/map',
+  path: '/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LootRoute = LootRouteImport.update({
+  id: '/loot',
+  path: '/loot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InventoryRoute = InventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HideoutRoute = HideoutRouteImport.update({
+  id: '/hideout',
+  path: '/hideout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiveRoute = DiveRouteImport.update({
+  id: '/dive',
+  path: '/dive',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CrewRoute = CrewRouteImport.update({
+  id: '/crew',
+  path: '/crew',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +61,130 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/crew': typeof CrewRoute
+  '/dive': typeof DiveRoute
+  '/hideout': typeof HideoutRoute
+  '/inventory': typeof InventoryRoute
+  '/loot': typeof LootRoute
+  '/map': typeof MapRoute
+  '/shop': typeof ShopRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/crew': typeof CrewRoute
+  '/dive': typeof DiveRoute
+  '/hideout': typeof HideoutRoute
+  '/inventory': typeof InventoryRoute
+  '/loot': typeof LootRoute
+  '/map': typeof MapRoute
+  '/shop': typeof ShopRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/crew': typeof CrewRoute
+  '/dive': typeof DiveRoute
+  '/hideout': typeof HideoutRoute
+  '/inventory': typeof InventoryRoute
+  '/loot': typeof LootRoute
+  '/map': typeof MapRoute
+  '/shop': typeof ShopRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/crew'
+    | '/dive'
+    | '/hideout'
+    | '/inventory'
+    | '/loot'
+    | '/map'
+    | '/shop'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/crew'
+    | '/dive'
+    | '/hideout'
+    | '/inventory'
+    | '/loot'
+    | '/map'
+    | '/shop'
+  id:
+    | '__root__'
+    | '/'
+    | '/crew'
+    | '/dive'
+    | '/hideout'
+    | '/inventory'
+    | '/loot'
+    | '/map'
+    | '/shop'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CrewRoute: typeof CrewRoute
+  DiveRoute: typeof DiveRoute
+  HideoutRoute: typeof HideoutRoute
+  InventoryRoute: typeof InventoryRoute
+  LootRoute: typeof LootRoute
+  MapRoute: typeof MapRoute
+  ShopRoute: typeof ShopRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/shop': {
+      id: '/shop'
+      path: '/shop'
+      fullPath: '/shop'
+      preLoaderRoute: typeof ShopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/map': {
+      id: '/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/loot': {
+      id: '/loot'
+      path: '/loot'
+      fullPath: '/loot'
+      preLoaderRoute: typeof LootRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inventory': {
+      id: '/inventory'
+      path: '/inventory'
+      fullPath: '/inventory'
+      preLoaderRoute: typeof InventoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hideout': {
+      id: '/hideout'
+      path: '/hideout'
+      fullPath: '/hideout'
+      preLoaderRoute: typeof HideoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dive': {
+      id: '/dive'
+      path: '/dive'
+      fullPath: '/dive'
+      preLoaderRoute: typeof DiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/crew': {
+      id: '/crew'
+      path: '/crew'
+      fullPath: '/crew'
+      preLoaderRoute: typeof CrewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,7 +197,24 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CrewRoute: CrewRoute,
+  DiveRoute: DiveRoute,
+  HideoutRoute: HideoutRoute,
+  InventoryRoute: InventoryRoute,
+  LootRoute: LootRoute,
+  MapRoute: MapRoute,
+  ShopRoute: ShopRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
