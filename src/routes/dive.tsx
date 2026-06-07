@@ -9,6 +9,7 @@ import { ActionBar } from "@/components/game/dive/ActionBar";
 import { CombatLog } from "@/components/game/dive/CombatLog";
 import { RunPile } from "@/components/game/dive/RunPile";
 import { LootToast } from "@/components/game/dive/LootToast";
+import { Objective } from "@/components/game/dive/Objective";
 
 export const Route = createFileRoute("/dive")({
   head: () => ({
@@ -53,7 +54,7 @@ function DiveScreen() {
   const dump = dumpsters.find(d => d.id === dive.dumpsterId)!;
 
   return (
-    <div className="mt-2 space-y-3">
+    <div className="mt-2 space-y-3 pb-32 md:pb-36">
       <RunHeader dump={dump} room={dive.room} totalRooms={dive.totalRooms} />
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
@@ -61,6 +62,7 @@ function DiveScreen() {
           <RoomPath rooms={dive.rooms} current={dive.room} />
           <TruckTimer sec={dive.timerSec} total={dive.truckTimerStart} />
           <DungeonStage cat={cat} enemy={dive.enemy} />
+          <Objective />
           <ActionBar />
         </div>
         <div className="space-y-3 lg:col-span-4">

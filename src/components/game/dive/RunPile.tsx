@@ -3,6 +3,7 @@ import { rarityClass, rarityGlow, useGame } from "@/lib/game/store";
 export function RunPile() {
   const dive = useGame(s => s.dive)!;
   const items = dive.collected;
+  const lastId = items[items.length - 1]?.id;
   return (
     <div className="chunky-panel bg-black/85 p-3">
       <div className="mb-2 flex items-center justify-between">
@@ -18,8 +19,8 @@ export function RunPile() {
       ) : (
         <div className="grid grid-cols-2 gap-1.5">
           {items.slice(-8).map(i => (
-            <div key={i.id} className={`chunky-panel bg-slate-950 p-1.5 border-l-4 ${rarityClass(i.rarity)} ${rarityGlow(i.rarity)}`}>
-              <div className="truncate text-[11px] font-bold">{i.name}</div>
+            <div key={i.id} className={`chunky-panel bg-slate-950 p-1.5 border-l-4 ${rarityClass(i.rarity)} ${rarityGlow(i.rarity)} ${i.id === lastId ? "animate-banner-slam ring-2 ring-primary" : ""}`}>
+              <div className={`truncate text-[11px] font-bold ${rarityClass(i.rarity)}`}>{i.name}</div>
               <div className={`text-[9px] uppercase tracking-widest ${rarityClass(i.rarity)}`}>{i.rarity}</div>
             </div>
           ))}
