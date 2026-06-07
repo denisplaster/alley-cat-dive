@@ -46,6 +46,7 @@ interface DiveState {
   panelSplitKey: number;     // bumps to trigger split-screen overlay
   knockbackKey: number;      // bumps to trigger enemy knockback animation
   catKnockbackKey: number;   // bumps to trigger cat knockback animation
+  bubble: { side: "cat" | "enemy"; text: string; key: number } | null;
 }
 
 interface GameState {
