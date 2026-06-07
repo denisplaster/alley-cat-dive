@@ -582,6 +582,8 @@ export const useGame = create<GameState>((set, get) => ({
       event = `Took ${dmg} damage`;
     }
     const rooms = d.rooms.map((r, i) => i === d.room - 1 ? { ...r, cleared: true } : r);
+    // non-combat rooms still count as progression toward Scrapper evolution.
+    set({ roomsCleared: s.roomsCleared + 1 });
     set({ dive: { ...d, catHp, collected, log: clog, bonesFound, capsFound, fx, rooms,
       roomCleared: true, roomEvent: event, lastLootKey,
       catPose: d.currentKind === "rest" ? "item" : "idle", enemyPose: "idle",
