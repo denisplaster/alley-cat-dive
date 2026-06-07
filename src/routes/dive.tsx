@@ -54,10 +54,10 @@ function DiveScreen() {
   const dump = dumpsters.find(d => d.id === dive.dumpsterId)!;
 
   return (
-    <div className="mt-1 flex h-full min-h-0 flex-col gap-1.5">
+    <div className="mt-1 flex h-[calc(100dvh-8rem)] min-h-0 flex-col gap-1 md:h-[calc(100dvh-5.25rem)]">
       {/* Ultra-compact top strip */}
-      <RunHeader dump={dump} room={dive.room} totalRooms={dive.totalRooms} />
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-1.5">
+      <div className="grid grid-cols-1 gap-1 md:grid-cols-[auto_1fr_auto]">
+        <RunHeader dump={dump} room={dive.room} totalRooms={dive.totalRooms} />
         <TruckTimer sec={dive.timerSec} total={dive.truckTimerStart} />
         <RoomPath rooms={dive.rooms} current={dive.room} />
       </div>
@@ -66,23 +66,7 @@ function DiveScreen() {
       <DungeonStage cat={cat} enemy={dive.enemy} />
 
       {/* Actions */}
-      <ActionBar />
-
-      {/* Drawer toggles */}
-      <div className="flex justify-center gap-2">
-        <button
-          onClick={() => setDrawer(d => d === "log" ? null : "log")}
-          className={`chunky-button px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${drawer === "log" ? "bg-primary text-primary-foreground" : "bg-slate-900"}`}
-        >
-          📜 Log
-        </button>
-        <button
-          onClick={() => setDrawer(d => d === "pile" ? null : "pile")}
-          className={`chunky-button px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${drawer === "pile" ? "bg-secondary text-black" : "bg-slate-900"}`}
-        >
-          🎒 Pile ({dive.collected.length})
-        </button>
-      </div>
+      <ActionBar footerActions={<DrawerToggles drawer={drawer} setDrawer={setDrawer} pileCount={dive.collected.length} />} />
 
       {/* Drawer content opens above the bottom edge now that the global menu lives in the top nav */}
       {drawer && (
@@ -107,6 +91,29 @@ function DiveScreen() {
       )}
 
       <LootToast />
+    </div>
+  );
+}
+
+function DrawerToggles({ drawer, setDrawer, pileCount }: {
+  drawer: null | "log" | "pile";
+  setDrawer: React.Dispatch<React.SetStateAction<null | "log" | "pile">>;
+  pileCount: number;
+}) {
+  return (
+    <div className="flex shrink-0 justify-center gap-2">
+      <button
+        onClick={() => setDrawer(d => d === "log" ? null : "log")}
+        className={`chunky-button px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${drawer === "log" ? "bg-primary text-primary-foreground" : "bg-slate-900"}`}
+      >
+        📜 Log
+      </button>
+      <button
+        onClick={() => setDrawer(d => d === "pile" ? null : "pile")}
+        className={`chunky-button px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${drawer === "pile" ? "bg-secondary text-black" : "bg-slate-900"}`}
+      >
+        🎒 Pile ({pileCount})
+      </button>
     </div>
   );
 }
