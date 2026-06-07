@@ -58,6 +58,8 @@ export function ActionBar() {
     const k = dive.currentKind;
     const map: Record<RoomKind, { label: string; tone?: "secondary" | "accent" | "destructive" }> = {
       enemy: { label: "Continue" },
+      swarm: { label: "Hold Formation" },
+      elite: { label: "Brace Up", tone: "secondary" },
       miniboss: { label: "Continue" },
       boss: { label: "Continue" },
       loot: { label: "GRAB LOOT", tone: "accent" },
