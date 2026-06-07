@@ -11,6 +11,8 @@ import catHurt from "@/assets/anime/cat-hurt.png";
 import catBlock from "@/assets/anime/cat-block.png";
 import catKo from "@/assets/anime/cat-ko.png";
 import catVictory from "@/assets/anime/cat-victory.png";
+import catCombo from "@/assets/anime/cat-combo.png";
+import catKnockback from "@/assets/anime/cat-knockback.png";
 import enemyIdle from "@/assets/anime/enemy-idle.png";
 import enemyAttack from "@/assets/anime/enemy-attack.png";
 import enemyHurt from "@/assets/anime/enemy-hurt.png";
@@ -18,8 +20,11 @@ import enemyKo from "@/assets/anime/enemy-ko.png";
 import bossIdle from "@/assets/anime/boss-idle.png";
 import bossAttack from "@/assets/anime/boss-attack.png";
 import bossHurt from "@/assets/anime/boss-hurt.png";
+import bossKo from "@/assets/anime/boss-ko.png";
 import minibossIdle from "@/assets/anime/miniboss-idle.png";
 import minibossAttack from "@/assets/anime/miniboss-attack.png";
+import minibossHurt from "@/assets/anime/miniboss-hurt.png";
+import minibossKo from "@/assets/anime/miniboss-ko.png";
 import roomLoot from "@/assets/anime/room-loot.png";
 import roomHazard from "@/assets/anime/room-hazard.png";
 import roomRest from "@/assets/anime/room-rest.png";
@@ -29,11 +34,14 @@ import fxCrit from "@/assets/anime/fx-crit.png";
 import fxHeal from "@/assets/anime/fx-heal.png";
 import fxMiss from "@/assets/anime/fx-miss.png";
 import fxBlock from "@/assets/anime/fx-block.png";
+import fxCombo from "@/assets/anime/fx-combo.png";
 import fxSpeedlines from "@/assets/anime/fx-speedlines.png";
 import wordBam from "@/assets/anime/word-bam.png";
 import wordPow from "@/assets/anime/word-pow.png";
 import wordSlash from "@/assets/anime/word-slash.png";
 import wordCrit from "@/assets/anime/word-crit.png";
+import wordCombo from "@/assets/anime/word-combo.png";
+import panelSplit from "@/assets/anime/panel-split.png";
 
 const KIND_TINT: Record<RoomKind, string> = {
   enemy: "from-emerald-950/60 via-black to-black",
@@ -131,8 +139,10 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
             maxHp={dive.catMaxHp}
             side="left"
             flashKey={dive.catFlashKey}
+            knockbackKey={dive.catKnockbackKey}
             fx={dive.fx.filter(f => f.target === "cat")}
             tone="primary"
+            combo={dive.combo}
           />
           {enemy ? (
             <CombatantSprite
@@ -144,6 +154,7 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
               maxHp={enemy.maxHp}
               side="right"
               flashKey={dive.enemyFlashKey}
+              knockbackKey={dive.knockbackKey}
               defeatKey={enemy.hp <= 0 ? dive.enemyDefeatKey : 0}
               fx={dive.fx.filter(f => f.target === "enemy")}
               tone={dive.currentKind === "boss" ? "boss" : "destructive"}
@@ -155,6 +166,7 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
           {(mangaFxArt || mangaWordArt) && (
             <MangaOverlay fxSrc={mangaFxArt} wordSrc={mangaWordArt} focus={dive.mangaFocus} />
           )}
+          <PanelSplitOverlay k={dive.panelSplitKey} />
         </div>
       </div>
 
@@ -185,15 +197,18 @@ const CAT_ART = {
   block: catBlock,
   ko: catKo,
   victory: catVictory,
+  combo: catCombo,
+  knockback: catKnockback,
 } as const;
 
-const FX_ART = { slash: fxSlash, impact: fxImpact, crit: fxCrit, heal: fxHeal, block: fxBlock, miss: fxMiss } as const;
-const WORD_ART = { bam: wordBam, pow: wordPow, slash: wordSlash, crit: wordCrit } as const;
+const FX_ART = { slash: fxSlash, impact: fxImpact, crit: fxCrit, heal: fxHeal, block: fxBlock, miss: fxMiss, combo: fxCombo } as const;
+const WORD_ART = { bam: wordBam, pow: wordPow, slash: wordSlash, crit: wordCrit, combo: wordCombo } as const;
 
-function getEnemyArt(kind: RoomKind, pose: "idle" | "attack" | "hurt" | "ko") {
-  if (kind === "boss") return ({ idle: bossIdle, attack: bossAttack, hurt: bossHurt, ko: bossHurt } as const)[pose];
-  if (kind === "miniboss") return ({ idle: minibossIdle, attack: minibossAttack, hurt: enemyHurt, ko: enemyKo } as const)[pose];
-  return ({ idle: enemyIdle, attack: enemyAttack, hurt: enemyHurt, ko: enemyKo } as const)[pose];
+function getEnemyArt(kind: RoomKind, pose: "idle" | "attack" | "hurt" | "ko" | "knockback") {
+  const p = pose === "knockback" ? "hurt" : pose;
+  if (kind === "boss") return ({ idle: bossIdle, attack: bossAttack, hurt: bossHurt, ko: bossKo } as const)[p];
+  if (kind === "miniboss") return ({ idle: minibossIdle, attack: minibossAttack, hurt: minibossHurt, ko: minibossKo } as const)[p];
+  return ({ idle: enemyIdle, attack: enemyAttack, hurt: enemyHurt, ko: enemyKo } as const)[p];
 }
 
 function MangaOverlay({ fxSrc, wordSrc, focus }: { fxSrc: string | null; wordSrc: string | null; focus: "cat" | "enemy" | "center" | null }) {
@@ -221,26 +236,30 @@ function MangaOverlay({ fxSrc, wordSrc, focus }: { fxSrc: string | null; wordSrc
 }
 
 function CombatantSprite({
-  name, sub, portrait, hp, maxHp, side, flashKey, defeatKey = 0, fx, tone,
+  name, sub, portrait, hp, maxHp, side, flashKey, knockbackKey = 0, defeatKey = 0, fx, tone, combo = 0,
 }: {
   name: string; sub: string; portrait?: string;
   hp: number; maxHp: number; side: "left" | "right";
-  flashKey: number; defeatKey?: number; fx: Fx[];
+  flashKey: number; knockbackKey?: number; defeatKey?: number; fx: Fx[];
   tone: "primary" | "destructive" | "boss";
+  combo?: number;
 }) {
   const [flashId, setFlashId] = useState(0);
   useEffect(() => { if (flashKey > 0) setFlashId(k => k + 1); }, [flashKey]);
+  const [kbId, setKbId] = useState(0);
+  useEffect(() => { if (knockbackKey > 0) setKbId(k => k + 1); }, [knockbackKey]);
   const pct = (hp / maxHp) * 100;
   const low = pct > 0 && pct < 30;
   const dead = hp <= 0;
   const barColor = tone === "primary" ? "bg-primary" : tone === "boss" ? "bg-secondary" : "bg-destructive";
   const align = side === "left" ? "items-start" : "items-end";
   const portraitSize = "w-40 h-40 md:w-52 md:h-52";
+  const kbClass = kbId > 0 ? (side === "left" ? "animate-knockback-left" : "animate-knockback-right") : "";
 
   return (
     <div className={`relative flex flex-col ${align} justify-end gap-2`}>
       {/* Floating numbers anchor */}
-      <div className="relative">
+      <div key={kbId} className={`relative ${kbClass}`}>
         <FloatingNumbers fx={fx} />
         {dead && defeatKey > 0 && <DefeatBurst k={defeatKey} />}
         <div className={`relative ${portraitSize} ${low ? "animate-pulse-glow" : "animate-floaty"} ${dead ? "opacity-30 grayscale !animate-none" : ""}`}>
@@ -271,7 +290,39 @@ function CombatantSprite({
           })}
         </div>
         <div className="mt-0.5 font-mono text-[10px] font-bold">{hp}/{maxHp}</div>
+        {combo > 0 && (
+          <div className="mt-1">
+            <div className="flex items-center justify-between text-[9px] uppercase tracking-widest">
+              <span className="text-accent font-display">Combo x{combo}</span>
+              {combo >= 3 && <span className="text-toxic font-display animate-pulse">FINISHER READY</span>}
+            </div>
+            <div className="mt-0.5 h-1.5 bg-slate-900 border border-black overflow-hidden">
+              <div
+                key={combo}
+                className="h-full bg-gradient-to-r from-accent via-toxic to-accent animate-combo-meter"
+                style={{ width: `${Math.min(100, combo * 25)}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+function PanelSplitOverlay({ k }: { k: number }) {
+  const [id, setId] = useState(0);
+  useEffect(() => { if (k > 0) setId(n => n + 1); }, [k]);
+  if (id === 0) return null;
+  return (
+    <div key={id} className="pointer-events-none absolute inset-0 z-30 overflow-hidden">
+      <div className="absolute inset-0 bg-white manga-panel-flash" />
+      <img
+        src={panelSplit}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 size-full object-cover manga-panel-split"
+      />
     </div>
   );
 }
