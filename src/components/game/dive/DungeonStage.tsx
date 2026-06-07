@@ -165,6 +165,7 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
             <MangaOverlay fxSrc={mangaFxArt} wordSrc={mangaWordArt} focus={dive.mangaFocus} />
           )}
           <PanelSplitOverlay k={dive.panelSplitKey} />
+          {dive.bubble && <SpeechBubble bubble={dive.bubble} />}
         </div>
       </div>
 
