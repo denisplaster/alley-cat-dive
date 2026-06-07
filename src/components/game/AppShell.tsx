@@ -41,8 +41,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="pointer-events-none fixed right-[14%] top-[34%] z-30 animate-fly text-xl select-none" style={{ animationDelay: "1.4s" }}>🪰</div>
 
       {/* Top HUD */}
-      <header className="relative z-30 flex flex-col gap-2 p-2 md:p-3">
-        <div className="flex flex-wrap items-start justify-between gap-2">
+      <header className="relative z-30 grid grid-cols-[auto_1fr_auto] items-start gap-2 p-2 md:items-center md:p-3">
+        <div className="contents">
           <Link to="/" className="flex items-end gap-3">
             <div className="chunky-panel rotate-[-2deg] bg-accent px-3 py-1.5 text-black">
               <div className="text-[10px] font-bold uppercase tracking-tight leading-none">Lvl</div>
@@ -56,13 +56,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           </Link>
 
-          <div className="flex gap-2 md:gap-3">
+          <div className="col-start-3 row-start-1 flex gap-2 md:gap-3">
             <Currency label="Fishbones" value={fishbones} bg="bg-white" text="text-black" pip="bg-accent" />
             <Currency label="Caps" value={bottlecaps} bg="bg-slate-800" text="text-secondary" pip="bg-secondary" />
           </div>
         </div>
 
-        <nav className="flex w-full flex-wrap items-center justify-center gap-1.5 md:gap-2">
+        <nav className="col-span-3 row-start-2 flex w-full flex-wrap items-center justify-center gap-1.5 md:col-span-1 md:col-start-2 md:row-start-1 md:gap-2">
           {NAV.map(n => {
             const active = (n.to === "/" && pathname === "/") || (n.to !== "/" && pathname.startsWith(n.to));
             return (
