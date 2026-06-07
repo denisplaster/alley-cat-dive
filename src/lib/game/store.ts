@@ -228,8 +228,10 @@ export const useGame = create<GameState>((set, get) => ({
     if (!dump || !cat || dump.status === "locked") return;
     const rooms = generateRooms(dump.rooms);
     const firstKind = rooms[0].kind;
-    const enemy = (firstKind === "enemy" || firstKind === "miniboss" || firstKind === "boss")
-      ? spawnEnemy(dump, firstKind, 0) : null;
+    const wave = (firstKind === "enemy" || firstKind === "swarm" || firstKind === "elite" || firstKind === "miniboss" || firstKind === "boss")
+      ? spawnEnemies(dump, firstKind, 0) : [];
+    const enemy = wave[0] ?? null;
+    const rest = wave.slice(1);
     set({
       dive: {
         dumpsterId: dump.id,
@@ -239,6 +241,7 @@ export const useGame = create<GameState>((set, get) => ({
         rooms,
         currentKind: firstKind,
         enemy,
+        enemies: rest,
         catHp: cat.hp,
         catMaxHp: cat.maxHp,
         timerSec: dump.truckTimerSec,
@@ -248,7 +251,9 @@ export const useGame = create<GameState>((set, get) => ({
         capsFound: 0,
         log: [
           mklog(`Diving into ${dump.name}…`, "info"),
-          enemy ? mklog(`A ${enemy.name} blocks the way!`, "warn")
+          enemy ? mklog(wave.length > 1
+                  ? `${wave.length} foes block the way — ${enemy.name} leads!`
+                  : `A ${enemy.name} blocks the way!`, "warn")
                 : mklog(roomDescriptor(firstKind), "info"),
         ],
         autoDive: false,
