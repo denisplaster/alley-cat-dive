@@ -5,6 +5,7 @@ import {
 import type {
   Cat, Dumpster, Enemy, Fx, HideoutUpgrade, Item, Rarity, Room, RoomKind,
 } from "./types";
+import { STORY_CHAPTERS, STAGE_ORDER, type HideoutStage, chapterById } from "./story";
 
 interface CombatEntry { id: number; text: string; tone: "info" | "hit" | "crit" | "loot" | "warn" }
 
@@ -63,6 +64,14 @@ interface GameState {
   dive: DiveState | null;
   lastRewards: { items: Item[]; bones: number; caps: number } | null;
 
+  // story
+  storyChapterIdx: number;             // 0-based pointer to next chapter to play
+  completedChapters: string[];
+  storyChoices: Record<string, string>;
+  hideoutStage: HideoutStage;
+  placedItems: Record<string, string>; // slotId -> itemId
+  activeCutscene: { chapterId: string; phase: "intro" | "outro"; panel: number } | null;
+
   selectDumpster: (id: string) => void;
   setActiveCat: (id: string) => void;
   startDive: () => void;
@@ -78,6 +87,13 @@ interface GameState {
   sell: (itemId: string) => void;
   upgrade: (id: string) => void;
   buy: (cost: { bones: number; caps: number }, granted: Item) => boolean;
+
+  openCutscene: (chapterId: string, phase: "intro" | "outro") => void;
+  advanceCutscene: () => void;
+  closeCutscene: () => void;
+  makeChoice: (chapterId: string, optionId: string) => void;
+  placeItem: (slotId: string, itemId: string) => void;
+  unplaceItem: (slotId: string) => void;
 }
 
 let _logId = 0;
@@ -154,6 +170,13 @@ export const useGame = create<GameState>((set, get) => ({
   hideout: HIDEOUT_UPGRADES,
   dive: null,
   lastRewards: null,
+
+  storyChapterIdx: 0,
+  completedChapters: [],
+  storyChoices: {},
+  hideoutStage: "tin_can",
+  placedItems: {},
+  activeCutscene: { chapterId: STORY_CHAPTERS[0].id, phase: "intro", panel: 0 },
 
   selectDumpster: (id) => set({ selectedDumpsterId: id }),
   setActiveCat: (id) => {
@@ -535,6 +558,9 @@ export const useGame = create<GameState>((set, get) => ({
         ? { ...c, status: "injured" as const, recoverySecondsLeft: 300, hp: Math.max(1, Math.round(c.maxHp * 0.3)) }
         : { ...c, hp: c.maxHp, xp: c.xp + 12 };
     });
+    // If the current story chapter hasn't been completed, queue its outro.
+    const chapter = STORY_CHAPTERS[s.storyChapterIdx];
+    const shouldPlayOutro = !wasFled && chapter && !s.completedChapters.includes(chapter.id);
     set({
       inventory: newInv,
       fishbones: s.fishbones + s.lastRewards.bones,
@@ -542,6 +568,9 @@ export const useGame = create<GameState>((set, get) => ({
       cats: updatedCats,
       dive: null,
       lastRewards: null,
+      activeCutscene: shouldPlayOutro
+        ? { chapterId: chapter.id, phase: "outro", panel: 0 }
+        : s.activeCutscene,
     });
   },
 
@@ -593,6 +622,65 @@ export const useGame = create<GameState>((set, get) => ({
       inventory: [...s.inventory, granted],
     });
     return true;
+  },
+
+  openCutscene: (chapterId, phase) => {
+    set({ activeCutscene: { chapterId, phase, panel: 0 } });
+  },
+  advanceCutscene: () => {
+    const s = get();
+    const c = s.activeCutscene;
+    if (!c) return;
+    const chapter = chapterById(c.chapterId);
+    if (!chapter) { set({ activeCutscene: null }); return; }
+    const panels = c.phase === "intro" ? chapter.intro : chapter.outro;
+    if (c.panel < panels.length - 1) {
+      set({ activeCutscene: { ...c, panel: c.panel + 1 } });
+      return;
+    }
+    // last panel of phase
+    if (c.phase === "intro") {
+      // close — go play the chapter (dive)
+      set({ activeCutscene: null });
+      return;
+    }
+    // outro finished — mark complete, unlock stage, advance pointer
+    const stage = chapter.unlocksStage ?? s.hideoutStage;
+    const stageIdx = STAGE_ORDER.indexOf(stage);
+    const curIdx = STAGE_ORDER.indexOf(s.hideoutStage);
+    const nextStage = stageIdx > curIdx ? stage : s.hideoutStage;
+    const completed = s.completedChapters.includes(chapter.id)
+      ? s.completedChapters : [...s.completedChapters, chapter.id];
+    const nextIdx = Math.min(STORY_CHAPTERS.length, s.storyChapterIdx + 1);
+    // if chapter has a choice, leave cutscene closed; the Cutscene UI handles
+    // showing the choice on the final outro panel before advancing.
+    set({
+      activeCutscene: null,
+      hideoutStage: nextStage,
+      completedChapters: completed,
+      storyChapterIdx: nextIdx,
+    });
+  },
+  closeCutscene: () => set({ activeCutscene: null }),
+  makeChoice: (chapterId, optionId) => {
+    const s = get();
+    set({ storyChoices: { ...s.storyChoices, [chapterId]: optionId } });
+  },
+  placeItem: (slotId, itemId) => {
+    const s = get();
+    // remove from any other slot first
+    const cleaned: Record<string, string> = {};
+    for (const [k, v] of Object.entries(s.placedItems)) {
+      if (v !== itemId) cleaned[k] = v;
+    }
+    cleaned[slotId] = itemId;
+    set({ placedItems: cleaned });
+  },
+  unplaceItem: (slotId) => {
+    const s = get();
+    const next = { ...s.placedItems };
+    delete next[slotId];
+    set({ placedItems: next });
   },
 }));
 

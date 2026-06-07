@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useGame } from "@/lib/game/store";
+import { HideoutRoom } from "@/components/game/hideout/HideoutRoom";
+import { useState } from "react";
 
 export const Route = createFileRoute("/hideout")({
   head: () => ({
@@ -18,6 +20,7 @@ function HideoutScreen() {
   const upgrade = useGame(s => s.upgrade);
   const fishbones = useGame(s => s.fishbones);
   const caps = useGame(s => s.bottlecaps);
+  const [tab, setTab] = useState<"room" | "build">("room");
 
   return (
     <div className="mt-6">
@@ -26,6 +29,20 @@ function HideoutScreen() {
         <p className="text-xs uppercase tracking-widest text-muted-foreground">Cardboard, ambition, and a little duct tape.</p>
       </header>
 
+      <div className="mb-4 flex gap-2">
+        <button
+          onClick={() => setTab("room")}
+          className={`chunky-button px-4 py-2 text-xs font-bold uppercase ${tab === "room" ? "bg-primary text-black" : "bg-slate-900"}`}
+        >Room</button>
+        <button
+          onClick={() => setTab("build")}
+          className={`chunky-button px-4 py-2 text-xs font-bold uppercase ${tab === "build" ? "bg-primary text-black" : "bg-slate-900"}`}
+        >Build</button>
+      </div>
+
+      {tab === "room" && <HideoutRoom />}
+
+      {tab === "build" && (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {hideout.map(u => {
           const nextLvl = u.level + 1;
@@ -60,6 +77,7 @@ function HideoutScreen() {
           );
         })}
       </div>
+      )}
     </div>
   );
 }

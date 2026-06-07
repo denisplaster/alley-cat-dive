@@ -5,6 +5,7 @@ import alleyBg from "@/assets/alley-bg.jpg";
 
 const NAV = [
   { to: "/", label: "Hub" },
+  { to: "/story", label: "Story" },
   { to: "/map", label: "Map" },
   { to: "/crew", label: "Crew" },
   { to: "/inventory", label: "Stash" },

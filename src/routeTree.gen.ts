@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StoryRouteImport } from './routes/story'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as LootRouteImport } from './routes/loot'
@@ -18,6 +19,11 @@ import { Route as DiveRouteImport } from './routes/dive'
 import { Route as CrewRouteImport } from './routes/crew'
 import { Route as IndexRouteImport } from './routes/index'
 
+const StoryRoute = StoryRouteImport.update({
+  id: '/story',
+  path: '/story',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShopRoute = ShopRouteImport.update({
   id: '/shop',
   path: '/shop',
@@ -68,6 +74,7 @@ export interface FileRoutesByFullPath {
   '/loot': typeof LootRoute
   '/map': typeof MapRoute
   '/shop': typeof ShopRoute
+  '/story': typeof StoryRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByTo {
   '/loot': typeof LootRoute
   '/map': typeof MapRoute
   '/shop': typeof ShopRoute
+  '/story': typeof StoryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -89,6 +97,7 @@ export interface FileRoutesById {
   '/loot': typeof LootRoute
   '/map': typeof MapRoute
   '/shop': typeof ShopRoute
+  '/story': typeof StoryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +110,7 @@ export interface FileRouteTypes {
     | '/loot'
     | '/map'
     | '/shop'
+    | '/story'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +121,7 @@ export interface FileRouteTypes {
     | '/loot'
     | '/map'
     | '/shop'
+    | '/story'
   id:
     | '__root__'
     | '/'
@@ -121,6 +132,7 @@ export interface FileRouteTypes {
     | '/loot'
     | '/map'
     | '/shop'
+    | '/story'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -132,10 +144,18 @@ export interface RootRouteChildren {
   LootRoute: typeof LootRoute
   MapRoute: typeof MapRoute
   ShopRoute: typeof ShopRoute
+  StoryRoute: typeof StoryRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/story': {
+      id: '/story'
+      path: '/story'
+      fullPath: '/story'
+      preLoaderRoute: typeof StoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/shop': {
       id: '/shop'
       path: '/shop'
@@ -204,6 +224,7 @@ const rootRouteChildren: RootRouteChildren = {
   LootRoute: LootRoute,
   MapRoute: MapRoute,
   ShopRoute: ShopRoute,
+  StoryRoute: StoryRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
