@@ -39,6 +39,23 @@ import ratSwarmHurt from "@/assets/anime/rat-swarm-hurt.png";
 import ratSwarmKo from "@/assets/anime/rat-swarm-ko.png";
 
 import pigeonIdle from "@/assets/anime/pigeon-idle.png";
+import trashSlimeIdle from "@/assets/anime/trash-slime-idle.png";
+import trashBagIdle from "@/assets/anime/trash-bag-idle.png";
+import moldGoblinIdle from "@/assets/anime/mold-goblin-idle.png";
+import gullIdle from "@/assets/anime/gull-idle.png";
+import canCrabIdle from "@/assets/anime/can-crab-idle.png";
+import chihuahuaIdle from "@/assets/anime/chihuahua-idle.png";
+import greaseSpriteIdle from "@/assets/anime/grease-sprite-idle.png";
+import crowIdle from "@/assets/anime/crow-idle.png";
+import scrapSerpentIdle from "@/assets/anime/scrap-serpent-idle.png";
+import spoiledImpIdle from "@/assets/anime/spoiled-imp-idle.png";
+import condoHoundIdle from "@/assets/anime/condo-hound-idle.png";
+import pigeonLordIdle from "@/assets/anime/pigeon-lord-idle.png";
+import ventWispIdle from "@/assets/anime/vent-wisp-idle.png";
+import antennaImpIdle from "@/assets/anime/antenna-imp-idle.png";
+import subwayRatKingIdle from "@/assets/anime/subway-rat-king-idle.png";
+import tunnelGhoulIdle from "@/assets/anime/tunnel-ghoul-idle.png";
+import graffitiWraithIdle from "@/assets/anime/graffiti-wraith-idle.png";
 
 export type LifeStage = "kitten" | "juvenile" | "adult";
 
@@ -126,6 +143,8 @@ export const PIGEON_POSES = {
   ko: pigeonIdle,
 } as const;
 
+const onePose = (idle: string): typeof BEETLE_POSES => ({ idle, attack: idle, hurt: idle, ko: idle });
+
 /**
  * Enemy id -> custom sprite override. Enemies not listed here fall back to
  * the generic enemy/miniboss/boss sprite set in DungeonStage.
@@ -137,4 +156,21 @@ export const ENEMY_SPRITE_OVERRIDES: Record<string, typeof BEETLE_POSES> = {
   raccoon: RACCOON_POSES,
   rat_swarm: RAT_SWARM_POSES,
   pigeon_thief: PIGEON_POSES,
+  trash_slime: onePose(trashSlimeIdle),
+  trash_bag: onePose(trashBagIdle),
+  mold_goblin: onePose(moldGoblinIdle),
+  gull_raider: onePose(gullIdle),
+  can_crab: onePose(canCrabIdle),
+  feral_chihuahua: onePose(chihuahuaIdle),
+  grease_sprite: onePose(greaseSpriteIdle),
+  alley_crow: onePose(crowIdle),
+  scrap_serpent: onePose(scrapSerpentIdle),
+  spoiled_imp: onePose(spoiledImpIdle),
+  condo_hound: onePose(condoHoundIdle),
+  pigeon_lord: onePose(pigeonLordIdle),
+  vent_wisp: onePose(ventWispIdle),
+  antenna_imp: onePose(antennaImpIdle),
+  subway_rat_king: onePose(subwayRatKingIdle),
+  tunnel_ghoul: onePose(tunnelGhoulIdle),
+  graffiti_wraith: onePose(graffitiWraithIdle),
 };

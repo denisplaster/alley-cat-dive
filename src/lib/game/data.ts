@@ -111,10 +111,10 @@ export const DUMPSTERS: Dumpster[] = [
     expectedLoot: "mythic", enemyPool: ["raccoon","trash_bag","mold_goblin","condo_hound","spoiled_imp","scrap_serpent"], rooms: 10,
     truckTimerSec: 300, recommendedPower: 200, status: "locked", rewardCaps: 80, rewardBones: 900 },
   { id: "rooftop", name: "Rooftop AC Bin", image: dRooftop, difficulty: 5,
-    expectedLoot: "legendary", enemyPool: ["pigeon_lord","vent_wisp","antenna_imp","alley_crow","gull_raider","grease_sprite"], rooms: 9,
+    expectedLoot: "legendary", enemyPool: ["vent_wisp","antenna_imp","alley_crow","gull_raider","grease_sprite","pigeon_lord"], rooms: 9,
     truckTimerSec: 270, recommendedPower: 160, status: "locked", rewardCaps: 50, rewardBones: 560 },
   { id: "subway", name: "Subway Platform Dumpster", image: dSubway, difficulty: 5,
-    expectedLoot: "legendary", enemyPool: ["subway_rat_king","tunnel_ghoul","graffiti_wraith","rat_swarm","mold_goblin","scrap_serpent"], rooms: 9,
+    expectedLoot: "legendary", enemyPool: ["tunnel_ghoul","graffiti_wraith","rat_swarm","mold_goblin","scrap_serpent","subway_rat_king"], rooms: 9,
     truckTimerSec: 270, recommendedPower: 170, status: "locked", rewardCaps: 55, rewardBones: 620 },
 ];
 
