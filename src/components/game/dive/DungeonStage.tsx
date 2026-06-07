@@ -139,8 +139,10 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
             maxHp={dive.catMaxHp}
             side="left"
             flashKey={dive.catFlashKey}
+            knockbackKey={dive.catKnockbackKey}
             fx={dive.fx.filter(f => f.target === "cat")}
             tone="primary"
+            combo={dive.combo}
           />
           {enemy ? (
             <CombatantSprite
@@ -152,6 +154,7 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
               maxHp={enemy.maxHp}
               side="right"
               flashKey={dive.enemyFlashKey}
+              knockbackKey={dive.knockbackKey}
               defeatKey={enemy.hp <= 0 ? dive.enemyDefeatKey : 0}
               fx={dive.fx.filter(f => f.target === "enemy")}
               tone={dive.currentKind === "boss" ? "boss" : "destructive"}
@@ -163,6 +166,7 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
           {(mangaFxArt || mangaWordArt) && (
             <MangaOverlay fxSrc={mangaFxArt} wordSrc={mangaWordArt} focus={dive.mangaFocus} />
           )}
+          <PanelSplitOverlay k={dive.panelSplitKey} />
         </div>
       </div>
 
