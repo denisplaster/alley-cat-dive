@@ -59,8 +59,6 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
   const tint = KIND_TINT[dive.currentKind];
   const truckPct = dive.timerSec / dive.truckTimerStart;
   const danger = truckPct < 0.1;
-  const catArt = CAT_ART[dive.catPose];
-  const enemyArt = getEnemyArt(dive.currentKind, dive.enemyPose);
   const mangaFxArt = dive.mangaFx ? FX_ART[dive.mangaFx] : null;
   const mangaWordArt = dive.mangaWord ? WORD_ART[dive.mangaWord] : null;
 
@@ -134,7 +132,8 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
           <CombatantSprite
             name={cat.name}
             sub={cat.catClass}
-            portrait={catArt}
+            poses={CAT_ART}
+            activePose={dive.catPose}
             hp={dive.catHp}
             maxHp={dive.catMaxHp}
             side="left"
@@ -147,7 +146,8 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
           {enemy ? (
             <CombatantSprite
               key={`${enemy.id}-${dive.room}`}
-              portrait={enemyArt}
+              poses={getEnemyPoses(dive.currentKind)}
+              activePose={dive.enemyPose === "knockback" ? "hurt" : dive.enemyPose}
               name={enemy.name}
               sub={dive.currentKind === "boss" ? "BOSS" : dive.currentKind === "miniboss" ? "MINI-BOSS" : "Trash Mob"}
               hp={enemy.hp}
@@ -204,11 +204,11 @@ const CAT_ART = {
 const FX_ART = { slash: fxSlash, impact: fxImpact, crit: fxCrit, heal: fxHeal, block: fxBlock, miss: fxMiss, combo: fxCombo } as const;
 const WORD_ART = { bam: wordBam, pow: wordPow, slash: wordSlash, crit: wordCrit, combo: wordCombo } as const;
 
-function getEnemyArt(kind: RoomKind, pose: "idle" | "attack" | "hurt" | "ko" | "knockback") {
-  const p = pose === "knockback" ? "hurt" : pose;
-  if (kind === "boss") return ({ idle: bossIdle, attack: bossAttack, hurt: bossHurt, ko: bossKo } as const)[p];
-  if (kind === "miniboss") return ({ idle: minibossIdle, attack: minibossAttack, hurt: minibossHurt, ko: minibossKo } as const)[p];
-  return ({ idle: enemyIdle, attack: enemyAttack, hurt: enemyHurt, ko: enemyKo } as const)[p];
+type EnemyPoseKey = "idle" | "attack" | "hurt" | "ko";
+function getEnemyPoses(kind: RoomKind): Record<EnemyPoseKey, string> {
+  if (kind === "boss") return { idle: bossIdle, attack: bossAttack, hurt: bossHurt, ko: bossKo };
+  if (kind === "miniboss") return { idle: minibossIdle, attack: minibossAttack, hurt: minibossHurt, ko: minibossKo };
+  return { idle: enemyIdle, attack: enemyAttack, hurt: enemyHurt, ko: enemyKo };
 }
 
 function MangaOverlay({ fxSrc, wordSrc, focus }: { fxSrc: string | null; wordSrc: string | null; focus: "cat" | "enemy" | "center" | null }) {
@@ -236,9 +236,11 @@ function MangaOverlay({ fxSrc, wordSrc, focus }: { fxSrc: string | null; wordSrc
 }
 
 function CombatantSprite({
-  name, sub, portrait, hp, maxHp, side, flashKey, knockbackKey = 0, defeatKey = 0, fx, tone, combo = 0,
+  name, sub, poses, activePose, hp, maxHp, side, flashKey, knockbackKey = 0, defeatKey = 0, fx, tone, combo = 0,
 }: {
-  name: string; sub: string; portrait?: string;
+  name: string; sub: string;
+  poses: Record<string, string>;
+  activePose: string;
   hp: number; maxHp: number; side: "left" | "right";
   flashKey: number; knockbackKey?: number; defeatKey?: number; fx: Fx[];
   tone: "primary" | "destructive" | "boss";
@@ -264,7 +266,19 @@ function CombatantSprite({
         {dead && defeatKey > 0 && <DefeatBurst k={defeatKey} />}
         <div className={`relative ${portraitSize} ${low ? "animate-pulse-glow" : "animate-floaty"} ${dead ? "opacity-30 grayscale !animate-none" : ""}`}>
           <div className="absolute inset-0 rounded-[10px] bg-black/35 blur-xl" />
-          <img src={portrait} alt={name} className={`relative size-full object-contain ${side === "right" ? "-scale-x-100" : ""}`} loading="lazy" width={1024} height={1024} />
+          {Object.entries(poses).map(([key, src]) => (
+            <img
+              key={key}
+              src={src}
+              alt={key === activePose ? name : ""}
+              aria-hidden={key !== activePose}
+              draggable={false}
+              decoding="sync"
+              width={1024}
+              height={1024}
+              className={`absolute inset-0 size-full object-contain transition-opacity duration-200 ease-out ${side === "right" ? "-scale-x-100" : ""} ${key === activePose ? "opacity-100" : "opacity-0"}`}
+            />
+          ))}
           {/* hit flash */}
           {flashId > 0 && (
             <div key={flashId} className="pointer-events-none absolute inset-0 bg-white animate-flash-hit" />
