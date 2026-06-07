@@ -664,6 +664,7 @@ export const useGame = create<GameState>((set, get) => ({
       cats: updatedCats,
       dive: null,
       lastRewards: null,
+      divesCompleted: s.divesCompleted + (wasFled ? 0 : 1),
       activeCutscene: shouldPlayOutro
         ? { chapterId: chapter.id, phase: "outro", panel: 0 }
         : s.activeCutscene,
