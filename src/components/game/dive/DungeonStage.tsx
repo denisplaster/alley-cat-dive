@@ -2,6 +2,38 @@ import { useEffect, useState } from "react";
 import { useGame } from "@/lib/game/store";
 import type { Cat, Enemy, Fx, RoomKind } from "@/lib/game/types";
 import { NextRoomPreview } from "./NextRoomPreview";
+import arenaBg from "@/assets/anime/bg-arena.jpg";
+import catIdle from "@/assets/anime/cat-idle.png";
+import catScratch from "@/assets/anime/cat-scratch.png";
+import catPounce from "@/assets/anime/cat-pounce.png";
+import catItem from "@/assets/anime/cat-item.png";
+import catHurt from "@/assets/anime/cat-hurt.png";
+import catBlock from "@/assets/anime/cat-block.png";
+import catKo from "@/assets/anime/cat-ko.png";
+import catVictory from "@/assets/anime/cat-victory.png";
+import enemyIdle from "@/assets/anime/enemy-idle.png";
+import enemyAttack from "@/assets/anime/enemy-attack.png";
+import enemyHurt from "@/assets/anime/enemy-hurt.png";
+import enemyKo from "@/assets/anime/enemy-ko.png";
+import bossIdle from "@/assets/anime/boss-idle.png";
+import bossAttack from "@/assets/anime/boss-attack.png";
+import bossHurt from "@/assets/anime/boss-hurt.png";
+import minibossIdle from "@/assets/anime/miniboss-idle.png";
+import minibossAttack from "@/assets/anime/miniboss-attack.png";
+import roomLoot from "@/assets/anime/room-loot.png";
+import roomHazard from "@/assets/anime/room-hazard.png";
+import roomRest from "@/assets/anime/room-rest.png";
+import fxSlash from "@/assets/anime/fx-slash.png";
+import fxImpact from "@/assets/anime/fx-impact.png";
+import fxCrit from "@/assets/anime/fx-crit.png";
+import fxHeal from "@/assets/anime/fx-heal.png";
+import fxMiss from "@/assets/anime/fx-miss.png";
+import fxBlock from "@/assets/anime/fx-block.png";
+import fxSpeedlines from "@/assets/anime/fx-speedlines.png";
+import wordBam from "@/assets/anime/word-bam.png";
+import wordPow from "@/assets/anime/word-pow.png";
+import wordSlash from "@/assets/anime/word-slash.png";
+import wordCrit from "@/assets/anime/word-crit.png";
 
 const KIND_TINT: Record<RoomKind, string> = {
   enemy: "from-emerald-950/60 via-black to-black",
@@ -19,6 +51,10 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
   const tint = KIND_TINT[dive.currentKind];
   const truckPct = dive.timerSec / dive.truckTimerStart;
   const danger = truckPct < 0.1;
+  const catArt = CAT_ART[dive.catPose];
+  const enemyArt = getEnemyArt(dive.currentKind, dive.enemyPose);
+  const mangaFxArt = dive.mangaFx ? FX_ART[dive.mangaFx] : null;
+  const mangaWordArt = dive.mangaWord ? WORD_ART[dive.mangaWord] : null;
 
   // shake handling
   const [shakeId, setShakeId] = useState(0);
@@ -28,6 +64,9 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
     <div className={`relative overflow-hidden chunky-panel bg-gradient-to-b ${tint} ${danger ? "animate-danger-border" : ""}`}>
       {/* Backdrop layers */}
       <div className="absolute inset-0 pointer-events-none">
+        <img src={arenaBg} alt="Dumpster dungeon arena" className="absolute inset-0 size-full object-cover opacity-55" />
+        <div className="absolute inset-0 bg-black/35" />
+        <img src={fxSpeedlines} alt="" aria-hidden="true" className={`absolute inset-0 size-full object-cover opacity-0 ${dive.mangaFocus ? "manga-speedlines-active" : ""}`} />
         {/* radial top light */}
         <div className="absolute inset-x-0 -top-20 h-60 bg-[radial-gradient(ellipse_at_center,_rgba(74,222,128,0.35),_transparent_70%)]" />
         {/* dumpster metal side walls */}
@@ -87,7 +126,7 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
           <CombatantSprite
             name={cat.name}
             sub={cat.catClass}
-            portrait={cat.portrait}
+            portrait={catArt}
             hp={dive.catHp}
             maxHp={dive.catMaxHp}
             side="left"
@@ -98,7 +137,7 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
           {enemy ? (
             <CombatantSprite
               key={`${enemy.id}-${dive.room}`}
-              emoji={enemy.emoji}
+              portrait={enemyArt}
               name={enemy.name}
               sub={dive.currentKind === "boss" ? "BOSS" : dive.currentKind === "miniboss" ? "MINI-BOSS" : "Trash Mob"}
               hp={enemy.hp}
@@ -111,6 +150,10 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
             />
           ) : (
             <NonCombatPanel kind={dive.currentKind} cleared={dive.roomCleared} />
+          )}
+
+          {(mangaFxArt || mangaWordArt) && (
+            <MangaOverlay fxSrc={mangaFxArt} wordSrc={mangaWordArt} focus={dive.mangaFocus} />
           )}
         </div>
       </div>
@@ -133,10 +176,54 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
   );
 }
 
+const CAT_ART = {
+  idle: catIdle,
+  scratch: catScratch,
+  pounce: catPounce,
+  item: catItem,
+  hurt: catHurt,
+  block: catBlock,
+  ko: catKo,
+  victory: catVictory,
+} as const;
+
+const FX_ART = { slash: fxSlash, impact: fxImpact, crit: fxCrit, heal: fxHeal, block: fxBlock, miss: fxMiss } as const;
+const WORD_ART = { bam: wordBam, pow: wordPow, slash: wordSlash, crit: wordCrit } as const;
+
+function getEnemyArt(kind: RoomKind, pose: "idle" | "attack" | "hurt" | "ko") {
+  if (kind === "boss") return ({ idle: bossIdle, attack: bossAttack, hurt: bossHurt, ko: bossHurt } as const)[pose];
+  if (kind === "miniboss") return ({ idle: minibossIdle, attack: minibossAttack, hurt: enemyHurt, ko: enemyKo } as const)[pose];
+  return ({ idle: enemyIdle, attack: enemyAttack, hurt: enemyHurt, ko: enemyKo } as const)[pose];
+}
+
+function MangaOverlay({ fxSrc, wordSrc, focus }: { fxSrc: string | null; wordSrc: string | null; focus: "cat" | "enemy" | "center" | null }) {
+  const pos = focus === "cat" ? "left-[16%]" : focus === "enemy" ? "right-[12%]" : "left-1/2 -translate-x-1/2";
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
+      {fxSrc && (
+        <img
+          src={fxSrc}
+          alt=""
+          aria-hidden="true"
+          className={`absolute top-1/3 ${pos} manga-fx-pop w-40 md:w-52 ${focus === "enemy" ? "-scale-x-100" : ""}`}
+        />
+      )}
+      {wordSrc && (
+        <img
+          src={wordSrc}
+          alt=""
+          aria-hidden="true"
+          className={`absolute bottom-8 ${focus === "enemy" ? "right-8" : focus === "cat" ? "left-6" : "left-1/2 -translate-x-1/2"} manga-word-slam w-28 md:w-36`}
+        />
+      )}
+    </div>
+  );
+}
+
 function CombatantSprite({
-  name, sub, portrait, emoji, hp, maxHp, side, flashKey, defeatKey = 0, fx, tone,
+  name, sub, portrait, hp, maxHp, side, flashKey, defeatKey = 0, fx, tone,
 }: {
-  name: string; sub: string; portrait?: string; emoji?: string;
+  name: string; sub: string; portrait?: string;
   hp: number; maxHp: number; side: "left" | "right";
   flashKey: number; defeatKey?: number; fx: Fx[];
   tone: "primary" | "destructive" | "boss";
@@ -148,7 +235,7 @@ function CombatantSprite({
   const dead = hp <= 0;
   const barColor = tone === "primary" ? "bg-primary" : tone === "boss" ? "bg-secondary" : "bg-destructive";
   const align = side === "left" ? "items-start" : "items-end";
-  const portraitSize = "size-32 md:size-40";
+  const portraitSize = "w-40 h-40 md:w-52 md:h-52";
 
   return (
     <div className={`relative flex flex-col ${align} justify-end gap-2`}>
@@ -157,13 +244,8 @@ function CombatantSprite({
         <FloatingNumbers fx={fx} />
         {dead && defeatKey > 0 && <DefeatBurst k={defeatKey} />}
         <div className={`relative ${portraitSize} ${low ? "animate-pulse-glow" : "animate-floaty"} ${dead ? "opacity-30 grayscale !animate-none" : ""}`}>
-          {portrait ? (
-            <img src={portrait} alt={name} className={`size-full chunky-panel object-cover bg-slate-800`} />
-          ) : (
-            <div className={`size-full chunky-panel flex items-center justify-center text-6xl md:text-7xl ${tone === "boss" ? "bg-secondary/30" : "bg-slate-800"}`}>
-              {emoji}
-            </div>
-          )}
+          <div className="absolute inset-0 rounded-[10px] bg-black/35 blur-xl" />
+          <img src={portrait} alt={name} className={`relative size-full object-contain ${side === "right" ? "-scale-x-100" : ""}`} loading="lazy" width={1024} height={1024} />
           {/* hit flash */}
           {flashId > 0 && (
             <div key={flashId} className="pointer-events-none absolute inset-0 bg-white animate-flash-hit" />
@@ -244,17 +326,22 @@ function DefeatBurst({ k }: { k: number }) {
 
 function NonCombatPanel({ kind, cleared }: { kind: RoomKind; cleared: boolean }) {
   const meta = {
-    loot: { icon: "💰", title: "LOOT PILE", desc: "A shimmering mound of trash treasure." },
-    hazard: { icon: "☣️", title: "HAZARD", desc: "Glowing goo bubbling from a busted jar." },
-    rest: { icon: "💤", title: "SAFE NEST", desc: "Warm laundry. The cat can catch a breath." },
+    loot: { icon: roomLoot, title: "LOOT PILE", desc: "A shimmering mound of trash treasure." },
+    hazard: { icon: roomHazard, title: "HAZARD", desc: "Glowing goo bubbling from a busted jar." },
+    rest: { icon: roomRest, title: "SAFE NEST", desc: "Warm laundry. The cat can catch a breath." },
     enemy: { icon: "⚔️", title: "EMPTY", desc: "" },
     miniboss: { icon: "👹", title: "EMPTY", desc: "" },
     boss: { icon: "👑", title: "EMPTY", desc: "" },
   }[kind];
+  const isArtRoom = kind === "loot" || kind === "hazard" || kind === "rest";
   return (
     <div className="relative flex flex-col items-end justify-end gap-2">
-      <div className={`size-28 md:size-32 chunky-panel flex items-center justify-center text-7xl bg-slate-800 ${cleared ? "opacity-40 grayscale" : "animate-floaty"}`}>
-        {meta.icon}
+      <div className={`w-32 h-32 md:w-40 md:h-40 flex items-center justify-center ${cleared ? "opacity-40 grayscale" : "animate-floaty"}`}>
+        {isArtRoom ? (
+          <img src={meta.icon} alt={meta.title} className="size-full object-contain" loading="lazy" width={1024} height={1024} />
+        ) : (
+          <div className="text-7xl">{meta.icon}</div>
+        )}
       </div>
       <div className="mx-auto mt-1 h-1.5 w-20 rounded-full bg-black/70 blur-sm" />
       <div className="w-full max-w-[260px] text-right">

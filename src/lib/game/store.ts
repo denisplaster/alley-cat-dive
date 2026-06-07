@@ -36,6 +36,11 @@ interface DiveState {
   catFlashKey: number;
   enemyDefeatKey: number;
   lastLootKey: number;
+  catPose: "idle" | "scratch" | "pounce" | "item" | "hurt" | "block" | "ko" | "victory";
+  enemyPose: "idle" | "attack" | "hurt" | "ko";
+  mangaFx: "slash" | "impact" | "crit" | "heal" | "block" | "miss" | null;
+  mangaWord: "bam" | "pow" | "slash" | "crit" | null;
+  mangaFocus: "cat" | "enemy" | "center" | null;
 }
 
 interface GameState {
@@ -159,7 +164,7 @@ export const useGame = create<GameState>((set, get) => ({
         capsFound: 0,
         log: [
           mklog(`Diving into ${dump.name}…`, "info"),
-          enemy ? mklog(`A ${enemy.name} ${enemy.emoji} blocks the way!`, "warn")
+          enemy ? mklog(`A ${enemy.name} blocks the way!`, "warn")
                 : mklog(roomDescriptor(firstKind), "info"),
         ],
         autoDive: false,
@@ -174,6 +179,11 @@ export const useGame = create<GameState>((set, get) => ({
         catFlashKey: 0,
         enemyDefeatKey: 0,
         lastLootKey: 0,
+        catPose: "idle",
+        enemyPose: "idle",
+        mangaFx: null,
+        mangaWord: null,
+        mangaFocus: null,
       },
       lastRewards: null,
     });
@@ -238,18 +248,44 @@ export const useGame = create<GameState>((set, get) => ({
     }
 
     // enemy counter-attack
+    let catPose: DiveState["catPose"] = d.catPose;
+    let enemyPose: DiveState["enemyPose"] = d.enemyPose;
+    let mangaFx: DiveState["mangaFx"] = null;
+    let mangaWord: DiveState["mangaWord"] = null;
+    let mangaFocus: DiveState["mangaFocus"] = null;
+
+    if (action === "item") {
+      catPose = "item";
+      enemyPose = enemy.hp <= 0 ? "ko" : "idle";
+      mangaFx = "heal";
+      mangaFocus = "cat";
+    } else {
+      catPose = action === "pounce" ? "pounce" : "scratch";
+      enemyPose = enemy.hp <= 0 ? "ko" : "hurt";
+      mangaFx = enemy.hp <= 0 && action === "pounce" ? "crit" : action === "scratch" ? "slash" : "impact";
+      mangaWord = enemy.hp <= 0 ? "crit" : action === "scratch" ? "slash" : action === "pounce" ? "pow" : "bam";
+      mangaFocus = "enemy";
+    }
+
     if (enemy.hp > 0 && action !== "item") {
       const incoming = Math.max(1, Math.round(enemy.attack * (0.8 + Math.random() * 0.4) - cat.defense * 0.4));
+      const blocked = incoming <= Math.max(4, Math.round(cat.defense * 0.55));
       catHp = Math.max(0, catHp - incoming);
       clog = [...clog, mklog(`${enemy.name} hits back for ${incoming}`, "warn")];
       fx = [...fx, { id: nextFxId(), target: "cat", kind: "dmg", amount: incoming }];
       catFlashKey += 1;
+      catPose = blocked ? "block" : "hurt";
+      enemyPose = "attack";
+      mangaFx = blocked ? "block" : "impact";
+      mangaWord = blocked ? null : incoming >= 12 ? "bam" : "pow";
+      mangaFocus = "cat";
     }
 
     if (catHp <= 0) {
       clog = [...clog, mklog(`💀 ${cat.name} went down! Dragging them out…`, "warn")];
       set({ dive: { ...d, catHp: 0, enemy, log: clog, ended: true, fled: true,
-        fx, catFlashKey, enemyFlashKey, shakeKey, shakeHard } });
+        fx, catFlashKey, enemyFlashKey, shakeKey, shakeHard,
+        catPose: "ko", enemyPose: enemy.hp <= 0 ? "ko" : "attack", mangaFx, mangaWord, mangaFocus } });
       get().endDive(false);
       return;
     }
@@ -273,12 +309,20 @@ export const useGame = create<GameState>((set, get) => ({
       set({ dive: { ...d, enemy, catHp, collected, log: clog, bonesFound, capsFound, fx, rooms,
         roomCleared: true, autoDive: false,
         roomEvent: `+${bonesGain} 🦴  +${capsGain} 🧴  ·  ${dropCount} item${dropCount>1?"s":""}`,
-        shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey } });
+        shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey,
+        catPose: "victory", enemyPose: "ko", mangaFx, mangaWord, mangaFocus } });
       return;
     }
 
     set({ dive: { ...d, catHp, enemy, collected, log: clog, fx, bonesFound, capsFound,
-      shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey } });
+      shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey,
+      catPose, enemyPose, mangaFx, mangaWord, mangaFocus } });
+
+    setTimeout(() => {
+      const current = get().dive;
+      if (!current || current.ended || current.roomCleared) return;
+      set({ dive: { ...current, catPose: "idle", enemyPose: current.enemy ? "idle" : "ko", mangaFx: null, mangaWord: null, mangaFocus: null } });
+    }, 520);
   },
 
   resolveNonCombat: () => {
@@ -313,7 +357,10 @@ export const useGame = create<GameState>((set, get) => ({
     }
     const rooms = d.rooms.map((r, i) => i === d.room - 1 ? { ...r, cleared: true } : r);
     set({ dive: { ...d, catHp, collected, log: clog, bonesFound, capsFound, fx, rooms,
-      roomCleared: true, roomEvent: event, lastLootKey } });
+      roomCleared: true, roomEvent: event, lastLootKey,
+      catPose: d.currentKind === "rest" ? "item" : "idle", enemyPose: "idle",
+      mangaFx: d.currentKind === "hazard" ? "impact" : d.currentKind === "rest" ? "heal" : null,
+      mangaWord: null, mangaFocus: d.currentKind === "hazard" ? "cat" : "center" } });
   },
 
   goDeeper: () => {
@@ -337,10 +384,11 @@ export const useGame = create<GameState>((set, get) => ({
       ? spawnEnemy(dump, nextKind, nextIdx) : null;
     const log2 = [...d.log,
       mklog(`Crawl deeper… Room ${nextRoom}/${d.totalRooms} — ${roomLabel(nextKind)}`, "info"),
-      enemy ? mklog(`A ${enemy.name} ${enemy.emoji} appears!`, "warn") : mklog(roomDescriptor(nextKind), "info"),
+      enemy ? mklog(`A ${enemy.name} appears!`, "warn") : mklog(roomDescriptor(nextKind), "info"),
     ];
     set({ dive: { ...d, room: nextRoom, rooms, currentKind: nextKind, enemy,
-      roomCleared: false, roomEvent: null, log: log2 } });
+      roomCleared: false, roomEvent: null, log: log2,
+      catPose: "idle", enemyPose: enemy ? "idle" : "ko", mangaFx: null, mangaWord: null, mangaFocus: null } });
   },
 
   toggleAuto: () => {
