@@ -502,7 +502,7 @@ export const useGame = create<GameState>((set, get) => ({
     ];
     set({ dive: { ...d, room: nextRoom, rooms, currentKind: nextKind, enemy,
       roomCleared: false, roomEvent: null, log: log2,
-      catPose: "idle", enemyPose: enemy ? "idle" : "ko", mangaFx: null, mangaWord: null, mangaFocus: null } });
+      catPose: "idle", enemyPose: enemy ? "idle" : "ko", mangaFx: null, mangaWord: null, mangaFocus: null, bubble: null } });
   },
 
   toggleAuto: () => {
