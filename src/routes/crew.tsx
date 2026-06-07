@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useGame } from "@/lib/game/store";
 import type { Cat } from "@/lib/game/types";
+import { EVOLUTIONS, computeEvolution } from "@/lib/game/evolution";
 
 export const Route = createFileRoute("/crew")({
   head: () => ({
@@ -18,6 +19,10 @@ function CrewScreen() {
   const cats = useGame(s => s.cats);
   const activeId = useGame(s => s.activeCatId);
   const setActive = useGame(s => s.setActiveCat);
+  const completed = useGame(s => s.completedChapters);
+  const roomsCleared = useGame(s => s.roomsCleared);
+  const bossesBeaten = useGame(s => s.bossesBeaten);
+  const evo = EVOLUTIONS[computeEvolution({ completedChapters: completed, roomsCleared, bossesBeaten })];
 
   return (
     <div className="mt-6">
@@ -25,6 +30,16 @@ function CrewScreen() {
         <h1 className="font-display text-4xl uppercase md:text-5xl">Cat Crew</h1>
         <p className="text-xs uppercase tracking-widest text-muted-foreground">Five strays. One alley. Infinite problems.</p>
       </header>
+      <div className="chunky-panel mb-4 flex flex-wrap items-center gap-3 bg-black/80 p-3">
+        <span className="border-2 border-black bg-primary px-2 py-0.5 text-[10px] font-bold uppercase text-black">
+          Main Cat Evolution
+        </span>
+        <span className="font-display text-lg uppercase">{evo.name}</span>
+        <span className="text-[11px] italic text-muted-foreground">{evo.tagline}</span>
+        <span className="ml-auto text-[10px] uppercase text-secondary">
+          +{evo.statBonus.atk} ATK · +{evo.statBonus.def} DEF · +{evo.statBonus.hp} HP
+        </span>
+      </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {cats.map(c => <CatCard key={c.id} c={c} active={c.id === activeId} onSelect={() => setActive(c.id)} />)}
       </div>

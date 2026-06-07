@@ -6,6 +6,7 @@ import type {
   Cat, Dumpster, Enemy, Fx, HideoutUpgrade, Item, Rarity, Room, RoomKind,
 } from "./types";
 import { STORY_CHAPTERS, STAGE_ORDER, type HideoutStage, chapterById } from "./story";
+import { computeEvolution, type EvolutionStage } from "./evolution";
 
 interface CombatEntry { id: number; text: string; tone: "info" | "hit" | "crit" | "loot" | "warn" }
 
@@ -73,6 +74,13 @@ interface GameState {
   hideoutStage: HideoutStage;
   placedItems: Record<string, string>; // slotId -> itemId
   activeCutscene: { chapterId: string; phase: "intro" | "outro"; panel: number } | null;
+  /** Reward panel shown after a chapter outro before returning to gameplay. */
+  pendingReward: { chapterId: string; newEvolution?: EvolutionStage } | null;
+
+  // progression milestones
+  roomsCleared: number;
+  bossesBeaten: number;
+  divesCompleted: number;
 
   selectDumpster: (id: string) => void;
   setActiveCat: (id: string) => void;
@@ -97,6 +105,9 @@ interface GameState {
   makeChoice: (chapterId: string, optionId: string) => void;
   placeItem: (slotId: string, itemId: string) => void;
   unplaceItem: (slotId: string) => void;
+  dismissReward: () => void;
+  /** Derived: current evolution from milestones. */
+  getEvolution: () => EvolutionStage;
 }
 
 let _logId = 0;
@@ -213,6 +224,10 @@ export const useGame = create<GameState>((set, get) => ({
   hideoutStage: "tin_can",
   placedItems: {},
   activeCutscene: { chapterId: STORY_CHAPTERS[0].id, phase: "intro", panel: 0 },
+  pendingReward: null,
+  roomsCleared: 0,
+  bossesBeaten: 0,
+  divesCompleted: 0,
 
   selectDumpster: (id) => set({ selectedDumpsterId: id }),
   setActiveCat: (id) => {
@@ -473,6 +488,12 @@ export const useGame = create<GameState>((set, get) => ({
       const rooms = d.rooms.map((r, i) => i === d.room - 1 ? { ...r, cleared: true } : r);
       enemyDefeatKey += 1;
       lastLootKey += 1;
+      // milestone bookkeeping: every cleared combat room counts, bosses too.
+      const isBossClear = d.currentKind === "boss";
+      set({
+        roomsCleared: s.roomsCleared + 1,
+        bossesBeaten: s.bossesBeaten + (isBossClear ? 1 : 0),
+      });
       set({ dive: { ...d, enemy, catHp, collected, log: clog, bonesFound, capsFound, fx, rooms,
         roomCleared: true, autoDive: false,
         roomEvent: `+${bonesGain} 🦴  +${capsGain} 🧴  ·  ${dropCount} item${dropCount>1?"s":""}`,
@@ -561,6 +582,8 @@ export const useGame = create<GameState>((set, get) => ({
       event = `Took ${dmg} damage`;
     }
     const rooms = d.rooms.map((r, i) => i === d.room - 1 ? { ...r, cleared: true } : r);
+    // non-combat rooms still count as progression toward Scrapper evolution.
+    set({ roomsCleared: s.roomsCleared + 1 });
     set({ dive: { ...d, catHp, collected, log: clog, bonesFound, capsFound, fx, rooms,
       roomCleared: true, roomEvent: event, lastLootKey,
       catPose: d.currentKind === "rest" ? "item" : "idle", enemyPose: "idle",
@@ -641,6 +664,7 @@ export const useGame = create<GameState>((set, get) => ({
       cats: updatedCats,
       dive: null,
       lastRewards: null,
+      divesCompleted: s.divesCompleted + (wasFled ? 0 : 1),
       activeCutscene: shouldPlayOutro
         ? { chapterId: chapter.id, phase: "outro", panel: 0 }
         : s.activeCutscene,
@@ -752,13 +776,26 @@ export const useGame = create<GameState>((set, get) => ({
     const completed = s.completedChapters.includes(chapter.id)
       ? s.completedChapters : [...s.completedChapters, chapter.id];
     const nextIdx = Math.min(STORY_CHAPTERS.length, s.storyChapterIdx + 1);
-    // if chapter has a choice, leave cutscene closed; the Cutscene UI handles
-    // showing the choice on the final outro panel before advancing.
+    // Detect a new evolution unlock to celebrate on the reward panel.
+    const prevEvo = computeEvolution({
+      completedChapters: s.completedChapters,
+      roomsCleared: s.roomsCleared,
+      bossesBeaten: s.bossesBeaten,
+    });
+    const nextEvo = computeEvolution({
+      completedChapters: completed,
+      roomsCleared: s.roomsCleared,
+      bossesBeaten: s.bossesBeaten,
+    });
     set({
       activeCutscene: null,
       hideoutStage: nextStage,
       completedChapters: completed,
       storyChapterIdx: nextIdx,
+      pendingReward: {
+        chapterId: chapter.id,
+        newEvolution: nextEvo !== prevEvo ? nextEvo : undefined,
+      },
     });
   },
   closeCutscene: () => set({ activeCutscene: null }),
@@ -781,6 +818,15 @@ export const useGame = create<GameState>((set, get) => ({
     const next = { ...s.placedItems };
     delete next[slotId];
     set({ placedItems: next });
+  },
+  dismissReward: () => set({ pendingReward: null }),
+  getEvolution: () => {
+    const s = get();
+    return computeEvolution({
+      completedChapters: s.completedChapters,
+      roomsCleared: s.roomsCleared,
+      bossesBeaten: s.bossesBeaten,
+    });
   },
 }));
 

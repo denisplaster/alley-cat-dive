@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import heroCat from "@/assets/hero-cat.png";
 import { useGame } from "@/lib/game/store";
 import { STORY_CHAPTERS } from "@/lib/game/story";
+import { EVOLUTIONS, computeEvolution } from "@/lib/game/evolution";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -24,6 +25,9 @@ function AlleyHub() {
   const storyIdx = useGame(s => s.storyChapterIdx);
   const completed = useGame(s => s.completedChapters);
   const openCutscene = useGame(s => s.openCutscene);
+  const roomsCleared = useGame(s => s.roomsCleared);
+  const bossesBeaten = useGame(s => s.bossesBeaten);
+  const evo = EVOLUTIONS[computeEvolution({ completedChapters: completed, roomsCleared, bossesBeaten })];
   const selected = dumpsters.find(d => d.id === selectedId)!;
   const activeCat = cats.find(c => c.id === activeCatId)!;
   const latest = inventory[inventory.length - 1];
@@ -51,6 +55,11 @@ function AlleyHub() {
             </div>
             <h3 className="font-display text-lg uppercase leading-tight md:text-xl">{activeCat.name}</h3>
             <p className="mb-2 text-[10px] text-muted-foreground">{activeCat.catClass}</p>
+            <div className="mb-2 border-2 border-black bg-primary/20 px-2 py-1">
+              <div className="text-[9px] font-bold uppercase tracking-wider text-primary">Evolution</div>
+              <div className="font-display text-sm uppercase leading-tight">{evo.name}</div>
+              <div className="text-[9px] italic text-muted-foreground">{evo.tagline}</div>
+            </div>
             <div className="grid grid-cols-3 gap-1 text-center">
               <Stat label="ATK" value={activeCat.attack} />
               <Stat label="DEF" value={activeCat.defense} />

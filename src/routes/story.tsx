@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useGame } from "@/lib/game/store";
 import { STORY_CHAPTERS } from "@/lib/game/story";
+import { EVOLUTIONS, computeEvolution, nextEvolutionHint } from "@/lib/game/evolution";
 
 export const Route = createFileRoute("/story")({
   head: () => ({
@@ -19,6 +20,12 @@ function StoryScreen() {
   const chapterIdx = useGame(s => s.storyChapterIdx);
   const choices = useGame(s => s.storyChoices);
   const openCutscene = useGame(s => s.openCutscene);
+  const roomsCleared = useGame(s => s.roomsCleared);
+  const bossesBeaten = useGame(s => s.bossesBeaten);
+  const progress = { completedChapters: completed, roomsCleared, bossesBeaten };
+  const evo = EVOLUTIONS[computeEvolution(progress)];
+  const evoHint = nextEvolutionHint(progress);
+  const current = STORY_CHAPTERS[chapterIdx];
 
   return (
     <div className="mt-6 space-y-4">
@@ -28,6 +35,30 @@ function StoryScreen() {
           From a tin can to the throne of the alley.
         </p>
       </header>
+
+      {/* Campaign status card */}
+      <div className="chunky-panel grid grid-cols-1 gap-3 bg-black/80 p-4 md:grid-cols-3">
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-secondary">Current Form</div>
+          <div className="font-display text-xl uppercase">{evo.name}</div>
+          <div className="text-[11px] italic text-muted-foreground">{evo.tagline}</div>
+        </div>
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-secondary">Next Goal</div>
+          <div className="font-display text-sm uppercase leading-tight">
+            {current ? current.title : "Campaign complete"}
+          </div>
+          <div className="text-[11px] italic text-muted-foreground">
+            {current ? current.subtitle : "Legend of the alley."}
+          </div>
+        </div>
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-secondary">Progression</div>
+          <div className="text-[11px] uppercase">{completed.length} / {STORY_CHAPTERS.length} chapters</div>
+          <div className="text-[11px] uppercase">{roomsCleared} rooms · {bossesBeaten} bosses</div>
+          {evoHint && <div className="mt-1 text-[10px] italic text-primary">{evoHint}</div>}
+        </div>
+      </div>
 
       <div className="space-y-3">
         {STORY_CHAPTERS.map((ch, i) => {
@@ -47,6 +78,25 @@ function StoryScreen() {
                   {choice && ch.choice && (
                     <p className="mt-2 text-[11px] uppercase tracking-wider text-secondary">
                       Choice: {ch.choice.options.find(o => o.id === choice)?.label ?? choice}
+                    </p>
+                  )}
+                  {/* Unlock list */}
+                  {ch.rewards && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {ch.rewards.map((r, idx) => (
+                        <span key={idx}
+                          className={`border-2 border-black px-2 py-0.5 text-[10px] font-bold uppercase ${
+                            isLocked ? "bg-slate-900 text-muted-foreground" : "bg-slate-900 text-foreground"
+                          }`}
+                        >
+                          {r.icon} {r.label}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {isLocked && ch.unlockRequirement && (
+                    <p className="mt-2 text-[10px] uppercase tracking-wider text-destructive">
+                      🔒 {ch.unlockRequirement}
                     </p>
                   )}
                 </div>
