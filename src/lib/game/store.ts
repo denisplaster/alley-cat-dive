@@ -189,6 +189,11 @@ export const useGame = create<GameState>((set, get) => ({
         mangaFx: null,
         mangaWord: null,
         mangaFocus: null,
+        combo: 0,
+        comboLastAction: null,
+        panelSplitKey: 0,
+        knockbackKey: 0,
+        catKnockbackKey: 0,
       },
       lastRewards: null,
     });
