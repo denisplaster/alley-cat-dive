@@ -333,7 +333,6 @@ function PanelSplitOverlay({ k }: { k: number }) {
 }
 
 function FloatingNumbers({ fx }: { fx: Fx[] }) {
-  // placeholder anchor
   const clearFx = useGame(s => s.clearFx);
   useEffect(() => {
     const timers = fx.map(f => setTimeout(() => clearFx(f.id), 900));
