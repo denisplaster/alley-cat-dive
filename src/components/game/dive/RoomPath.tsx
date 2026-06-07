@@ -2,6 +2,8 @@ import type { Room, RoomKind } from "@/lib/game/types";
 
 const ICON: Record<RoomKind, string> = {
   enemy: "⚔️",
+  swarm: "🐀",
+  elite: "💢",
   loot: "💰",
   hazard: "☣️",
   rest: "💤",

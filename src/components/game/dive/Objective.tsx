@@ -2,7 +2,7 @@ import { useGame } from "@/lib/game/store";
 import type { RoomKind } from "@/lib/game/types";
 
 const KIND_NAME: Record<RoomKind, string> = {
-  enemy: "fight", loot: "loot pile", hazard: "hazard", rest: "safe nest",
+  enemy: "fight", swarm: "enemy pack", elite: "elite threat", loot: "loot pile", hazard: "hazard", rest: "safe nest",
   miniboss: "mini-boss", boss: "BOSS",
 };
 
@@ -28,9 +28,12 @@ export function Objective() {
       tone = lowTimer ? "text-destructive" : "text-accent";
     }
   } else if (dive.enemy) {
+    const foeText = dive.enemies.length > 1
+      ? `${dive.enemies.length} enemies`
+      : `the ${dive.enemy.name}`;
     text = lowTimer
-      ? `Objective: Drop the ${dive.enemy.name} — the truck is almost here!`
-      : `Objective: Defeat the ${dive.enemy.name} before the truck arrives.`;
+      ? `Objective: Drop ${foeText} — the truck is almost here!`
+      : `Objective: Defeat ${foeText} before the truck arrives.`;
     tone = lowTimer ? "text-destructive" : "text-primary";
   } else {
     const k = dive.currentKind;
