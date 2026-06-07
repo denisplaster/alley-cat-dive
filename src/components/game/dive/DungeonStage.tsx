@@ -42,6 +42,7 @@ import wordSlash from "@/assets/anime/word-slash.png";
 import wordCrit from "@/assets/anime/word-crit.png";
 import wordCombo from "@/assets/anime/word-combo.png";
 import panelSplit from "@/assets/anime/panel-split.png";
+import { lifeStageFromHideout, KITTEN_POSES, JUVENILE_POSES, ENEMY_SPRITE_OVERRIDES } from "@/lib/game/lifestage";
 
 const KIND_TINT: Record<RoomKind, string> = {
   enemy: "from-emerald-950/60 via-black to-black",
@@ -56,6 +57,13 @@ const BG_PROPS = ["🍕","🦴","🥫","📦","🍌","🥡","🍣","🧃","🍔"
 
 export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) {
   const dive = useGame(s => s.dive)!;
+  const hideoutStage = useGame(s => s.hideoutStage);
+  const stage = lifeStageFromHideout(hideoutStage);
+  const catArt = stage === "kitten"
+    ? { ...CAT_ART, ...KITTEN_POSES }
+    : stage === "juvenile"
+      ? { ...CAT_ART, ...JUVENILE_POSES }
+      : CAT_ART;
   const tint = KIND_TINT[dive.currentKind];
   const truckPct = dive.timerSec / dive.truckTimerStart;
   const danger = truckPct < 0.1;
@@ -132,7 +140,7 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
           <CombatantSprite
             name={cat.name}
             sub={cat.catClass}
-            poses={CAT_ART}
+            poses={catArt}
             activePose={dive.catPose}
             hp={dive.catHp}
             maxHp={dive.catMaxHp}
@@ -145,7 +153,7 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
           {enemy ? (
             <CombatantSprite
               key={`${enemy.id}-${dive.room}`}
-              poses={getEnemyPoses(dive.currentKind)}
+              poses={getEnemyPoses(dive.currentKind, enemy.id)}
               activePose={dive.enemyPose === "knockback" ? "hurt" : dive.enemyPose}
               name={enemy.name}
               sub={dive.currentKind === "boss" ? "BOSS" : dive.currentKind === "miniboss" ? "MINI-BOSS" : "Trash Mob"}
@@ -204,9 +212,10 @@ const FX_ART = { slash: fxSlash, impact: fxImpact, crit: fxCrit, heal: fxHeal, b
 const WORD_ART = { bam: wordBam, pow: wordPow, slash: wordSlash, crit: wordCrit, combo: wordCombo } as const;
 
 type EnemyPoseKey = "idle" | "attack" | "hurt" | "ko";
-function getEnemyPoses(kind: RoomKind): Record<EnemyPoseKey, string> {
+function getEnemyPoses(kind: RoomKind, enemyId?: string): Record<EnemyPoseKey, string> {
   if (kind === "boss") return { idle: bossIdle, attack: bossAttack, hurt: bossHurt, ko: bossKo };
   if (kind === "miniboss") return { idle: minibossIdle, attack: minibossAttack, hurt: minibossHurt, ko: minibossKo };
+  if (enemyId && ENEMY_SPRITE_OVERRIDES[enemyId]) return ENEMY_SPRITE_OVERRIDES[enemyId];
   return { idle: enemyIdle, attack: enemyAttack, hurt: enemyHurt, ko: enemyKo };
 }
 
