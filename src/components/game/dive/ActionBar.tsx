@@ -1,11 +1,30 @@
-import { useEffect, useRef, useState } from "react";
 import { useGame } from "@/lib/game/store";
 import type { RoomKind } from "@/lib/game/types";
+import { lifeStageFromHideout, type LifeStage } from "@/lib/game/lifestage";
 
-const ATTACK_COOLDOWN_MS = 750;
+// Move sets unlock as the cat grows up. Action ids stay the same so combat
+// logic doesn't care which stage we're in — only the labels change.
+const MOVES: Record<LifeStage, { id: "scratch" | "pounce" | "item"; label: string; tone?: "secondary" | "accent" }[]> = {
+  kitten: [
+    { id: "scratch", label: "Swat" },
+    { id: "item",    label: "Snack",   tone: "accent" },
+  ],
+  juvenile: [
+    { id: "scratch", label: "Claw" },
+    { id: "pounce",  label: "Pounce", tone: "secondary" },
+    { id: "item",    label: "Snack",  tone: "accent" },
+  ],
+  adult: [
+    { id: "scratch", label: "Slash" },
+    { id: "pounce",  label: "Pounce", tone: "secondary" },
+    { id: "item",    label: "Snack",  tone: "accent" },
+  ],
+};
 
 export function ActionBar() {
   const dive = useGame(s => s.dive)!;
+  const hideoutStage = useGame(s => s.hideoutStage);
+  const stage = lifeStageFromHideout(hideoutStage);
   const doAction = useGame(s => s.doAction);
   const goDeeper = useGame(s => s.goDeeper);
   const resolve = useGame(s => s.resolveNonCombat);
@@ -14,30 +33,9 @@ export function ActionBar() {
   const lowHp = dive.catHp / dive.catMaxHp < 0.3;
   const isFinalRoom = dive.room >= dive.totalRooms;
 
-  // Attack cooldown — disables attack buttons briefly after each action so
-  // players can't just mash through fights.
-  const [cdUntil, setCdUntil] = useState(0);
-  const [, force] = useState(0);
-  const rafRef = useRef<number | null>(null);
-  const onCooldown = cdUntil > Date.now();
-  useEffect(() => {
-    if (!onCooldown) return;
-    const tick = () => {
-      force(n => n + 1);
-      if (cdUntil > Date.now()) rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [cdUntil, onCooldown]);
-
-  const attack = (a: "scratch" | "pounce" | "item") => {
-    if (onCooldown) return;
-    doAction(a);
-    setCdUntil(Date.now() + ATTACK_COOLDOWN_MS);
-  };
-  const cdPct = onCooldown
-    ? Math.max(0, Math.min(1, (cdUntil - Date.now()) / ATTACK_COOLDOWN_MS))
-    : 0;
+  // Turn-based lock: while the enemy is mid-counter-attack the store flips
+  // `dive.inAction = true` and rejects further actions until its counter resolves.
+  const locked = dive.inAction;
 
   // 1) Room cleared → Go Deeper / Claim
   if (dive.roomCleared) {
@@ -69,45 +67,51 @@ export function ActionBar() {
     );
   }
 
-  // 3) Combat
+  // 3) Combat — moves depend on life stage
+  const moves = MOVES[stage];
   return (
     <Bar>
-      <Btn label="Scratch" onClick={() => attack("scratch")} primary disabled={onCooldown} cooldown={cdPct} />
-      <Btn label="Pounce" onClick={() => attack("pounce")} tone="secondary" disabled={onCooldown} cooldown={cdPct} />
-      <Btn label={lowHp ? "Heal" : "Item"} onClick={() => attack("item")} tone="accent" highlight={lowHp} disabled={onCooldown} cooldown={cdPct} />
+      {moves.map((m, i) => {
+        const isHeal = m.id === "item";
+        return (
+          <Btn
+            key={m.id}
+            label={isHeal && lowHp ? "Heal" : m.label}
+            onClick={() => doAction(m.id)}
+            primary={i === 0}
+            tone={m.tone}
+            highlight={isHeal && lowHp}
+            disabled={locked}
+          />
+        );
+      })}
       <Btn label="Flee" onClick={() => doAction("flee")} tone="destructive" />
-      <Btn label={dive.autoDive ? "Stop Auto" : "Auto"} onClick={toggleAuto} />
+      <Btn label={dive.autoDive ? "Stop Auto" : "Auto"} onClick={toggleAuto} disabled={locked && !dive.autoDive} />
     </Bar>
   );
 }
 
 function Bar({ children }: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-2 gap-2 md:grid-cols-5">{children}</div>;
+  return <div className="grid grid-cols-3 gap-1.5 md:grid-cols-5 md:gap-2">{children}</div>;
 }
 
-function Btn({ label, onClick, primary, big, tone = "default", highlight, disabled, cooldown = 0 }: {
+function Btn({ label, onClick, primary, big, tone = "default", highlight, disabled }: {
   label: string; onClick: () => void; primary?: boolean; big?: boolean;
   tone?: "default" | "secondary" | "accent" | "destructive";
-  highlight?: boolean; disabled?: boolean; cooldown?: number;
+  highlight?: boolean; disabled?: boolean;
 }) {
   const bg = tone === "secondary" ? "bg-secondary text-black"
     : tone === "accent" ? "bg-accent text-black"
     : tone === "destructive" ? "bg-destructive text-destructive-foreground"
     : primary ? "bg-primary text-primary-foreground"
     : "bg-slate-900 text-foreground";
-  const span = big ? "col-span-2 md:col-span-4" : "";
+  const span = big ? "col-span-3 md:col-span-4" : "";
   const pulse = (primary || highlight) && !disabled ? "animate-pulse-glow" : "";
   const dim = disabled ? "opacity-60 cursor-not-allowed" : "";
   return (
     <button onClick={onClick} disabled={disabled}
-      className={`chunky-button relative overflow-hidden px-3 ${big ? "py-4" : "py-3"} font-display uppercase ${big ? "text-xl" : "text-base"} ${bg} ${span} ${pulse} ${dim}`}>
-      <span className="relative z-10">{label}</span>
-      {cooldown > 0 && (
-        <span
-          className="pointer-events-none absolute inset-y-0 left-0 z-0 bg-black/55"
-          style={{ width: `${cooldown * 100}%` }}
-        />
-      )}
+      className={`chunky-button relative px-2 ${big ? "py-3" : "py-2"} font-display uppercase ${big ? "text-lg md:text-xl" : "text-xs md:text-sm"} ${bg} ${span} ${pulse} ${dim}`}>
+      {label}
     </button>
   );
 }
