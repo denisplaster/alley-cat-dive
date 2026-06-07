@@ -17,6 +17,7 @@ interface DiveState {
   rooms: Room[];
   currentKind: RoomKind;
   enemy: Enemy | null;
+  enemies: Enemy[];
   catHp: number;
   catMaxHp: number;
   timerSec: number;
@@ -125,9 +126,11 @@ const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
 const generateRooms = (totalRooms: number): Room[] => {
   const arr: RoomKind[] = Array.from({ length: totalRooms }, () => "enemy" as RoomKind);
   arr[totalRooms - 1] = "boss";
-  if (totalRooms >= 3) arr[1] = "loot";
-  if (totalRooms >= 5) arr[Math.floor(totalRooms / 2)] = Math.random() < 0.5 ? "hazard" : "rest";
-  if (totalRooms >= 6) arr[totalRooms - 2] = "miniboss";
+  if (totalRooms >= 3) arr[1] = Math.random() < 0.5 ? "loot" : "rest";
+  if (totalRooms >= 4) arr[2] = "swarm";
+  if (totalRooms >= 5) arr[Math.floor(totalRooms / 2)] = "elite";
+  if (totalRooms >= 6) arr[Math.max(3, totalRooms - 3)] = Math.random() < 0.5 ? "hazard" : "loot";
+  if (totalRooms >= 7) arr[totalRooms - 2] = "miniboss";
   return arr.map((k, i) => ({ kind: k, cleared: false, revealed: i === 0 }));
 };
 
@@ -144,6 +147,11 @@ const spawnEnemy = (dump: Dumpster, kind: RoomKind, roomIdx: number): Enemy => {
   let emoji = tmpl.emoji;
   // Boss/mini scaling ramps with dumpster difficulty so the first dumpster's
   // boss isn't a brick wall for a fresh kitten.
+  if (kind === "elite") {
+    hp = Math.round(hp * (1.18 + dump.difficulty * 0.06));
+    atk = Math.round(atk * (1.08 + dump.difficulty * 0.03));
+    name = "Elite " + name;
+  }
   if (kind === "miniboss") {
     hp = Math.round(hp * (1.25 + dump.difficulty * 0.08));
     atk = Math.round(atk * (1.10 + dump.difficulty * 0.04));
@@ -156,6 +164,17 @@ const spawnEnemy = (dump: Dumpster, kind: RoomKind, roomIdx: number): Enemy => {
     emoji = "👑";
   }
   return { id: enemyKey, name, hp, maxHp: hp, attack: atk, emoji };
+};
+
+const spawnEnemies = (dump: Dumpster, kind: RoomKind, roomIdx: number): Enemy[] => {
+  if (kind === "swarm") {
+    const count = dump.difficulty >= 4 ? 3 : 2;
+    return Array.from({ length: count }, (_, idx) => {
+      const enemy = spawnEnemy(dump, "enemy", roomIdx + idx);
+      return { ...enemy, name: count > 2 ? `${enemy.name} ${idx + 1}` : enemy.name };
+    });
+  }
+  return [spawnEnemy(dump, kind, roomIdx)];
 };
 
 const rollLoot = (target: Rarity): Item => {
