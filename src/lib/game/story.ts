@@ -483,3 +483,18 @@ export const STORY_CHAPTERS: Chapter[] = [
 ];
 
 export const chapterById = (id: string) => STORY_CHAPTERS.find(c => c.id === id);
+
+/**
+ * Which dumpster each chapter dives into. Keeps enemies and backdrops fresh
+ * across the campaign so no two chapters feel like the same dive.
+ */
+export const CHAPTER_DUMPSTER: Record<string, string> = {
+  ch1_abandoned:    "greasy",
+  ch2_first_scraps: "apartment",
+  ch3_training:     "mall",
+  ch4_rival_meeting:"fish",
+  ch5_alley_pact:   "haunted",
+  ch6_king_of_bins: "rooftop",
+  ch7_rally:        "subway",
+  ch8_hero:         "luxury",
+};
