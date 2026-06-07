@@ -30,6 +30,10 @@ export function ActionBar() {
   const goDeeper = useGame(s => s.goDeeper);
   const resolve = useGame(s => s.resolveNonCombat);
   const toggleAuto = useGame(s => s.toggleAuto);
+  const buySnack = useGame(s => s.buySnack);
+  const fishbones = useGame(s => s.fishbones);
+  const snackPrice = 30 + snackCount * 15;
+  const canAffordSnack = fishbones >= snackPrice;
 
   const lowHp = dive.catHp / dive.catMaxHp < 0.3;
   const isFinalRoom = dive.room >= dive.totalRooms;
@@ -71,6 +75,7 @@ export function ActionBar() {
   // 3) Combat — moves depend on life stage
   const moves = MOVES[stage];
   return (
+    <>
     <Bar>
       {moves.map((m, i) => {
         const isHeal = m.id === "item";
@@ -93,6 +98,15 @@ export function ActionBar() {
       <Btn label="Flee" onClick={() => doAction("flee")} tone="destructive" />
       <Btn label={dive.autoDive ? "Stop Auto" : "Auto"} onClick={toggleAuto} disabled={locked && !dive.autoDive} />
     </Bar>
+    {/* Mid-fight snack vendor — buy a sardine with fishbones if the bag is dry. */}
+    <button
+      onClick={() => buySnack()}
+      disabled={!canAffordSnack}
+      className={`chunky-button px-3 py-2 text-[11px] font-bold uppercase ${canAffordSnack ? "bg-accent text-black" : "bg-slate-900 opacity-60 cursor-not-allowed"}`}
+    >
+      🐀 Buy Sardine — {snackPrice} 🦴 ({fishbones} avail)
+    </button>
+    </>
   );
 }
 

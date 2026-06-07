@@ -88,6 +88,7 @@ interface GameState {
   sell: (itemId: string) => void;
   upgrade: (id: string) => void;
   buy: (cost: { bones: number; caps: number }, granted: Item) => boolean;
+  buySnack: () => boolean;
 
   openCutscene: (chapterId: string, phase: "intro" | "outro") => void;
   advanceCutscene: () => void;
@@ -137,8 +138,19 @@ const spawnEnemy = (dump: Dumpster, kind: RoomKind, roomIdx: number): Enemy => {
   let atk = tmpl.attack;
   let name = tmpl.name;
   let emoji = tmpl.emoji;
-  if (kind === "miniboss") { hp = Math.round(hp * 1.6); atk = Math.round(atk * 1.3); name = "Mini-Boss " + name; }
-  if (kind === "boss") { hp = Math.round(hp * 2.4); atk = Math.round(atk * 1.5); name = "BOSS — " + name; emoji = "👑"; }
+  // Boss/mini scaling ramps with dumpster difficulty so the first dumpster's
+  // boss isn't a brick wall for a fresh kitten.
+  if (kind === "miniboss") {
+    hp = Math.round(hp * (1.25 + dump.difficulty * 0.08));
+    atk = Math.round(atk * (1.10 + dump.difficulty * 0.04));
+    name = "Mini-Boss " + name;
+  }
+  if (kind === "boss") {
+    hp = Math.round(hp * (1.45 + dump.difficulty * 0.18));
+    atk = Math.round(atk * (1.15 + dump.difficulty * 0.06));
+    name = "BOSS — " + name;
+    emoji = "👑";
+  }
   return { id: enemyKey, name, hp, maxHp: hp, attack: atk, emoji };
 };
 
@@ -383,7 +395,7 @@ export const useGame = create<GameState>((set, get) => ({
 
     if (enemy.hp > 0 && action !== "item") {
       // Enemies hit harder: bigger base swing, lower defense scaling.
-      const incoming = Math.max(2, Math.round(enemy.attack * (1.25 + Math.random() * 0.55) - cat.defense * 0.22));
+      const incoming = Math.max(2, Math.round(enemy.attack * (0.95 + Math.random() * 0.45) - cat.defense * 0.28));
       const blocked = incoming <= Math.max(3, Math.round(cat.defense * 0.35));
       const heavy = incoming >= 18;
       const nextCatFlash = catFlashKey + 1;
@@ -636,6 +648,33 @@ export const useGame = create<GameState>((set, get) => ({
       fishbones: s.fishbones - cost.bones,
       bottlecaps: s.bottlecaps - cost.caps,
       inventory: [...s.inventory, granted],
+    });
+    return true;
+  },
+
+  // Mid-dive snack vendor: spend fishbones to top up consumables when the
+  // bag runs dry. Price climbs a little per snack already in inventory so it
+  // can't be spammed to trivialize a fight.
+  buySnack: () => {
+    const s = get();
+    const snacks = s.inventory.filter(i => i.kind === "food").length;
+    const price = 30 + snacks * 15;
+    if (s.fishbones < price) {
+      if (s.dive) {
+        const warnLog = [...s.dive.log, mklog(`Need ${price} 🦴 for a snack from the alley vendor.`, "warn")];
+        set({ dive: { ...s.dive, log: warnLog } });
+      }
+      return false;
+    }
+    const sardine = LOOT_POOL.find(i => i.name === "Sardine of Healing") ?? LOOT_POOL[8];
+    const item: Item = { ...sardine, id: newItemId() };
+    const log = s.dive
+      ? [...s.dive.log, mklog(`Bought ${item.name} from a passing rat. -${price} 🦴`, "loot")]
+      : null;
+    set({
+      fishbones: s.fishbones - price,
+      inventory: [...s.inventory, item],
+      dive: s.dive && log ? { ...s.dive, log } : s.dive,
     });
     return true;
   },
