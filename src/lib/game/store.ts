@@ -151,11 +151,12 @@ const generateRooms = (totalRooms: number, _bossRunsAway = false): Room[] => {
 };
 
 const spawnEnemy = (dump: Dumpster, kind: RoomKind, roomIdx: number): Enemy => {
-  // Pick a random enemy from the pool so repeat dives don't always face the
-  // same lineup. Boss room uses the last entry as the "signature" boss.
+  // Pick a random non-boss enemy from the pool so the signature boss, always
+  // stored as the last pool entry, only appears in the final boss room.
+  const regularPool = dump.enemyPool.slice(0, -1);
   const enemyKey = kind === "boss"
     ? dump.enemyPool[dump.enemyPool.length - 1]
-    : dump.enemyPool[Math.floor(Math.random() * dump.enemyPool.length)];
+    : regularPool[Math.floor(Math.random() * regularPool.length)] ?? dump.enemyPool[0];
   const tmpl = ENEMIES[enemyKey];
   let hp = tmpl.baseHp + dump.difficulty * 10 + roomIdx * 4;
   let atk = tmpl.attack;
@@ -175,9 +176,7 @@ const spawnEnemy = (dump: Dumpster, kind: RoomKind, roomIdx: number): Enemy => {
   }
   if (kind === "boss") {
     const isFinal = roomIdx >= dump.rooms - 1;
-    // Earlier boss encounters in the chapter are scaled down so the climactic
-    // final fight is still the toughest. The boss keeps showing up — first to
-    // test the cat, then to finish them off.
+    // The signature boss only appears for the dumpster's final fight.
     const hpMult = isFinal ? 1.45 + dump.difficulty * 0.18 : 1.05 + dump.difficulty * 0.08;
     const atkMult = isFinal ? 1.15 + dump.difficulty * 0.06 : 1.0 + dump.difficulty * 0.03;
     hp = Math.round(hp * hpMult);
