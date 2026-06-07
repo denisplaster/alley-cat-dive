@@ -66,23 +66,7 @@ function DiveScreen() {
       <DungeonStage cat={cat} enemy={dive.enemy} />
 
       {/* Actions */}
-      <ActionBar />
-
-      {/* Drawer toggles */}
-      <div className="flex justify-center gap-2">
-        <button
-          onClick={() => setDrawer(d => d === "log" ? null : "log")}
-          className={`chunky-button px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${drawer === "log" ? "bg-primary text-primary-foreground" : "bg-slate-900"}`}
-        >
-          📜 Log
-        </button>
-        <button
-          onClick={() => setDrawer(d => d === "pile" ? null : "pile")}
-          className={`chunky-button px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${drawer === "pile" ? "bg-secondary text-black" : "bg-slate-900"}`}
-        >
-          🎒 Pile ({dive.collected.length})
-        </button>
-      </div>
+      <ActionBar footerActions={<DrawerToggles drawer={drawer} setDrawer={setDrawer} pileCount={dive.collected.length} />} />
 
       {/* Drawer content opens above the bottom edge now that the global menu lives in the top nav */}
       {drawer && (
@@ -107,6 +91,29 @@ function DiveScreen() {
       )}
 
       <LootToast />
+    </div>
+  );
+}
+
+function DrawerToggles({ drawer, setDrawer, pileCount }: {
+  drawer: null | "log" | "pile";
+  setDrawer: React.Dispatch<React.SetStateAction<null | "log" | "pile">>;
+  pileCount: number;
+}) {
+  return (
+    <div className="flex shrink-0 justify-center gap-2">
+      <button
+        onClick={() => setDrawer(d => d === "log" ? null : "log")}
+        className={`chunky-button px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${drawer === "log" ? "bg-primary text-primary-foreground" : "bg-slate-900"}`}
+      >
+        📜 Log
+      </button>
+      <button
+        onClick={() => setDrawer(d => d === "pile" ? null : "pile")}
+        className={`chunky-button px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${drawer === "pile" ? "bg-secondary text-black" : "bg-slate-900"}`}
+      >
+        🎒 Pile ({pileCount})
+      </button>
     </div>
   );
 }

@@ -22,7 +22,7 @@ const MOVES: Record<LifeStage, { id: "scratch" | "pounce" | "item"; label: strin
   ],
 };
 
-export function ActionBar() {
+export function ActionBar({ footerActions }: { footerActions?: React.ReactNode } = {}) {
   const dive = useGame(s => s.dive)!;
   const hideoutStage = useGame(s => s.hideoutStage);
   const stage = lifeStageFromHideout(hideoutStage);
@@ -46,10 +46,13 @@ export function ActionBar() {
   // 1) Room cleared → Go Deeper / Claim
   if (dive.roomCleared) {
     return (
-      <Bar>
-        <Btn label={isFinalRoom ? "CLAIM RUN" : "GO DEEPER"} onClick={goDeeper} primary big />
-        <Btn label="Flee" onClick={() => doAction("flee")} tone="destructive" />
-      </Bar>
+      <>
+        <Bar>
+          <Btn label={isFinalRoom ? "CLAIM RUN" : "GO DEEPER"} onClick={goDeeper} primary big />
+          <Btn label="Flee" onClick={() => doAction("flee")} tone="destructive" />
+        </Bar>
+        {footerActions}
+      </>
     );
   }
 
@@ -68,10 +71,13 @@ export function ActionBar() {
     };
     const cfg = map[k];
     return (
-      <Bar>
-        <Btn label={cfg.label} onClick={resolve} primary big tone={cfg.tone} />
-        <Btn label="Flee" onClick={() => doAction("flee")} tone="destructive" />
-      </Bar>
+      <>
+        <Bar>
+          <Btn label={cfg.label} onClick={resolve} primary big tone={cfg.tone} />
+          <Btn label="Flee" onClick={() => doAction("flee")} tone="destructive" />
+        </Bar>
+        {footerActions}
+      </>
     );
   }
 
@@ -102,13 +108,16 @@ export function ActionBar() {
       <Btn label={dive.autoDive ? "Stop Auto" : "Auto"} onClick={toggleAuto} disabled={locked && !dive.autoDive} />
     </Bar>
     {/* Mid-fight snack vendor — buy a sardine with fishbones if the bag is dry. */}
-    <button
-      onClick={() => buySnack()}
-      disabled={!canAffordSnack}
-      className={`chunky-button px-3 py-1.5 text-[11px] font-bold uppercase ${canAffordSnack ? "bg-accent text-black" : "bg-slate-900 opacity-60 cursor-not-allowed"}`}
-    >
-      🐀 Buy Sardine — {snackPrice} 🦴 ({fishbones} avail)
-    </button>
+    <div className="flex items-stretch gap-2">
+      <button
+        onClick={() => buySnack()}
+        disabled={!canAffordSnack}
+        className={`chunky-button min-w-0 flex-1 px-3 py-1.5 text-[11px] font-bold uppercase ${canAffordSnack ? "bg-accent text-black" : "bg-slate-900 opacity-60 cursor-not-allowed"}`}
+      >
+        🐀 Buy Sardine — {snackPrice} 🦴 ({fishbones} avail)
+      </button>
+      {footerActions}
+    </div>
     </>
   );
 }
