@@ -1,137 +1,58 @@
+# Story Mode + Living Hideout
 
-## Dive Screen Overhaul — Alley Cat Dumpster Divers
+Turn the game into a narrative arc: a kitten abandoned in an alley grows into a legendary dumpster diver. Story is told in manga-style chapters between dives. The hideout becomes a real, illustrated room that physically evolves (tin can → cardboard box → crate fort → alley throne room) and lets the player place trophies and stash inside.
 
-Scope: only `/dive` and its supporting components/state. Hub, map, loot, crew, inventory, hideout, shop untouched. Keep neon-grime arcade identity (black panels, toxic green, magenta/yellow accents, Anton + JetBrains Mono).
+## Story Arc (5 chapters)
 
-### New file layout
+1. **Abandoned** — Rainy alley. Kitten finds a tin can. Tutorial dive: one rat.
+2. **First Scraps** — Meets Scrapper. Cardboard box hideout. Choice: share food (Kind path) or hoard (Cunning path).
+3. **The Alley Pact** — Forms the crew. Crate fort hideout. Choice: ally with raccoons or fight them.
+4. **King of the Bins** — Defeats a miniboss. Pallet throne hideout. Choice: mercy or dominance.
+5. **Hero of the Trash** — Boss dive (Luxury Condo). Final hideout: full alley throne room.
 
-```
-src/components/game/dive/
-  DungeonStage.tsx       # scene background + props + cat/enemy sprites
-  RunHeader.tsx          # dumpster name, difficulty, rec power, loot tier, room x/y
-  RoomPath.tsx           # icon-based room path (enemy/loot/hazard/rest/mini-boss/boss)
-  TruckTimer.tsx         # 4-state dramatic timer
-  Combatant.tsx          # cat / enemy panel w/ HP, flash, shake, defeat fx
-  FloatingNumbers.tsx    # damage / heal / crit popups
-  ActionBar.tsx          # context-aware actions
-  CombatLog.tsx          # color-coded scrollable log
-  RunPile.tsx            # bones, caps, item mini-cards w/ rarity
-  RoomClearBanner.tsx    # "ROOM CLEARED" celebration
-  LootToast.tsx          # transient loot-gained pop
-```
+Each chapter = 1 cutscene before + 1-2 dives + 1 cutscene after + 1 choice. Choices affect later flavor text, a stat buff, and which hideout decor unlocks.
 
-`src/routes/dive.tsx` becomes a thin composition of the above + the existing `useGame` store.
+## Cutscene Format
 
-### Store additions (`src/lib/game/store.ts`, `types.ts`)
+Manga-panel cutscene component: 2-4 panels with a background image, a character pose, and a speech bubble (reusing the bubble system we just shipped). Player taps to advance panels. Final panel of "choice" cutscenes shows 2 buttons.
 
-Add per-run structure without breaking existing fields:
+## Hideout Evolution
 
-- `RoomKind = "enemy" | "loot" | "hazard" | "rest" | "miniboss" | "boss"`
-- `DiveState.rooms: { kind: RoomKind; cleared: boolean }[]` — generated at `startDive` from the dumpster (last room = boss, second-to-last chance of miniboss, sprinkle 1 loot + 1 hazard/rest).
-- `DiveState.bonesFound`, `capsFound` — accumulated mid-run; awarded on `collectRewards`.
-- `DiveState.fx` (transient, not persisted across renders): `{ id, kind: "dmg"|"crit"|"heal"|"miss", target: "cat"|"enemy", amount }[]` plus a `shakeKey` and `flashKey` bumped on hits. A `clearFx(id)` action lets popups self-remove after animation.
-- `roomCleared: boolean` — true between enemy KO and "Go Deeper". `goDeeper()` advances to the next room and spawns the next enemy / triggers hazard / opens loot room.
-- Room-kind handling in `doAction`:
-  - enemy/miniboss/boss: current combat path (boss = higher HP, magenta tint, "BOSS" tag).
-  - loot: skip combat; auto-drop 1–2 items, `goDeeper` enabled immediately.
-  - hazard: small HP tick on entry, log entry, `goDeeper` enabled.
-  - rest: +HP on entry, log entry, `goDeeper` enabled.
+Replace the current upgrades grid with a **room view**: an illustrated interior that swaps as the story progresses. Stages: `tin_can` → `cardboard_box` → `crate_fort` → `pallet_throne` → `alley_palace`.
 
-Engine logic stays in the store so it remains easy to port. No backend.
+Inside the room, **placement slots** (3-6 spots depending on stage): floor, wall, shelf, corner. Player drags trophies/stash items from inventory into slots. Each placed item shows as a small icon overlay on the room image with a tooltip.
 
-### Dungeon scene (`DungeonStage`)
+The existing upgrades (gym, pantry, etc.) move to a secondary "Build" tab on the same page so we don't lose them.
 
-Replace the alley-bg feel with an interior:
-- Layered CSS: dark vignette + radial toxic-green light from above (`bg-[radial-gradient(...)]`), subtle scanlines kept from existing `crt-overlay`.
-- Background props as absolutely-positioned emoji/SVG with `floaty`/drift animations: 🍕 boxes, 🦴 bones, 🥫 cans, 🪰 flies (looping translate), slime drips (CSS gradient strips), torn cardboard edges via `clip-path`.
-- Foreground "floor" line with neon green glow under the combatants so the cat/enemy read as standing inside the dumpster.
-- Scene tint shifts by current room kind (boss = magenta wash, hazard = sickly yellow, rest = cool blue-green).
+## Technical Plan
 
-### Combatant presentation
+**New files**
+- `src/lib/game/story.ts` — chapter definitions, panel scripts, choice effects, `STORY_CHAPTERS` array.
+- `src/components/game/story/Cutscene.tsx` — full-screen manga panel player with bubble + advance/choice UI.
+- `src/components/game/hideout/HideoutRoom.tsx` — illustrated room with placement slots.
+- `src/components/game/hideout/PlacedItem.tsx` — draggable item icon.
+- `src/routes/story.tsx` — chapter list / replay screen.
+- 5 hideout-stage images in `src/assets/` (tin_can, cardboard_box, crate_fort, pallet_throne, alley_palace) — generated via imagegen.
+- ~6-8 cutscene background images (alley_rain, dumpster_first, raccoon_standoff, crew_pact, throne_moment, hero_dawn).
 
-- Larger portrait (~96–128px) with chunky black border and pulse-glow on low HP (<30%).
-- Hit flash: bump `flashKey` → component applies a 120ms red/white overlay via key-based remount of a `<div className="animate-flash" />`.
-- Screen shake: `DungeonStage` listens to `shakeKey`, applies `animate-shake` (new keyframes) on the scene wrapper for ~200ms; stronger amplitude on crits/boss hits.
-- Enemy defeat: scale-down + fade + green particle burst (CSS-only, 6 spans with `animate-burst`).
-- HP bars segmented (10 ticks) for readability; numeric `hp/max` underneath.
+**Edits**
+- `src/lib/game/store.ts` — add `story: { chapter, panel, choices: Record<string,string>, completedChapters: string[] }`, `hideoutStage`, `placedItems: Record<slotId, itemId>`. Add `advanceStory()`, `makeChoice(id)`, `placeItem(slot,itemId)`, `unplaceItem(slot)`. Trigger cutscene after each dive completion if chapter milestone met.
+- `src/routes/hideout.tsx` — render `HideoutRoom` on top, existing upgrades grid below in a "Build" tab.
+- `src/routes/index.tsx` — add "Continue Story" CTA showing current chapter.
+- `src/routes/__root.tsx` — mount `<Cutscene/>` overlay when `story.activeCutscene` is set.
+- `src/components/game/AppShell.tsx` — add Story nav link.
 
-### Floating damage numbers
+**Persistence** — extend the existing zustand persist slice to include story + hideout state.
 
-`FloatingNumbers` reads `dive.fx`, renders each as an absolutely-positioned span anchored to the target portrait. Animation: rise + fade over 700ms; crits in larger Anton w/ accent yellow + slight wobble; heals in primary green with `+`; misses in muted.
+## Scope / Order of Implementation
 
-### Room path
+This plan is the scaffold + Chapter 1 fully playable, with chapters 2-5 stubbed with placeholder text/images you can flesh out turn-by-turn. That keeps the first PR reviewable.
 
-Horizontal strip above the stage:
-- One pill per room, ~44px square, chunky-panel styling.
-- Icon per kind: ⚔️ enemy, 💰 loot, ☣️ hazard, 💤 rest, 👹 miniboss, 👑 boss.
-- Cleared rooms: muted + checkmark overlay. Current: pulsing neon-green border + scale 1.1. Future: dimmed with `?` for unknown kinds beyond next (reveal next room's kind, hide kinds 2+ ahead).
-- Connecting line between pills, fills in green as rooms clear.
+1. Store + types + persistence
+2. Cutscene component + 1 generated alley_rain background
+3. Chapter 1 script + trigger on first dive completion
+4. Hideout room view + tin_can image + 3 placement slots
+5. Story route + nav link
+6. Stub chapters 2-5 with titles and "Coming soon" panels
 
-### Run header
-
-Single chunky-panel strip at top: `[Dumpster Name]  •  DIFF ★★★☆☆  •  LOOT: EPIC  •  REC ⚡110  •  ROOM 2/5  •  truck-timer-mini`. Pulls all from selected dumpster + `dive`. Difficulty stars colored by tier.
-
-### Trash truck timer
-
-`TruckTimer` derives state from `dive.timerSec / dive.dumpster.truckTimerSec`:
-- >60% → Safe (muted, "🚛 distant rumble")
-- 30–60% → Inbound (yellow, slow pulse)
-- 10–30% → Nearby (orange, faster pulse, slight tilt)
-- <10% → Pickup imminent (red, hard flicker via existing `flicker` keyframe, occasional shake on scene)
-
-Bar uses gradient that recolors per state. Sub-label changes copy. At <10%, a thin red border flashes around the whole DungeonStage.
-
-### Action bar (context-aware)
-
-`ActionBar` reads `roomCleared`, `enemy`, `roomKind`, `catHp/maxHp`:
-- Combat (enemy alive): Scratch (primary, large), Pounce (secondary, "CRIT chance"), Use Item, Flee. Auto Dive toggle as a smaller chip.
-- Room cleared: hide combat buttons; primary becomes a big pulsing **GO DEEPER ▶** (or **CLAIM RUN 🏆** on last room cleared).
-- Loot room: primary **GRAB LOOT**, secondary skip.
-- Rest room: primary **NAP (+HP)**, secondary skip.
-- Hazard room: primary **PUSH THROUGH**, optional **USE ITEM** if HP <50%.
-- Low HP (<30%): Use Item highlighted with pulse-glow and "HEAL" label hint.
-- All buttons keep `chunky-button` look; pulse glow on the currently-recommended action.
-
-### Combat log
-
-Same data, better styling:
-- Icons per tone (⚔️ player, 💢 enemy, ✨ crit, 💰 loot, 🛡️ status, ⏱️ timer).
-- Latest entry at top with a subtle fade-in highlight (key-based).
-- Max-height scroll preserved.
-
-### Run pile
-
-`RunPile` panel shows:
-- 🦴 fishbones running total, 🧴 caps running total (large numbers, Anton).
-- Items grid (up to 8 mini-cards, rarity border + glow from existing `rarityClass`/`rarityGlow`, name + rarity tag, +N badge if overflow).
-- Empty state copy: "Nothing yet. Smack something."
-
-### Loot toast + room-clear banner
-
-- `LootToast`: fixed bottom-right, slides in on new item, auto-dismisses 2.2s, rarity-colored glow.
-- `RoomClearBanner`: full-width chunky overlay across the stage when `roomCleared`, big "ROOM CLEARED" in Anton, small line "Bones +X · Caps +Y · Item: <name>". Dismisses on Go Deeper.
-
-### Animations / tokens (`src/styles.css`)
-
-Add (kept minimal, all token-driven):
-- `@keyframes shake` (translate jitter), `animate-shake`.
-- `@keyframes flash` (white→transparent), `animate-flash`.
-- `@keyframes burst` (scale + opacity for defeat particles).
-- `@keyframes rise-fade` for floating numbers.
-- `@keyframes banner-slam` for room-clear banner.
-- New utility tokens for truck states: `--color-truck-safe/inbound/nearby/imminent` (re-using existing palette).
-
-No changes to color identity or font stack.
-
-### Out of scope
-
-- Hub / map / loot / crew / inventory / hideout / shop screens.
-- Real audio (sound effects mentioned in original spec stay deferred).
-- Persistence / backend.
-- Balancing pass beyond what the new room kinds require.
-
-### Verification
-
-- Manual click-through: start dive from `/map` → confirm rooms render with mixed kinds, combat triggers fx, room-clear banner appears, Go Deeper advances, last room awards full loot, flee/KO still routes to `/loot`.
-- Truck timer reaches each of the 4 states across a fast forward (temporarily lower `truckTimerSec` if needed, then revert).
-- No console errors; build passes.
+After you approve, I'll ask which art style you want for the cutscene backgrounds (gritty noir manga vs colorful shonen vs watercolor) before generating images.
