@@ -573,13 +573,18 @@ export const useGame = create<GameState>((set, get) => ({
     const nextKind = d.rooms[nextIdx].kind;
     const rooms = d.rooms.map((r, i) => i === nextIdx ? { ...r, revealed: true }
       : i === nextIdx + 1 ? { ...r, revealed: true } : r);
-    const enemy = (nextKind === "enemy" || nextKind === "miniboss" || nextKind === "boss")
-      ? spawnEnemy(dump, nextKind, nextIdx) : null;
+    const wave = (nextKind === "enemy" || nextKind === "swarm" || nextKind === "elite" || nextKind === "miniboss" || nextKind === "boss")
+      ? spawnEnemies(dump, nextKind, nextIdx) : [];
+    const enemy = wave[0] ?? null;
+    const rest = wave.slice(1);
     const log2 = [...d.log,
       mklog(`Crawl deeper… Room ${nextRoom}/${d.totalRooms} — ${roomLabel(nextKind)}`, "info"),
-      enemy ? mklog(`A ${enemy.name} appears!`, "warn") : mklog(roomDescriptor(nextKind), "info"),
+      enemy ? mklog(wave.length > 1
+              ? `${wave.length} foes appear — ${enemy.name} steps up first!`
+              : `A ${enemy.name} appears!`, "warn")
+            : mklog(roomDescriptor(nextKind), "info"),
     ];
-    set({ dive: { ...d, room: nextRoom, rooms, currentKind: nextKind, enemy,
+    set({ dive: { ...d, room: nextRoom, rooms, currentKind: nextKind, enemy, enemies: rest,
       roomCleared: false, roomEvent: null, log: log2,
       catPose: "idle", enemyPose: enemy ? "idle" : "ko", mangaFx: null, mangaWord: null, mangaFocus: null, bubble: null } });
   },
