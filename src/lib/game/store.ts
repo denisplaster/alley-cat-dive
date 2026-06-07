@@ -237,7 +237,8 @@ export const useGame = create<GameState>((set, get) => ({
     if (d.roomCleared || !d.enemy) return;
 
     let { catHp, enemy, collected, log: clog, bonesFound, capsFound, fx,
-      shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey } = d;
+      shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey,
+      combo, comboLastAction, panelSplitKey, knockbackKey, catKnockbackKey } = d;
     enemy = { ...enemy! };
 
     if (action === "item") {
@@ -245,16 +246,31 @@ export const useGame = create<GameState>((set, get) => ({
       catHp = Math.min(d.catMaxHp, catHp + heal);
       clog = [...clog, mklog("Munched a sardine. +30 HP", "loot")];
       fx = [...fx, { id: nextFxId(), target: "cat", kind: "heal", amount: heal }];
+      // item breaks combo
+      combo = 0;
+      comboLastAction = null;
     } else {
       const isCrit = Math.random() < (action === "pounce" ? 0.28 : 0.14);
+      // Momentum: alternating actions and reaching combo 3+ ramps damage
+      const isFinisher = combo >= 2 && comboLastAction !== null && comboLastAction !== action;
+      const comboMult = 1 + Math.min(combo, 4) * 0.12 + (isFinisher ? 0.5 : 0);
       const base = action === "pounce" ? cat.attack * 1.6 : cat.attack;
-      const dmg = Math.round(base * (isCrit ? 2 : 1) * (0.85 + Math.random() * 0.3));
+      const dmg = Math.round(base * (isCrit ? 2 : 1) * comboMult * (0.85 + Math.random() * 0.3));
       enemy.hp = Math.max(0, enemy.hp - dmg);
-      clog = [...clog, mklog(`${cat.name} ${action === "pounce" ? "pounces" : "scratches"} for ${dmg}${isCrit ? " (CRIT!)" : ""}`, isCrit ? "crit" : "hit")];
+      const verb = action === "pounce" ? "pounces" : "scratches";
+      const suffix = isFinisher ? " — COMBO FINISHER!" : isCrit ? " (CRIT!)" : "";
+      clog = [...clog, mklog(`${cat.name} ${verb} for ${dmg}${suffix}`, isFinisher || isCrit ? "crit" : "hit")];
       fx = [...fx, { id: nextFxId(), target: "enemy", kind: isCrit ? "crit" : "dmg", amount: dmg }];
       enemyFlashKey += 1;
       shakeKey += 1;
-      shakeHard = isCrit || action === "pounce";
+      shakeHard = isCrit || action === "pounce" || isFinisher;
+      // momentum bookkeeping
+      combo = combo + 1;
+      comboLastAction = action;
+      // big hits knock the enemy back
+      if (isCrit || isFinisher || action === "pounce") knockbackKey += 1;
+      // combo finisher triggers split-screen panel
+      if (isFinisher) { panelSplitKey += 1; }
     }
 
     // enemy counter-attack
@@ -270,10 +286,16 @@ export const useGame = create<GameState>((set, get) => ({
       mangaFx = "heal";
       mangaFocus = "cat";
     } else {
-      catPose = action === "pounce" ? "pounce" : "scratch";
+      const isFinisher = combo >= 3 && (comboLastAction !== d.comboLastAction);
+      catPose = isFinisher ? "combo" : action === "pounce" ? "pounce" : "scratch";
       enemyPose = enemy.hp <= 0 ? "ko" : "hurt";
-      mangaFx = enemy.hp <= 0 && action === "pounce" ? "crit" : action === "scratch" ? "slash" : "impact";
-      mangaWord = enemy.hp <= 0 ? "crit" : action === "scratch" ? "slash" : action === "pounce" ? "pow" : "bam";
+      mangaFx = isFinisher ? "combo"
+        : enemy.hp <= 0 && action === "pounce" ? "crit"
+        : action === "scratch" ? "slash" : "impact";
+      mangaWord = isFinisher ? "combo"
+        : enemy.hp <= 0 ? "crit"
+        : action === "scratch" ? "slash"
+        : action === "pounce" ? "pow" : "bam";
       mangaFocus = "enemy";
     }
 
@@ -284,18 +306,23 @@ export const useGame = create<GameState>((set, get) => ({
       clog = [...clog, mklog(`${enemy.name} hits back for ${incoming}`, "warn")];
       fx = [...fx, { id: nextFxId(), target: "cat", kind: "dmg", amount: incoming }];
       catFlashKey += 1;
-      catPose = blocked ? "block" : "hurt";
+      // big incoming hits send the cat flying & break combo
+      const heavy = incoming >= 14;
+      catPose = blocked ? "block" : heavy ? "knockback" : "hurt";
       enemyPose = "attack";
       mangaFx = blocked ? "block" : "impact";
       mangaWord = blocked ? null : incoming >= 12 ? "bam" : "pow";
       mangaFocus = "cat";
+      if (heavy) { catKnockbackKey += 1; combo = 0; comboLastAction = null; }
+      if (!blocked && !heavy && combo > 2) combo = Math.max(0, combo - 1);
     }
 
     if (catHp <= 0) {
       clog = [...clog, mklog(`💀 ${cat.name} went down! Dragging them out…`, "warn")];
       set({ dive: { ...d, catHp: 0, enemy, log: clog, ended: true, fled: true,
         fx, catFlashKey, enemyFlashKey, shakeKey, shakeHard,
-        catPose: "ko", enemyPose: enemy.hp <= 0 ? "ko" : "attack", mangaFx, mangaWord, mangaFocus } });
+        catPose: "ko", enemyPose: enemy.hp <= 0 ? "ko" : "attack", mangaFx, mangaWord, mangaFocus,
+        combo: 0, comboLastAction: null, knockbackKey, catKnockbackKey, panelSplitKey } });
       get().endDive(false);
       return;
     }
@@ -320,13 +347,15 @@ export const useGame = create<GameState>((set, get) => ({
         roomCleared: true, autoDive: false,
         roomEvent: `+${bonesGain} 🦴  +${capsGain} 🧴  ·  ${dropCount} item${dropCount>1?"s":""}`,
         shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey,
-        catPose: "victory", enemyPose: "ko", mangaFx, mangaWord, mangaFocus } });
+        catPose: "victory", enemyPose: "ko", mangaFx, mangaWord, mangaFocus,
+        combo: 0, comboLastAction: null, knockbackKey, catKnockbackKey, panelSplitKey } });
       return;
     }
 
     set({ dive: { ...d, catHp, enemy, collected, log: clog, fx, bonesFound, capsFound,
       shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey,
-      catPose, enemyPose, mangaFx, mangaWord, mangaFocus } });
+      catPose, enemyPose, mangaFx, mangaWord, mangaFocus,
+      combo, comboLastAction, knockbackKey, catKnockbackKey, panelSplitKey } });
 
     setTimeout(() => {
       const current = get().dive;
