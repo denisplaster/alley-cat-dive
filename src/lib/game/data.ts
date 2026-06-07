@@ -74,7 +74,7 @@ export const ENEMIES: Record<string, Omit<Enemy, "id" | "hp" | "maxHp"> & { base
 
 export const DUMPSTERS: Dumpster[] = [
   { id: "greasy", name: "Greasy Spoon Dumpster", image: dGreasy, difficulty: 1,
-    expectedLoot: "uncommon", enemyPool: ["litter_mouse","garbage_beetle","dust_bunny"], rooms: 3,
+    expectedLoot: "uncommon", enemyPool: ["litter_mouse","garbage_beetle","dust_bunny","rat_swarm","pigeon_thief"], rooms: 3,
     truckTimerSec: 180, recommendedPower: 30, status: "unlocked", rewardCaps: 8, rewardBones: 60 },
   { id: "apartment", name: "Apartment Alley Bin", image: dApartment, difficulty: 2,
     expectedLoot: "rare", enemyPool: ["garbage_beetle","rat_swarm","pigeon_thief"], rooms: 4,

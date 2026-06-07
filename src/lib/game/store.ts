@@ -132,7 +132,11 @@ const generateRooms = (totalRooms: number): Room[] => {
 };
 
 const spawnEnemy = (dump: Dumpster, kind: RoomKind, roomIdx: number): Enemy => {
-  const enemyKey = dump.enemyPool[roomIdx % dump.enemyPool.length];
+  // Pick a random enemy from the pool so repeat dives don't always face the
+  // same lineup. Boss room uses the last entry as the "signature" boss.
+  const enemyKey = kind === "boss"
+    ? dump.enemyPool[dump.enemyPool.length - 1]
+    : dump.enemyPool[Math.floor(Math.random() * dump.enemyPool.length)];
   const tmpl = ENEMIES[enemyKey];
   let hp = tmpl.baseHp + dump.difficulty * 10 + roomIdx * 4;
   let atk = tmpl.attack;
