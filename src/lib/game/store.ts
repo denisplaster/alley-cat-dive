@@ -446,6 +446,18 @@ export const useGame = create<GameState>((set, get) => ({
 
     // Enemy dead from the cat's hit — show victory panel, no counter to schedule.
     if (enemy.hp <= 0) {
+      // If this room has more foes in the wave, promote the next one and keep fighting.
+      if (d.enemies.length > 0) {
+        const [nextFoe, ...remaining] = d.enemies;
+        const nextLog = [...clog, mklog(`${enemy.name} drops! ${nextFoe.name} steps up.`, "warn")];
+        set({ dive: { ...d, enemy: nextFoe, enemies: remaining, catHp, collected, log: nextLog,
+          bonesFound, capsFound, fx, shakeKey, shakeHard, enemyFlashKey, catFlashKey,
+          enemyDefeatKey: enemyDefeatKey + 1, lastLootKey,
+          catPose: "idle", enemyPose: "idle", mangaFx: null, mangaWord: null, mangaFocus: null,
+          combo: 0, comboLastAction: null, knockbackKey, catKnockbackKey, panelSplitKey,
+          bubble: null, inAction: false } });
+        return;
+      }
       const isBoss = d.currentKind === "boss";
       const isMini = d.currentKind === "miniboss";
       const dropCount = isBoss ? 3 : isMini ? 2 : 1;
