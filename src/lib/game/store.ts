@@ -247,6 +247,12 @@ export const useGame = create<GameState>((set, get) => ({
 
   startDive: () => {
     const s = get();
+    // If an intro cutscene is still open (e.g. user clicked the home page
+    // "Start Dive" button while the overlay was up), close it so we don't
+    // re-show it on top of the dive.
+    if (s.activeCutscene?.phase === "intro") {
+      set({ activeCutscene: null });
+    }
     // While the player still has an unfinished story chapter, force the dive
     // into that chapter's themed dumpster so every chapter shows different
     // art and a different enemy pool. Free-roam picks (post-campaign or via
