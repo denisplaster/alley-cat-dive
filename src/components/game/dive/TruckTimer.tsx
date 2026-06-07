@@ -8,12 +8,12 @@ export function TruckTimer({ sec, total }: { sec: number; total: number }) {
   const mm = Math.floor(sec / 60);
   const ss = (sec % 60).toString().padStart(2, "0");
   return (
-    <div className={`chunky-panel bg-black/90 px-3 py-1.5 ${pct <= 10 ? "animate-danger-border" : ""}`}>
-      <div className={`mb-1 flex items-center justify-between text-[9px] font-bold uppercase ${state.pulse}`}>
+    <div className={`chunky-panel h-full bg-black/90 px-3 py-1 ${pct <= 10 ? "animate-danger-border" : ""}`}>
+      <div className={`mb-0.5 flex items-center justify-between text-[9px] font-bold uppercase ${state.pulse}`}>
         <span className={state.text}>{state.label}</span>
         <span className={`font-display text-sm leading-none ${state.text}`}>{mm}:{ss}</span>
       </div>
-      <div className="h-2 border-2 border-black bg-slate-900">
+      <div className="h-1.5 border-2 border-black bg-slate-900">
         <div className={`h-full ${state.color} transition-all duration-500`} style={{ width: `${pct}%` }} />
       </div>
     </div>

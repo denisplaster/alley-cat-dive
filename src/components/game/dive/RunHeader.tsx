@@ -11,9 +11,9 @@ const LOOT_TIER: Record<Rarity, string> = {
 
 export function RunHeader({ dump, room, totalRooms }: { dump: Dumpster; room: number; totalRooms: number }) {
   return (
-    <div className="chunky-panel bg-black/90 px-3 py-1.5">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <div className="font-display text-base md:text-lg uppercase leading-none text-primary">
+    <div className="chunky-panel h-full bg-black/90 px-3 py-1">
+      <div className="flex h-full flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="font-display text-sm md:text-base uppercase leading-none text-primary">
           {dump.name}
         </div>
         <Pill label="Diff" hideOnMobile>
