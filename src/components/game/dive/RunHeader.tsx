@@ -11,20 +11,20 @@ const LOOT_TIER: Record<Rarity, string> = {
 
 export function RunHeader({ dump, room, totalRooms }: { dump: Dumpster; room: number; totalRooms: number }) {
   return (
-    <div className="chunky-panel bg-black/90 px-4 py-3">
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <div className="font-display text-xl md:text-2xl uppercase leading-none text-primary">
+    <div className="chunky-panel bg-black/90 px-3 py-1.5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="font-display text-base md:text-lg uppercase leading-none text-primary">
           {dump.name}
         </div>
-        <Pill label="Difficulty">
+        <Pill label="Diff" hideOnMobile>
           <span className="text-accent">
             {"★".repeat(dump.difficulty)}<span className="text-muted-foreground/40">{"★".repeat(6 - dump.difficulty)}</span>
           </span>
         </Pill>
-        <Pill label="Loot">
+        <Pill label="Loot" hideOnMobile>
           <span className={`font-display uppercase ${LOOT_TIER[dump.expectedLoot]}`}>{dump.expectedLoot}</span>
         </Pill>
-        <Pill label="Rec. Power">
+        <Pill label="Pwr" hideOnMobile>
           <span className="font-display text-foreground">{dump.recommendedPower}</span>
         </Pill>
         <Pill label="Room">
@@ -35,11 +35,11 @@ export function RunHeader({ dump, room, totalRooms }: { dump: Dumpster; room: nu
   );
 }
 
-function Pill({ label, children }: { label: string; children: React.ReactNode }) {
+function Pill({ label, children, hideOnMobile }: { label: string; children: React.ReactNode; hideOnMobile?: boolean }) {
   return (
-    <div className="flex items-baseline gap-1.5">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</span>
-      <span className="text-sm font-bold">{children}</span>
+    <div className={`flex items-baseline gap-1 ${hideOnMobile ? "hidden md:flex" : ""}`}>
+      <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{label}</span>
+      <span className="text-xs font-bold">{children}</span>
     </div>
   );
 }
