@@ -68,7 +68,7 @@ function DiveScreen() {
       {/* Actions */}
       <ActionBar />
 
-      {/* Drawer toggles — open log or pile on demand instead of pinning them */}
+      {/* Drawer toggles — kept inline above the action bar so the fixed bottom nav can't hide them */}
       <div className="grid grid-cols-2 gap-2">
         <button
           onClick={() => setDrawer(d => d === "log" ? null : "log")}
@@ -84,8 +84,27 @@ function DiveScreen() {
         </button>
       </div>
 
-      {drawer === "log" && <CombatLog />}
-      {drawer === "pile" && <RunPile />}
+      {/* Drawer content opens as an overlay above the fixed bottom nav so it isn't hidden behind it */}
+      {drawer && (
+        <div className="fixed inset-x-0 bottom-[5.5rem] z-50 px-3 md:px-6 md:bottom-[6.5rem]">
+          <div className="mx-auto w-full max-w-7xl">
+            <div className="chunky-panel max-h-[55dvh] overflow-y-auto bg-slate-950/95 p-2 backdrop-blur">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  {drawer === "log" ? "Combat Log" : "Run Pile"}
+                </div>
+                <button
+                  onClick={() => setDrawer(null)}
+                  className="chunky-button bg-slate-900 px-2 py-1 text-[10px] font-bold uppercase"
+                >
+                  Close ✕
+                </button>
+              </div>
+              {drawer === "log" ? <CombatLog /> : <RunPile />}
+            </div>
+          </div>
+        </div>
+      )}
 
       <LootToast />
     </div>
