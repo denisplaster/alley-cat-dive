@@ -54,10 +54,10 @@ function DiveScreen() {
   const dump = dumpsters.find(d => d.id === dive.dumpsterId)!;
 
   return (
-    <div className="mt-1 flex h-[calc(100dvh-8rem)] min-h-0 flex-col gap-1.5 md:h-[calc(100dvh-5.75rem)]">
+    <div className="mt-1 flex h-[calc(100dvh-8rem)] min-h-0 flex-col gap-1 md:h-[calc(100dvh-5.25rem)]">
       {/* Ultra-compact top strip */}
-      <RunHeader dump={dump} room={dive.room} totalRooms={dive.totalRooms} />
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-1.5">
+      <div className="grid grid-cols-1 gap-1 md:grid-cols-[auto_1fr_auto]">
+        <RunHeader dump={dump} room={dive.room} totalRooms={dive.totalRooms} />
         <TruckTimer sec={dive.timerSec} total={dive.truckTimerStart} />
         <RoomPath rooms={dive.rooms} current={dive.room} />
       </div>
