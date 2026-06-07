@@ -174,9 +174,15 @@ const spawnEnemy = (dump: Dumpster, kind: RoomKind, roomIdx: number): Enemy => {
     name = "Mini-Boss " + name;
   }
   if (kind === "boss") {
-    hp = Math.round(hp * (1.45 + dump.difficulty * 0.18));
-    atk = Math.round(atk * (1.15 + dump.difficulty * 0.06));
-    name = "BOSS — " + name;
+    const isFinal = roomIdx >= dump.rooms - 1;
+    // Earlier boss encounters in the chapter are scaled down so the climactic
+    // final fight is still the toughest. The boss keeps showing up — first to
+    // test the cat, then to finish them off.
+    const hpMult = isFinal ? 1.45 + dump.difficulty * 0.18 : 1.05 + dump.difficulty * 0.08;
+    const atkMult = isFinal ? 1.15 + dump.difficulty * 0.06 : 1.0 + dump.difficulty * 0.03;
+    hp = Math.round(hp * hpMult);
+    atk = Math.round(atk * atkMult);
+    name = (isFinal ? "FINAL BOSS — " : "BOSS — ") + name;
     emoji = "👑";
   }
   return { id: enemyKey, name, hp, maxHp: hp, attack: atk, emoji };
