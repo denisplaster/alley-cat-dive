@@ -68,25 +68,25 @@ function DiveScreen() {
       {/* Actions */}
       <ActionBar />
 
-      {/* Drawer toggles — kept inline above the action bar so the fixed bottom nav can't hide them */}
-      <div className="grid grid-cols-2 gap-2">
+      {/* Drawer toggles — floating above the fixed bottom nav so they're never hidden */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-[5rem] z-50 flex justify-center gap-2 px-3 md:bottom-[6rem]">
         <button
           onClick={() => setDrawer(d => d === "log" ? null : "log")}
-          className={`chunky-button px-3 py-2 text-xs font-bold uppercase ${drawer === "log" ? "bg-primary text-primary-foreground" : "bg-slate-900"}`}
+          className={`pointer-events-auto chunky-button px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${drawer === "log" ? "bg-primary text-primary-foreground" : "bg-slate-900/95 backdrop-blur"}`}
         >
-          📜 Combat Log
+          📜 Log
         </button>
         <button
           onClick={() => setDrawer(d => d === "pile" ? null : "pile")}
-          className={`chunky-button px-3 py-2 text-xs font-bold uppercase ${drawer === "pile" ? "bg-secondary text-black" : "bg-slate-900"}`}
+          className={`pointer-events-auto chunky-button px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${drawer === "pile" ? "bg-secondary text-black" : "bg-slate-900/95 backdrop-blur"}`}
         >
           🎒 Pile ({dive.collected.length})
         </button>
       </div>
 
-      {/* Drawer content opens as an overlay above the fixed bottom nav so it isn't hidden behind it */}
+      {/* Drawer content opens as an overlay above the toggles + fixed bottom nav so nothing is hidden behind it */}
       {drawer && (
-        <div className="fixed inset-x-0 bottom-[5.5rem] z-50 px-3 md:px-6 md:bottom-[6.5rem]">
+        <div className="fixed inset-x-0 bottom-[8rem] z-50 px-3 md:bottom-[9rem] md:px-6">
           <div className="mx-auto w-full max-w-7xl">
             <div className="chunky-panel max-h-[55dvh] overflow-y-auto bg-slate-950/95 p-2 backdrop-blur">
               <div className="mb-2 flex items-center justify-between">
