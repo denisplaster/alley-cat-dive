@@ -79,7 +79,7 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
   useEffect(() => { setShakeId(k => k + 1); }, [dive.shakeKey]);
 
   return (
-    <div className={`relative overflow-hidden chunky-panel bg-gradient-to-b ${tint} ${danger ? "animate-danger-border" : ""}`}>
+    <div className={`relative overflow-hidden chunky-panel bg-gradient-to-b ${tint} ${danger ? "animate-danger-border" : ""} flex flex-1 min-h-0 flex-col`}>
       {/* Backdrop layers */}
       <div className="absolute inset-0 pointer-events-none">
         <img src={dumpImage} alt="Dumpster dungeon arena" className="absolute inset-0 size-full object-cover opacity-55" />
@@ -139,8 +139,8 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
       </div>
 
       {/* Stage with shake */}
-      <div key={shakeId} className={dive.shakeKey > 0 ? (dive.shakeHard ? "animate-shake-hard" : "animate-shake") : ""}>
-        <div className="relative grid grid-cols-2 gap-3 p-3 md:p-6 min-h-[360px] md:min-h-[500px]">
+      <div key={shakeId} className={`relative z-10 flex-1 min-h-0 ${dive.shakeKey > 0 ? (dive.shakeHard ? "animate-shake-hard" : "animate-shake") : ""}`}>
+        <div className="relative grid h-full grid-cols-2 gap-3 p-3 md:p-6 min-h-[320px]">
           <CombatantSprite
             name={cat.name}
             sub={cat.catClass}
