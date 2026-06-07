@@ -280,7 +280,7 @@ function CombatantSprite({
           ))}
           {/* hit flash */}
           {flashId > 0 && (
-            <div key={flashId} className="pointer-events-none absolute inset-0 bg-white animate-flash-hit" />
+            <div key={flashId} className="pointer-events-none absolute inset-0 bg-destructive/40 animate-flash-hit" />
           )}
         </div>
         {/* platform + shadow */}
@@ -328,8 +328,8 @@ function PanelSplitOverlay({ k }: { k: number }) {
   useEffect(() => { if (k > 0) setId(n => n + 1); }, [k]);
   if (id === 0) return null;
   return (
-    <div key={id} className="pointer-events-none absolute inset-0 z-30 overflow-hidden">
-      <div className="absolute inset-0 bg-white manga-panel-flash" />
+      <div key={id} className="pointer-events-none absolute inset-0 z-30 overflow-hidden">
+      <div className="absolute inset-0 bg-black/60 manga-panel-flash" />
       <img
         src={panelSplit}
         alt=""
