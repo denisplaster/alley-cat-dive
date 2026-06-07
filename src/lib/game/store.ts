@@ -558,6 +558,9 @@ export const useGame = create<GameState>((set, get) => ({
         ? { ...c, status: "injured" as const, recoverySecondsLeft: 300, hp: Math.max(1, Math.round(c.maxHp * 0.3)) }
         : { ...c, hp: c.maxHp, xp: c.xp + 12 };
     });
+    // If the current story chapter hasn't been completed, queue its outro.
+    const chapter = STORY_CHAPTERS[s.storyChapterIdx];
+    const shouldPlayOutro = !wasFled && chapter && !s.completedChapters.includes(chapter.id);
     set({
       inventory: newInv,
       fishbones: s.fishbones + s.lastRewards.bones,
@@ -565,6 +568,9 @@ export const useGame = create<GameState>((set, get) => ({
       cats: updatedCats,
       dive: null,
       lastRewards: null,
+      activeCutscene: shouldPlayOutro
+        ? { chapterId: chapter.id, phase: "outro", panel: 0 }
+        : s.activeCutscene,
     });
   },
 
