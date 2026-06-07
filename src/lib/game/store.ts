@@ -134,14 +134,19 @@ const ENEMY_LINES = {
 };
 const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
 
-const generateRooms = (totalRooms: number): Room[] => {
+const generateRooms = (totalRooms: number, bossRunsAway = false): Room[] => {
   const arr: RoomKind[] = Array.from({ length: totalRooms }, () => "enemy" as RoomKind);
+  // The chapter boss always closes out the dive.
   arr[totalRooms - 1] = "boss";
   if (totalRooms >= 3) arr[1] = Math.random() < 0.5 ? "loot" : "rest";
   if (totalRooms >= 4) arr[2] = "swarm";
-  if (totalRooms >= 5) arr[Math.floor(totalRooms / 2)] = "elite";
+  // Mid-dive: in a normal chapter the boss shows up to test the cat. In a
+  // "runs away" chapter they only taunt — leave an elite goon instead.
+  if (totalRooms >= 5) arr[Math.floor(totalRooms / 2)] = bossRunsAway ? "elite" : "boss";
   if (totalRooms >= 6) arr[Math.max(3, totalRooms - 3)] = Math.random() < 0.5 ? "hazard" : "loot";
-  if (totalRooms >= 7) arr[totalRooms - 2] = "miniboss";
+  // Penultimate room: another boss encounter, OR a mini-boss lieutenant if
+  // the real boss is staying off-screen until the climax.
+  if (totalRooms >= 7) arr[totalRooms - 2] = bossRunsAway ? "miniboss" : "boss";
   return arr.map((k, i) => ({ kind: k, cleared: false, revealed: i === 0 }));
 };
 
@@ -259,7 +264,7 @@ export const useGame = create<GameState>((set, get) => ({
     if (chapterDumpsterId) {
       set({ dumpsters, selectedDumpsterId: chapterDumpsterId });
     }
-    const rooms = generateRooms(dump.rooms);
+    const rooms = generateRooms(dump.rooms, dump.bossRunsAway);
     const firstKind = rooms[0].kind;
     const wave = (firstKind === "enemy" || firstKind === "swarm" || firstKind === "elite" || firstKind === "miniboss" || firstKind === "boss")
       ? spawnEnemies(dump, firstKind, 0) : [];
