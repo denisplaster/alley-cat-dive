@@ -236,26 +236,30 @@ function MangaOverlay({ fxSrc, wordSrc, focus }: { fxSrc: string | null; wordSrc
 }
 
 function CombatantSprite({
-  name, sub, portrait, hp, maxHp, side, flashKey, defeatKey = 0, fx, tone,
+  name, sub, portrait, hp, maxHp, side, flashKey, knockbackKey = 0, defeatKey = 0, fx, tone, combo = 0,
 }: {
   name: string; sub: string; portrait?: string;
   hp: number; maxHp: number; side: "left" | "right";
-  flashKey: number; defeatKey?: number; fx: Fx[];
+  flashKey: number; knockbackKey?: number; defeatKey?: number; fx: Fx[];
   tone: "primary" | "destructive" | "boss";
+  combo?: number;
 }) {
   const [flashId, setFlashId] = useState(0);
   useEffect(() => { if (flashKey > 0) setFlashId(k => k + 1); }, [flashKey]);
+  const [kbId, setKbId] = useState(0);
+  useEffect(() => { if (knockbackKey > 0) setKbId(k => k + 1); }, [knockbackKey]);
   const pct = (hp / maxHp) * 100;
   const low = pct > 0 && pct < 30;
   const dead = hp <= 0;
   const barColor = tone === "primary" ? "bg-primary" : tone === "boss" ? "bg-secondary" : "bg-destructive";
   const align = side === "left" ? "items-start" : "items-end";
   const portraitSize = "w-40 h-40 md:w-52 md:h-52";
+  const kbClass = kbId > 0 ? (side === "left" ? "animate-knockback-left" : "animate-knockback-right") : "";
 
   return (
     <div className={`relative flex flex-col ${align} justify-end gap-2`}>
       {/* Floating numbers anchor */}
-      <div className="relative">
+      <div key={kbId} className={`relative ${kbClass}`}>
         <FloatingNumbers fx={fx} />
         {dead && defeatKey > 0 && <DefeatBurst k={defeatKey} />}
         <div className={`relative ${portraitSize} ${low ? "animate-pulse-glow" : "animate-floaty"} ${dead ? "opacity-30 grayscale !animate-none" : ""}`}>
@@ -286,7 +290,39 @@ function CombatantSprite({
           })}
         </div>
         <div className="mt-0.5 font-mono text-[10px] font-bold">{hp}/{maxHp}</div>
+        {combo > 0 && (
+          <div className="mt-1">
+            <div className="flex items-center justify-between text-[9px] uppercase tracking-widest">
+              <span className="text-accent font-display">Combo x{combo}</span>
+              {combo >= 3 && <span className="text-toxic font-display animate-pulse">FINISHER READY</span>}
+            </div>
+            <div className="mt-0.5 h-1.5 bg-slate-900 border border-black overflow-hidden">
+              <div
+                key={combo}
+                className="h-full bg-gradient-to-r from-accent via-toxic to-accent animate-combo-meter"
+                style={{ width: `${Math.min(100, combo * 25)}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+function PanelSplitOverlay({ k }: { k: number }) {
+  const [id, setId] = useState(0);
+  useEffect(() => { if (k > 0) setId(n => n + 1); }, [k]);
+  if (id === 0) return null;
+  return (
+    <div key={id} className="pointer-events-none absolute inset-0 z-30 overflow-hidden">
+      <div className="absolute inset-0 bg-white manga-panel-flash" />
+      <img
+        src={panelSplit}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 size-full object-cover manga-panel-split"
+      />
     </div>
   );
 }
