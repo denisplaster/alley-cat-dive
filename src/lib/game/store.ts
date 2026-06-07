@@ -289,10 +289,20 @@ export const useGame = create<GameState>((set, get) => ({
     enemy = { ...enemy! };
 
     if (action === "item") {
-      const heal = 30;
+      // Healing now consumes a food item from inventory.
+      const foodIdx = s.inventory.findIndex(i => i.kind === "food");
+      if (foodIdx === -1) {
+        const warnLog = [...clog, mklog("No snacks left in your bag!", "warn")];
+        set({ dive: { ...d, log: warnLog } });
+        return;
+      }
+      const food = s.inventory[foodIdx];
+      const heal = Math.max(10, food.health ?? 20);
       catHp = Math.min(d.catMaxHp, catHp + heal);
-      clog = [...clog, mklog("Munched a sardine. +30 HP", "loot")];
+      clog = [...clog, mklog(`Munched ${food.name}. +${heal} HP`, "loot")];
       fx = [...fx, { id: nextFxId(), target: "cat", kind: "heal", amount: heal }];
+      const newInv = [...s.inventory.slice(0, foodIdx), ...s.inventory.slice(foodIdx + 1)];
+      set({ inventory: newInv });
       // item breaks combo
       combo = 0;
       comboLastAction = null;
