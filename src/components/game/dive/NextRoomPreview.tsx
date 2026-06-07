@@ -3,6 +3,8 @@ import type { RoomKind } from "@/lib/game/types";
 
 const META: Record<RoomKind, { icon: string; label: string; risk: string; reward: string; tone: string }> = {
   enemy:    { icon: "⚔️", label: "Enemy Encounter", risk: "Low",    reward: "Loot drop",        tone: "text-primary" },
+  swarm:    { icon: "🐀", label: "Enemy Swarm",     risk: "Medium", reward: "More loot",         tone: "text-destructive" },
+  elite:    { icon: "💢", label: "Elite Threat",    risk: "High",   reward: "Better loot",       tone: "text-secondary" },
   loot:     { icon: "💰", label: "Loot Pile",       risk: "None",   reward: "Free items + 🦴",  tone: "text-accent" },
   hazard:   { icon: "☣️", label: "Toxic Hazard",    risk: "Medium", reward: "Path forward",     tone: "text-destructive" },
   rest:     { icon: "💤", label: "Safe Nest",       risk: "None",   reward: "Restore HP",       tone: "text-secondary" },

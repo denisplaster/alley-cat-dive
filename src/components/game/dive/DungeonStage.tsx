@@ -46,6 +46,8 @@ import { lifeStageFromHideout, KITTEN_POSES, JUVENILE_POSES, ENEMY_SPRITE_OVERRI
 
 const KIND_TINT: Record<RoomKind, string> = {
   enemy: "from-emerald-950/60 via-black to-black",
+  swarm: "from-red-950/60 via-black to-black",
+  elite: "from-orange-950/60 via-black to-black",
   loot: "from-yellow-900/60 via-black to-black",
   hazard: "from-lime-950/70 via-black to-black",
   rest: "from-cyan-950/60 via-black to-black",
@@ -425,10 +427,12 @@ function DefeatBurst({ k }: { k: number }) {
 }
 
 function NonCombatPanel({ kind, cleared }: { kind: RoomKind; cleared: boolean }) {
-  const meta = {
+  const meta: Record<RoomKind, { icon: string; title: string; desc: string }> = {
     loot: { icon: roomLoot, title: "LOOT PILE", desc: "A shimmering mound of trash treasure." },
     hazard: { icon: roomHazard, title: "HAZARD", desc: "Glowing goo bubbling from a busted jar." },
     rest: { icon: roomRest, title: "SAFE NEST", desc: "Warm laundry. The cat can catch a breath." },
+    swarm: { icon: "🐀", title: "SWARM", desc: "A whole pack is skittering ahead." },
+    elite: { icon: "💢", title: "ELITE", desc: "Something meaner than usual is waiting." },
     enemy: { icon: "⚔️", title: "EMPTY", desc: "" },
     miniboss: { icon: "👹", title: "EMPTY", desc: "" },
     boss: { icon: "👑", title: "EMPTY", desc: "" },
