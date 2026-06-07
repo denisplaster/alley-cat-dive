@@ -427,7 +427,7 @@ function DefeatBurst({ k }: { k: number }) {
 }
 
 function NonCombatPanel({ kind, cleared }: { kind: RoomKind; cleared: boolean }) {
-  const meta: Record<RoomKind, { icon: string; title: string; desc: string }> = {
+  const metaMap: Record<RoomKind, { icon: string; title: string; desc: string }> = {
     loot: { icon: roomLoot, title: "LOOT PILE", desc: "A shimmering mound of trash treasure." },
     hazard: { icon: roomHazard, title: "HAZARD", desc: "Glowing goo bubbling from a busted jar." },
     rest: { icon: roomRest, title: "SAFE NEST", desc: "Warm laundry. The cat can catch a breath." },
@@ -436,7 +436,8 @@ function NonCombatPanel({ kind, cleared }: { kind: RoomKind; cleared: boolean })
     enemy: { icon: "⚔️", title: "EMPTY", desc: "" },
     miniboss: { icon: "👹", title: "EMPTY", desc: "" },
     boss: { icon: "👑", title: "EMPTY", desc: "" },
-  }[kind];
+  };
+  const meta = metaMap[kind];
   const isArtRoom = kind === "loot" || kind === "hazard" || kind === "rest";
   return (
     <div className="relative flex flex-col items-end justify-end gap-2">

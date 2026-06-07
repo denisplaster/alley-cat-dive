@@ -28,8 +28,9 @@ export function Objective() {
       tone = lowTimer ? "text-destructive" : "text-accent";
     }
   } else if (dive.enemy) {
-    const foeText = dive.enemies.length > 1
-      ? `${dive.enemies.length} enemies`
+    const totalFoes = 1 + dive.enemies.length;
+    const foeText = totalFoes > 1
+      ? `all ${totalFoes} foes`
       : `the ${dive.enemy.name}`;
     text = lowTimer
       ? `Objective: Drop ${foeText} — the truck is almost here!`

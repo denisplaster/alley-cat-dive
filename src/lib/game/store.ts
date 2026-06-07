@@ -228,8 +228,10 @@ export const useGame = create<GameState>((set, get) => ({
     if (!dump || !cat || dump.status === "locked") return;
     const rooms = generateRooms(dump.rooms);
     const firstKind = rooms[0].kind;
-    const enemy = (firstKind === "enemy" || firstKind === "miniboss" || firstKind === "boss")
-      ? spawnEnemy(dump, firstKind, 0) : null;
+    const wave = (firstKind === "enemy" || firstKind === "swarm" || firstKind === "elite" || firstKind === "miniboss" || firstKind === "boss")
+      ? spawnEnemies(dump, firstKind, 0) : [];
+    const enemy = wave[0] ?? null;
+    const rest = wave.slice(1);
     set({
       dive: {
         dumpsterId: dump.id,
@@ -239,6 +241,7 @@ export const useGame = create<GameState>((set, get) => ({
         rooms,
         currentKind: firstKind,
         enemy,
+        enemies: rest,
         catHp: cat.hp,
         catMaxHp: cat.maxHp,
         timerSec: dump.truckTimerSec,
@@ -248,7 +251,9 @@ export const useGame = create<GameState>((set, get) => ({
         capsFound: 0,
         log: [
           mklog(`Diving into ${dump.name}…`, "info"),
-          enemy ? mklog(`A ${enemy.name} blocks the way!`, "warn")
+          enemy ? mklog(wave.length > 1
+                  ? `${wave.length} foes block the way — ${enemy.name} leads!`
+                  : `A ${enemy.name} blocks the way!`, "warn")
                 : mklog(roomDescriptor(firstKind), "info"),
         ],
         autoDive: false,
@@ -441,6 +446,18 @@ export const useGame = create<GameState>((set, get) => ({
 
     // Enemy dead from the cat's hit — show victory panel, no counter to schedule.
     if (enemy.hp <= 0) {
+      // If this room has more foes in the wave, promote the next one and keep fighting.
+      if (d.enemies.length > 0) {
+        const [nextFoe, ...remaining] = d.enemies;
+        const nextLog = [...clog, mklog(`${enemy.name} drops! ${nextFoe.name} steps up.`, "warn")];
+        set({ dive: { ...d, enemy: nextFoe, enemies: remaining, catHp, collected, log: nextLog,
+          bonesFound, capsFound, fx, shakeKey, shakeHard, enemyFlashKey, catFlashKey,
+          enemyDefeatKey: enemyDefeatKey + 1, lastLootKey,
+          catPose: "idle", enemyPose: "idle", mangaFx: null, mangaWord: null, mangaFocus: null,
+          combo: 0, comboLastAction: null, knockbackKey, catKnockbackKey, panelSplitKey,
+          bubble: null, inAction: false } });
+        return;
+      }
       const isBoss = d.currentKind === "boss";
       const isMini = d.currentKind === "miniboss";
       const dropCount = isBoss ? 3 : isMini ? 2 : 1;
@@ -568,13 +585,18 @@ export const useGame = create<GameState>((set, get) => ({
     const nextKind = d.rooms[nextIdx].kind;
     const rooms = d.rooms.map((r, i) => i === nextIdx ? { ...r, revealed: true }
       : i === nextIdx + 1 ? { ...r, revealed: true } : r);
-    const enemy = (nextKind === "enemy" || nextKind === "miniboss" || nextKind === "boss")
-      ? spawnEnemy(dump, nextKind, nextIdx) : null;
+    const wave = (nextKind === "enemy" || nextKind === "swarm" || nextKind === "elite" || nextKind === "miniboss" || nextKind === "boss")
+      ? spawnEnemies(dump, nextKind, nextIdx) : [];
+    const enemy = wave[0] ?? null;
+    const rest = wave.slice(1);
     const log2 = [...d.log,
       mklog(`Crawl deeper… Room ${nextRoom}/${d.totalRooms} — ${roomLabel(nextKind)}`, "info"),
-      enemy ? mklog(`A ${enemy.name} appears!`, "warn") : mklog(roomDescriptor(nextKind), "info"),
+      enemy ? mklog(wave.length > 1
+              ? `${wave.length} foes appear — ${enemy.name} steps up first!`
+              : `A ${enemy.name} appears!`, "warn")
+            : mklog(roomDescriptor(nextKind), "info"),
     ];
-    set({ dive: { ...d, room: nextRoom, rooms, currentKind: nextKind, enemy,
+    set({ dive: { ...d, room: nextRoom, rooms, currentKind: nextKind, enemy, enemies: rest,
       roomCleared: false, roomEvent: null, log: log2,
       catPose: "idle", enemyPose: enemy ? "idle" : "ko", mangaFx: null, mangaWord: null, mangaFocus: null, bubble: null } });
   },
@@ -763,11 +785,13 @@ export const useGame = create<GameState>((set, get) => ({
 }));
 
 function roomLabel(k: RoomKind): string {
-  return ({ enemy: "Enemy", loot: "Loot", hazard: "Hazard", rest: "Rest", miniboss: "Mini-Boss", boss: "BOSS" } as const)[k];
+  return ({ enemy: "Enemy", swarm: "Swarm", elite: "Elite", loot: "Loot", hazard: "Hazard", rest: "Rest", miniboss: "Mini-Boss", boss: "BOSS" } as const)[k];
 }
 function roomDescriptor(k: RoomKind): string {
   return ({
     enemy: "Something's rustling…",
+    swarm: "A pack of critters skitters out at once!",
+    elite: "A scarred, oversized foe blocks the path.",
     loot: "A glittering pile of trash treasure!",
     hazard: "Glowing green ooze drips from above. Careful.",
     rest: "A warm laundry pile. Safe… for now.",
