@@ -134,19 +134,19 @@ const ENEMY_LINES = {
 };
 const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
 
-const generateRooms = (totalRooms: number, bossRunsAway = false): Room[] => {
+const generateRooms = (totalRooms: number, _bossRunsAway = false): Room[] => {
   const arr: RoomKind[] = Array.from({ length: totalRooms }, () => "enemy" as RoomKind);
-  // The chapter boss always closes out the dive.
+  // The chapter boss only shows up for the final fight of the dumpster.
   arr[totalRooms - 1] = "boss";
   if (totalRooms >= 3) arr[1] = Math.random() < 0.5 ? "loot" : "rest";
   if (totalRooms >= 4) arr[2] = "swarm";
-  // Mid-dive: in a normal chapter the boss shows up to test the cat. In a
-  // "runs away" chapter they only taunt — leave an elite goon instead.
-  if (totalRooms >= 5) arr[Math.floor(totalRooms / 2)] = bossRunsAway ? "elite" : "boss";
+  // Mid-dive: an elite goon tests the cat — the boss stays off-screen until
+  // the climactic final room.
+  if (totalRooms >= 5) arr[Math.floor(totalRooms / 2)] = "elite";
   if (totalRooms >= 6) arr[Math.max(3, totalRooms - 3)] = Math.random() < 0.5 ? "hazard" : "loot";
-  // Penultimate room: another boss encounter, OR a mini-boss lieutenant if
-  // the real boss is staying off-screen until the climax.
-  if (totalRooms >= 7) arr[totalRooms - 2] = bossRunsAway ? "miniboss" : "boss";
+  // Penultimate room: a mini-boss lieutenant softens the cat up before the
+  // real boss in the final room.
+  if (totalRooms >= 7) arr[totalRooms - 2] = "miniboss";
   return arr.map((k, i) => ({ kind: k, cleared: false, revealed: i === 0 }));
 };
 
