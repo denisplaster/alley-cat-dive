@@ -195,6 +195,7 @@ export const useGame = create<GameState>((set, get) => ({
         panelSplitKey: 0,
         knockbackKey: 0,
         catKnockbackKey: 0,
+        bubble: null,
       },
       lastRewards: null,
     });
