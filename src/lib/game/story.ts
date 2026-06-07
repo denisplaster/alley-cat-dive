@@ -183,6 +183,10 @@ export interface Chapter {
   unlocksStage?: HideoutStage;
   /** Choice presented at the end of the chapter. */
   choice?: { question: string; options: ChoiceOption[] };
+  /** Short list of gameplay unlocks shown on the reward panel. */
+  rewards?: { icon: string; label: string; detail: string }[];
+  /** Human-readable prerequisite shown on locked chapters. */
+  unlockRequirement?: string;
 }
 
 export const STORY_CHAPTERS: Chapter[] = [
