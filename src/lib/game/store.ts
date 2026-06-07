@@ -356,12 +356,6 @@ export const useGame = create<GameState>((set, get) => ({
       shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey,
       catPose, enemyPose, mangaFx, mangaWord, mangaFocus,
       combo, comboLastAction, knockbackKey, catKnockbackKey, panelSplitKey } });
-
-    setTimeout(() => {
-      const current = get().dive;
-      if (!current || current.ended || current.roomCleared) return;
-      set({ dive: { ...current, catPose: "idle", enemyPose: current.enemy ? "idle" : "ko", mangaFx: null, mangaWord: null, mangaFocus: null } });
-    }, 520);
   },
 
   resolveNonCombat: () => {
