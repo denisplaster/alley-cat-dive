@@ -17,7 +17,7 @@ export function LootToast() {
   if (!shown) return null;
   return (
     <div className="pointer-events-none fixed bottom-24 right-6 z-50">
-      <div className={`chunky-panel bg-black px-4 py-3 animate-banner-slam ${rarityGlow(shown.rarity)}`}>
+      <div className={`chunky-panel bg-black px-4 py-3 animate-banner-slam ${rarityGlow(shown.rarity)} animate-pulse-glow`}>
         <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Loot Acquired</div>
         <div className={`font-display text-lg uppercase ${rarityClass(shown.rarity)}`}>{shown.name}</div>
         <div className={`text-[10px] uppercase tracking-widest ${rarityClass(shown.rarity)}`}>{shown.rarity}</div>
