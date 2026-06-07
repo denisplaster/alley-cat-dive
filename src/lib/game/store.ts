@@ -85,6 +85,25 @@ const mklog = (text: string, tone: CombatEntry["tone"] = "info"): CombatEntry =>
 let _fxId = 0;
 const nextFxId = () => ++_fxId;
 
+let _bubbleKey = 0;
+const nextBubbleKey = () => ++_bubbleKey;
+
+const CAT_LINES = {
+  scratch: ["Take that, nya!", "Scratch attack!", "Eat my claws!", "Feel the fluff!"],
+  pounce:  ["Pouncing time!", "Gotcha, nya!", "Air strike!", "Here I come!"],
+  combo:   ["COMBO FINISHER!", "This is the end, nya!", "Witness my fury!"],
+  item:    ["Snack break!", "Mmm, sardines.", "Yum, healing!"],
+  hurt:    ["Owie!", "Hisss!", "That stings, nya!"],
+  block:   ["Nice try!", "Blocked it, nya!", "Too slow!"],
+};
+const ENEMY_LINES = {
+  attack:   ["Get over here!", "You're mine!", "Take this!", "Grrr!"],
+  heavy:    ["FEEL MY WRATH!", "CRUSH!", "DIE, CAT!"],
+  boss:     ["I rule this dumpster!", "Bow before me!", "You dare?!"],
+  miniboss: ["You're outmatched!", "I've been waiting."],
+};
+const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+
 const generateRooms = (totalRooms: number): Room[] => {
   const arr: RoomKind[] = Array.from({ length: totalRooms }, () => "enemy" as RoomKind);
   arr[totalRooms - 1] = "boss";
