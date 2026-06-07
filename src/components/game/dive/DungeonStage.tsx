@@ -137,7 +137,6 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
             hp={dive.catHp}
             maxHp={dive.catMaxHp}
             side="left"
-            flashKey={dive.catFlashKey}
             knockbackKey={dive.catKnockbackKey}
             fx={dive.fx.filter(f => f.target === "cat")}
             tone="primary"
@@ -153,7 +152,6 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
               hp={enemy.hp}
               maxHp={enemy.maxHp}
               side="right"
-              flashKey={dive.enemyFlashKey}
               knockbackKey={dive.knockbackKey}
               defeatKey={enemy.hp <= 0 ? dive.enemyDefeatKey : 0}
               fx={dive.fx.filter(f => f.target === "enemy")}
@@ -236,18 +234,16 @@ function MangaOverlay({ fxSrc, wordSrc, focus }: { fxSrc: string | null; wordSrc
 }
 
 function CombatantSprite({
-  name, sub, poses, activePose, hp, maxHp, side, flashKey, knockbackKey = 0, defeatKey = 0, fx, tone, combo = 0,
+  name, sub, poses, activePose, hp, maxHp, side, knockbackKey = 0, defeatKey = 0, fx, tone, combo = 0,
 }: {
   name: string; sub: string;
   poses: Record<string, string>;
   activePose: string;
   hp: number; maxHp: number; side: "left" | "right";
-  flashKey: number; knockbackKey?: number; defeatKey?: number; fx: Fx[];
+  knockbackKey?: number; defeatKey?: number; fx: Fx[];
   tone: "primary" | "destructive" | "boss";
   combo?: number;
 }) {
-  const [flashId, setFlashId] = useState(0);
-  useEffect(() => { if (flashKey > 0) setFlashId(k => k + 1); }, [flashKey]);
   const [kbId, setKbId] = useState(0);
   useEffect(() => { if (knockbackKey > 0) setKbId(k => k + 1); }, [knockbackKey]);
   const pct = (hp / maxHp) * 100;
@@ -278,17 +274,6 @@ function CombatantSprite({
               className={`absolute inset-0 size-full object-contain transition-opacity duration-200 ease-out ${side === "right" ? "-scale-x-100" : ""} ${key === activePose ? "opacity-100" : "opacity-0"}`}
             />
           ))}
-          {/* hit flash — radial burst growing from character */}
-          {flashId > 0 && (
-            <div
-              key={flashId}
-              className="pointer-events-none absolute inset-0 animate-flash-hit rounded-full mix-blend-screen"
-              style={{
-                background:
-                  "radial-gradient(circle at center, rgba(239,68,68,0.85) 0%, rgba(239,68,68,0.5) 35%, rgba(239,68,68,0) 70%)",
-              }}
-            />
-          )}
         </div>
         {/* platform + shadow */}
         <div className="relative mx-auto mt-2 flex flex-col items-center">
@@ -335,8 +320,7 @@ function PanelSplitOverlay({ k }: { k: number }) {
   useEffect(() => { if (k > 0) setId(n => n + 1); }, [k]);
   if (id === 0) return null;
   return (
-      <div key={id} className="pointer-events-none absolute inset-0 z-30 overflow-hidden">
-      <div className="absolute inset-0 bg-black/60 manga-panel-flash" />
+    <div key={id} className="pointer-events-none absolute inset-0 z-30 overflow-hidden">
       <img
         src={panelSplit}
         alt=""
