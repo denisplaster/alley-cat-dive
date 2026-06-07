@@ -763,11 +763,13 @@ export const useGame = create<GameState>((set, get) => ({
 }));
 
 function roomLabel(k: RoomKind): string {
-  return ({ enemy: "Enemy", loot: "Loot", hazard: "Hazard", rest: "Rest", miniboss: "Mini-Boss", boss: "BOSS" } as const)[k];
+  return ({ enemy: "Enemy", swarm: "Swarm", elite: "Elite", loot: "Loot", hazard: "Hazard", rest: "Rest", miniboss: "Mini-Boss", boss: "BOSS" } as const)[k];
 }
 function roomDescriptor(k: RoomKind): string {
   return ({
     enemy: "Something's rustling…",
+    swarm: "A pack of critters skitters out at once!",
+    elite: "A scarred, oversized foe blocks the path.",
     loot: "A glittering pile of trash treasure!",
     hazard: "Glowing green ooze drips from above. Careful.",
     rest: "A warm laundry pile. Safe… for now.",
