@@ -236,18 +236,16 @@ function MangaOverlay({ fxSrc, wordSrc, focus }: { fxSrc: string | null; wordSrc
 }
 
 function CombatantSprite({
-  name, sub, poses, activePose, hp, maxHp, side, flashKey, knockbackKey = 0, defeatKey = 0, fx, tone, combo = 0,
+  name, sub, poses, activePose, hp, maxHp, side, knockbackKey = 0, defeatKey = 0, fx, tone, combo = 0,
 }: {
   name: string; sub: string;
   poses: Record<string, string>;
   activePose: string;
   hp: number; maxHp: number; side: "left" | "right";
-  flashKey: number; knockbackKey?: number; defeatKey?: number; fx: Fx[];
+  knockbackKey?: number; defeatKey?: number; fx: Fx[];
   tone: "primary" | "destructive" | "boss";
   combo?: number;
 }) {
-  const [flashId, setFlashId] = useState(0);
-  useEffect(() => { if (flashKey > 0) setFlashId(k => k + 1); }, [flashKey]);
   const [kbId, setKbId] = useState(0);
   useEffect(() => { if (knockbackKey > 0) setKbId(k => k + 1); }, [knockbackKey]);
   const pct = (hp / maxHp) * 100;
