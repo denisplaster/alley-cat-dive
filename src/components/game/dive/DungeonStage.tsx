@@ -59,8 +59,6 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
   const tint = KIND_TINT[dive.currentKind];
   const truckPct = dive.timerSec / dive.truckTimerStart;
   const danger = truckPct < 0.1;
-  const catArt = CAT_ART[dive.catPose];
-  const enemyArt = getEnemyArt(dive.currentKind, dive.enemyPose);
   const mangaFxArt = dive.mangaFx ? FX_ART[dive.mangaFx] : null;
   const mangaWordArt = dive.mangaWord ? WORD_ART[dive.mangaWord] : null;
 
@@ -134,7 +132,8 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
           <CombatantSprite
             name={cat.name}
             sub={cat.catClass}
-            portrait={catArt}
+            poses={CAT_ART}
+            activePose={dive.catPose}
             hp={dive.catHp}
             maxHp={dive.catMaxHp}
             side="left"
@@ -147,7 +146,8 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
           {enemy ? (
             <CombatantSprite
               key={`${enemy.id}-${dive.room}`}
-              portrait={enemyArt}
+              poses={getEnemyPoses(dive.currentKind)}
+              activePose={dive.enemyPose === "knockback" ? "hurt" : dive.enemyPose}
               name={enemy.name}
               sub={dive.currentKind === "boss" ? "BOSS" : dive.currentKind === "miniboss" ? "MINI-BOSS" : "Trash Mob"}
               hp={enemy.hp}
