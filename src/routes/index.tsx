@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import heroCat from "@/assets/hero-cat.png";
 import { useGame } from "@/lib/game/store";
+import { STORY_CHAPTERS } from "@/lib/game/story";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -20,9 +21,14 @@ function AlleyHub() {
   const cats = useGame(s => s.cats);
   const activeCatId = useGame(s => s.activeCatId);
   const inventory = useGame(s => s.inventory);
+  const storyIdx = useGame(s => s.storyChapterIdx);
+  const completed = useGame(s => s.completedChapters);
+  const openCutscene = useGame(s => s.openCutscene);
   const selected = dumpsters.find(d => d.id === selectedId)!;
   const activeCat = cats.find(c => c.id === activeCatId)!;
   const latest = inventory[inventory.length - 1];
+  const currentChapter = STORY_CHAPTERS[storyIdx];
+  const showStoryCta = currentChapter && !completed.includes(currentChapter.id);
 
   return (
     <div className="relative mt-2 md:mt-6">
@@ -109,6 +115,14 @@ function AlleyHub() {
 
       {/* CTA */}
       <div className="relative z-10 mt-10 flex flex-col items-center gap-3">
+        {showStoryCta && (
+          <button
+            onClick={() => openCutscene(currentChapter.id, "intro")}
+            className="chunky-button rotate-[1deg] bg-secondary px-6 py-3 font-display text-lg uppercase text-black"
+          >
+            ▶ Continue Story · {currentChapter.title}
+          </button>
+        )}
         <Link
           to="/dive"
           className="chunky-button animate-pulse-glow rotate-[-1deg] bg-primary px-12 py-5 font-display text-3xl uppercase text-black md:text-4xl"
