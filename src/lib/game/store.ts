@@ -48,6 +48,7 @@ interface DiveState {
   knockbackKey: number;      // bumps to trigger enemy knockback animation
   catKnockbackKey: number;   // bumps to trigger cat knockback animation
   bubble: { side: "cat" | "enemy"; text: string; key: number } | null;
+  inAction: boolean;          // true while enemy is mid-counter-attack — locks player input
 }
 
 interface GameState {
@@ -238,6 +239,7 @@ export const useGame = create<GameState>((set, get) => ({
         knockbackKey: 0,
         catKnockbackKey: 0,
         bubble: null,
+        inAction: false,
       },
       lastRewards: null,
     });
@@ -279,6 +281,7 @@ export const useGame = create<GameState>((set, get) => ({
       return;
     }
     if (d.roomCleared || !d.enemy) return;
+    if (d.inAction) return;   // turn-based lock: wait for enemy counter to resolve
 
     let { catHp, enemy, collected, log: clog, bonesFound, capsFound, fx,
       shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey,
@@ -413,15 +416,17 @@ export const useGame = create<GameState>((set, get) => ({
         roomEvent: `+${bonesGain} 🦴  +${capsGain} 🧴  ·  ${dropCount} item${dropCount>1?"s":""}`,
         shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey,
         catPose: "victory", enemyPose: "ko", mangaFx, mangaWord, mangaFocus,
-        combo: 0, comboLastAction: null, knockbackKey, catKnockbackKey, panelSplitKey } });
+        combo: 0, comboLastAction: null, knockbackKey, catKnockbackKey, panelSplitKey,
+        inAction: false } });
       return;
     }
 
     // Panel 1: cat-attacker view (enemy hurt). Damage already applied.
-    set({ dive: { ...d, catHp: d.catHp, enemy, collected, log: clog, fx, bonesFound, capsFound,
+    set({ dive: { ...d, catHp, enemy, collected, log: clog, fx, bonesFound, capsFound,
       shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey,
       catPose, enemyPose, mangaFx, mangaWord, mangaFocus,
-      combo, comboLastAction, knockbackKey, catKnockbackKey, panelSplitKey, bubble } });
+      combo, comboLastAction, knockbackKey, catKnockbackKey, panelSplitKey, bubble,
+      inAction: counter !== null } });
 
     // Panel 2: enemy counter-attack — apply HP loss and swap to counter visuals after a beat.
     if (counter) {
@@ -456,6 +461,7 @@ export const useGame = create<GameState>((set, get) => ({
           bubble: { side: "enemy", text: enemyText, key: nextBubbleKey() },
           ended: willKo ? true : cur.ended,
           fled: willKo ? true : cur.fled,
+          inAction: false,
         } });
         if (willKo) get().endDive(false);
       }, 1800);
