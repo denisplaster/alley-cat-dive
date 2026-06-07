@@ -302,6 +302,9 @@ export const useGame = create<GameState>((set, get) => ({
 
     // ---- Panel 2: enemy counter-attack (data computed now, visuals deferred) ----
     let counter: null | {
+      incoming: number;
+      blocked: boolean;
+      enemyName: string;
       catPose: DiveState["catPose"];
       enemyPose: DiveState["enemyPose"];
       mangaFx: DiveState["mangaFx"];
@@ -314,15 +317,15 @@ export const useGame = create<GameState>((set, get) => ({
     if (enemy.hp > 0 && action !== "item") {
       const incoming = Math.max(1, Math.round(enemy.attack * (0.8 + Math.random() * 0.4) - cat.defense * 0.4));
       const blocked = incoming <= Math.max(4, Math.round(cat.defense * 0.55));
-      catHp = Math.max(0, catHp - incoming);
-      clog = [...clog, mklog(`${enemy.name} hits back for ${incoming}`, "warn")];
-      fx = [...fx, { id: nextFxId(), target: "cat", kind: "dmg", amount: incoming }];
       const heavy = incoming >= 14;
       const nextCatFlash = catFlashKey + 1;
       const nextCatKb = heavy ? catKnockbackKey + 1 : catKnockbackKey;
       if (heavy) { combo = 0; comboLastAction = null; }
       else if (!blocked && combo > 2) combo = Math.max(0, combo - 1);
       counter = {
+        incoming,
+        blocked,
+        enemyName: enemy.name,
         catPose: blocked ? "block" : heavy ? "knockback" : "hurt",
         enemyPose: "attack",
         mangaFx: blocked ? "block" : "impact",
