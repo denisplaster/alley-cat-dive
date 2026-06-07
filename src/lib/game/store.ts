@@ -273,31 +273,43 @@ export const useGame = create<GameState>((set, get) => ({
       if (isFinisher) { panelSplitKey += 1; }
     }
 
-    // enemy counter-attack
-    let catPose: DiveState["catPose"] = d.catPose;
-    let enemyPose: DiveState["enemyPose"] = d.enemyPose;
-    let mangaFx: DiveState["mangaFx"] = null;
-    let mangaWord: DiveState["mangaWord"] = null;
-    let mangaFocus: DiveState["mangaFocus"] = null;
+    // ---- Panel 1: the CAT's action ----
+    let catPose: DiveState["catPose"];
+    let enemyPose: DiveState["enemyPose"];
+    let mangaFx: DiveState["mangaFx"];
+    let mangaWord: DiveState["mangaWord"];
+    let mangaFocus: DiveState["mangaFocus"];
 
     if (action === "item") {
       catPose = "item";
       enemyPose = enemy.hp <= 0 ? "ko" : "idle";
       mangaFx = "heal";
+      mangaWord = null;
       mangaFocus = "cat";
     } else {
-      const isFinisher = combo >= 3 && (comboLastAction !== d.comboLastAction);
-      catPose = isFinisher ? "combo" : action === "pounce" ? "pounce" : "scratch";
+      const wasFinisher = combo >= 3 && comboLastAction !== d.comboLastAction;
+      catPose = wasFinisher ? "combo" : action === "pounce" ? "pounce" : "scratch";
       enemyPose = enemy.hp <= 0 ? "ko" : "hurt";
-      mangaFx = isFinisher ? "combo"
+      mangaFx = wasFinisher ? "combo"
         : enemy.hp <= 0 && action === "pounce" ? "crit"
         : action === "scratch" ? "slash" : "impact";
-      mangaWord = isFinisher ? "combo"
+      mangaWord = wasFinisher ? "combo"
         : enemy.hp <= 0 ? "crit"
         : action === "scratch" ? "slash"
         : action === "pounce" ? "pow" : "bam";
       mangaFocus = "enemy";
     }
+
+    // ---- Panel 2: enemy counter-attack (data computed now, visuals deferred) ----
+    let counter: null | {
+      catPose: DiveState["catPose"];
+      enemyPose: DiveState["enemyPose"];
+      mangaFx: DiveState["mangaFx"];
+      mangaWord: DiveState["mangaWord"];
+      mangaFocus: DiveState["mangaFocus"];
+      catFlashKey: number;
+      catKnockbackKey: number;
+    } = null;
 
     if (enemy.hp > 0 && action !== "item") {
       const incoming = Math.max(1, Math.round(enemy.attack * (0.8 + Math.random() * 0.4) - cat.defense * 0.4));
@@ -305,16 +317,20 @@ export const useGame = create<GameState>((set, get) => ({
       catHp = Math.max(0, catHp - incoming);
       clog = [...clog, mklog(`${enemy.name} hits back for ${incoming}`, "warn")];
       fx = [...fx, { id: nextFxId(), target: "cat", kind: "dmg", amount: incoming }];
-      catFlashKey += 1;
-      // big incoming hits send the cat flying & break combo
       const heavy = incoming >= 14;
-      catPose = blocked ? "block" : heavy ? "knockback" : "hurt";
-      enemyPose = "attack";
-      mangaFx = blocked ? "block" : "impact";
-      mangaWord = blocked ? null : incoming >= 12 ? "bam" : "pow";
-      mangaFocus = "cat";
-      if (heavy) { catKnockbackKey += 1; combo = 0; comboLastAction = null; }
-      if (!blocked && !heavy && combo > 2) combo = Math.max(0, combo - 1);
+      const nextCatFlash = catFlashKey + 1;
+      const nextCatKb = heavy ? catKnockbackKey + 1 : catKnockbackKey;
+      if (heavy) { combo = 0; comboLastAction = null; }
+      else if (!blocked && combo > 2) combo = Math.max(0, combo - 1);
+      counter = {
+        catPose: blocked ? "block" : heavy ? "knockback" : "hurt",
+        enemyPose: "attack",
+        mangaFx: blocked ? "block" : "impact",
+        mangaWord: blocked ? null : incoming >= 12 ? "bam" : "pow",
+        mangaFocus: "cat",
+        catFlashKey: nextCatFlash,
+        catKnockbackKey: nextCatKb,
+      };
     }
 
     if (catHp <= 0) {
