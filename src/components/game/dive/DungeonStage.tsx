@@ -3,6 +3,7 @@ import { useGame } from "@/lib/game/store";
 import type { Cat, Enemy, Fx, RoomKind } from "@/lib/game/types";
 import { NextRoomPreview } from "./NextRoomPreview";
 import arenaBg from "@/assets/anime/bg-arena.jpg";
+import { DUMPSTERS } from "@/lib/game/data";
 import catIdle from "@/assets/anime/cat-idle.png";
 import catScratch from "@/assets/anime/cat-scratch.png";
 import catPounce from "@/assets/anime/cat-pounce.png";
@@ -61,6 +62,7 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
   const dive = useGame(s => s.dive)!;
   const hideoutStage = useGame(s => s.hideoutStage);
   const stage = lifeStageFromHideout(hideoutStage);
+  const dumpImage = (DUMPSTERS.find(d => d.id === dive.dumpsterId)?.image) ?? arenaBg;
   const catArt = stage === "kitten"
     ? { ...CAT_ART, ...KITTEN_POSES }
     : stage === "juvenile"
@@ -80,7 +82,7 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
     <div className={`relative overflow-hidden chunky-panel bg-gradient-to-b ${tint} ${danger ? "animate-danger-border" : ""}`}>
       {/* Backdrop layers */}
       <div className="absolute inset-0 pointer-events-none">
-        <img src={arenaBg} alt="Dumpster dungeon arena" className="absolute inset-0 size-full object-cover opacity-55" />
+        <img src={dumpImage} alt="Dumpster dungeon arena" className="absolute inset-0 size-full object-cover opacity-55" />
         <div className="absolute inset-0 bg-black/35" />
         <img src={fxSpeedlines} alt="" aria-hidden="true" className={`absolute inset-0 size-full object-cover opacity-0 ${dive.mangaFocus ? "manga-speedlines-active" : ""}`} />
         {/* radial top light */}
