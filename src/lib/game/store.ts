@@ -46,6 +46,7 @@ interface DiveState {
   panelSplitKey: number;     // bumps to trigger split-screen overlay
   knockbackKey: number;      // bumps to trigger enemy knockback animation
   catKnockbackKey: number;   // bumps to trigger cat knockback animation
+  bubble: { side: "cat" | "enemy"; text: string; key: number } | null;
 }
 
 interface GameState {
@@ -83,6 +84,25 @@ let _logId = 0;
 const mklog = (text: string, tone: CombatEntry["tone"] = "info"): CombatEntry => ({ id: ++_logId, text, tone });
 let _fxId = 0;
 const nextFxId = () => ++_fxId;
+
+let _bubbleKey = 0;
+const nextBubbleKey = () => ++_bubbleKey;
+
+const CAT_LINES = {
+  scratch: ["Take that, nya!", "Scratch attack!", "Eat my claws!", "Feel the fluff!"],
+  pounce:  ["Pouncing time!", "Gotcha, nya!", "Air strike!", "Here I come!"],
+  combo:   ["COMBO FINISHER!", "This is the end, nya!", "Witness my fury!"],
+  item:    ["Snack break!", "Mmm, sardines.", "Yum, healing!"],
+  hurt:    ["Owie!", "Hisss!", "That stings, nya!"],
+  block:   ["Nice try!", "Blocked it, nya!", "Too slow!"],
+};
+const ENEMY_LINES = {
+  attack:   ["Get over here!", "You're mine!", "Take this!", "Grrr!"],
+  heavy:    ["FEEL MY WRATH!", "CRUSH!", "DIE, CAT!"],
+  boss:     ["I rule this dumpster!", "Bow before me!", "You dare?!"],
+  miniboss: ["You're outmatched!", "I've been waiting."],
+};
+const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
 
 const generateRooms = (totalRooms: number): Room[] => {
   const arr: RoomKind[] = Array.from({ length: totalRooms }, () => "enemy" as RoomKind);
@@ -194,6 +214,7 @@ export const useGame = create<GameState>((set, get) => ({
         panelSplitKey: 0,
         knockbackKey: 0,
         catKnockbackKey: 0,
+        bubble: null,
       },
       lastRewards: null,
     });
@@ -300,6 +321,16 @@ export const useGame = create<GameState>((set, get) => ({
       mangaFocus = "enemy";
     }
 
+    // Cat speech bubble for panel 1
+    let bubble: DiveState["bubble"] = null;
+    if (action === "item") {
+      bubble = { side: "cat", text: pick(CAT_LINES.item), key: nextBubbleKey() };
+    } else {
+      const wasFinisher = combo >= 3 && comboLastAction !== d.comboLastAction;
+      const pool = wasFinisher ? CAT_LINES.combo : action === "pounce" ? CAT_LINES.pounce : CAT_LINES.scratch;
+      bubble = { side: "cat", text: pick(pool), key: nextBubbleKey() };
+    }
+
     // ---- Panel 2: enemy counter-attack (data computed now, visuals deferred) ----
     let counter: null | {
       incoming: number;
@@ -315,9 +346,10 @@ export const useGame = create<GameState>((set, get) => ({
     } = null;
 
     if (enemy.hp > 0 && action !== "item") {
-      const incoming = Math.max(1, Math.round(enemy.attack * (0.8 + Math.random() * 0.4) - cat.defense * 0.4));
-      const blocked = incoming <= Math.max(4, Math.round(cat.defense * 0.55));
-      const heavy = incoming >= 14;
+      // Enemies hit harder: bigger base swing, lower defense scaling.
+      const incoming = Math.max(2, Math.round(enemy.attack * (1.25 + Math.random() * 0.55) - cat.defense * 0.22));
+      const blocked = incoming <= Math.max(3, Math.round(cat.defense * 0.35));
+      const heavy = incoming >= 18;
       const nextCatFlash = catFlashKey + 1;
       const nextCatKb = heavy ? catKnockbackKey + 1 : catKnockbackKey;
       if (heavy) { combo = 0; comboLastAction = null; }
@@ -366,13 +398,19 @@ export const useGame = create<GameState>((set, get) => ({
     set({ dive: { ...d, catHp: d.catHp, enemy, collected, log: clog, fx, bonesFound, capsFound,
       shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey,
       catPose, enemyPose, mangaFx, mangaWord, mangaFocus,
-      combo, comboLastAction, knockbackKey, catKnockbackKey, panelSplitKey } });
+      combo, comboLastAction, knockbackKey, catKnockbackKey, panelSplitKey, bubble } });
 
     // Panel 2: enemy counter-attack — apply HP loss and swap to counter visuals after a beat.
     if (counter) {
       const ctr = counter;
       const finalCatHp = Math.max(0, catHp - ctr.incoming);
       const willKo = finalCatHp <= 0;
+      // Pick enemy bubble pool based on context
+      const enemyPool = d.currentKind === "boss" ? ENEMY_LINES.boss
+        : d.currentKind === "miniboss" ? ENEMY_LINES.miniboss
+        : ctr.incoming >= 18 ? ENEMY_LINES.heavy
+        : ENEMY_LINES.attack;
+      const enemyText = pick(enemyPool);
       setTimeout(() => {
         const cur = get().dive;
         if (!cur || cur.ended || cur.roomCleared) return;
@@ -392,11 +430,12 @@ export const useGame = create<GameState>((set, get) => ({
           catFlashKey: ctr.catFlashKey,
           catKnockbackKey: ctr.catKnockbackKey,
           log: log2,
+          bubble: { side: "enemy", text: enemyText, key: nextBubbleKey() },
           ended: willKo ? true : cur.ended,
           fled: willKo ? true : cur.fled,
         } });
         if (willKo) get().endDive(false);
-      }, 850);
+      }, 1800);
     }
   },
 
@@ -463,7 +502,7 @@ export const useGame = create<GameState>((set, get) => ({
     ];
     set({ dive: { ...d, room: nextRoom, rooms, currentKind: nextKind, enemy,
       roomCleared: false, roomEvent: null, log: log2,
-      catPose: "idle", enemyPose: enemy ? "idle" : "ko", mangaFx: null, mangaWord: null, mangaFocus: null } });
+      catPose: "idle", enemyPose: enemy ? "idle" : "ko", mangaFx: null, mangaWord: null, mangaFocus: null, bubble: null } });
   },
 
   toggleAuto: () => {
