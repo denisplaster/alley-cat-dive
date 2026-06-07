@@ -775,13 +775,26 @@ export const useGame = create<GameState>((set, get) => ({
     const completed = s.completedChapters.includes(chapter.id)
       ? s.completedChapters : [...s.completedChapters, chapter.id];
     const nextIdx = Math.min(STORY_CHAPTERS.length, s.storyChapterIdx + 1);
-    // if chapter has a choice, leave cutscene closed; the Cutscene UI handles
-    // showing the choice on the final outro panel before advancing.
+    // Detect a new evolution unlock to celebrate on the reward panel.
+    const prevEvo = computeEvolution({
+      completedChapters: s.completedChapters,
+      roomsCleared: s.roomsCleared,
+      bossesBeaten: s.bossesBeaten,
+    });
+    const nextEvo = computeEvolution({
+      completedChapters: completed,
+      roomsCleared: s.roomsCleared,
+      bossesBeaten: s.bossesBeaten,
+    });
     set({
       activeCutscene: null,
       hideoutStage: nextStage,
       completedChapters: completed,
       storyChapterIdx: nextIdx,
+      pendingReward: {
+        chapterId: chapter.id,
+        newEvolution: nextEvo !== prevEvo ? nextEvo : undefined,
+      },
     });
   },
   closeCutscene: () => set({ activeCutscene: null }),
