@@ -25,7 +25,7 @@ export function RunHeader({ dump, room, totalRooms }: { dump: Dumpster; room: nu
           <span className={`font-display uppercase ${LOOT_TIER[dump.expectedLoot]}`}>{dump.expectedLoot}</span>
         </Pill>
         <Pill label="Rec. Power">
-          <span className="font-display text-foreground">⚡{dump.recommendedPower}</span>
+          <span className="font-display text-foreground">{dump.recommendedPower}</span>
         </Pill>
         <Pill label="Room">
           <span className="font-display text-primary">{room}<span className="text-muted-foreground"> / {totalRooms}</span></span>

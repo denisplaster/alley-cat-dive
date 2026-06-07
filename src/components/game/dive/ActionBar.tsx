@@ -15,7 +15,7 @@ export function ActionBar() {
   if (dive.roomCleared) {
     return (
       <Bar>
-        <Btn label={isFinalRoom ? "🏆 CLAIM RUN" : "▶ GO DEEPER"} onClick={goDeeper} primary big />
+        <Btn label={isFinalRoom ? "CLAIM RUN" : "GO DEEPER"} onClick={goDeeper} primary big />
         <Btn label="Flee" onClick={() => doAction("flee")} tone="destructive" />
       </Bar>
     );
@@ -28,9 +28,9 @@ export function ActionBar() {
       enemy: { label: "Continue" },
       miniboss: { label: "Continue" },
       boss: { label: "Continue" },
-      loot: { label: "💰 GRAB LOOT", tone: "accent" },
-      rest: { label: "💤 NAP (+HP)", tone: "secondary" },
-      hazard: { label: "☣️ PUSH THROUGH", tone: "destructive" },
+      loot: { label: "GRAB LOOT", tone: "accent" },
+      rest: { label: "REST (+HP)", tone: "secondary" },
+      hazard: { label: "PUSH THROUGH", tone: "destructive" },
     };
     const cfg = map[k];
     return (
@@ -44,11 +44,11 @@ export function ActionBar() {
   // 3) Combat
   return (
     <Bar>
-      <Btn label="⚔️ Scratch" onClick={() => doAction("scratch")} primary />
-      <Btn label="🐾 Pounce" onClick={() => doAction("pounce")} tone="secondary" />
-      <Btn label={lowHp ? "🐟 HEAL!" : "🐟 Item"} onClick={() => doAction("item")} tone="accent" highlight={lowHp} />
-      <Btn label="💨 Flee" onClick={() => doAction("flee")} tone="destructive" />
-      <Btn label={dive.autoDive ? "⏸ Stop Auto" : "⏵ Auto"} onClick={toggleAuto} />
+      <Btn label="Scratch" onClick={() => doAction("scratch")} primary />
+      <Btn label="Pounce" onClick={() => doAction("pounce")} tone="secondary" />
+      <Btn label={lowHp ? "Heal" : "Item"} onClick={() => doAction("item")} tone="accent" highlight={lowHp} />
+      <Btn label="Flee" onClick={() => doAction("flee")} tone="destructive" />
+      <Btn label={dive.autoDive ? "Stop Auto" : "Auto"} onClick={toggleAuto} />
     </Bar>
   );
 }
