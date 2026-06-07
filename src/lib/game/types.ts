@@ -46,7 +46,7 @@ export interface Enemy {
 
 export type DumpsterStatus = "unlocked" | "locked" | "completed" | "dangerous";
 
-export type RoomKind = "enemy" | "loot" | "hazard" | "rest" | "miniboss" | "boss";
+export type RoomKind = "enemy" | "swarm" | "elite" | "loot" | "hazard" | "rest" | "miniboss" | "boss";
 
 export interface Room {
   kind: RoomKind;
