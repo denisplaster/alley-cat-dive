@@ -6,6 +6,7 @@ import type {
   Cat, Dumpster, Enemy, Fx, HideoutUpgrade, Item, Rarity, Room, RoomKind,
 } from "./types";
 import { STORY_CHAPTERS, STAGE_ORDER, type HideoutStage, chapterById } from "./story";
+import { computeEvolution, type EvolutionStage } from "./evolution";
 
 interface CombatEntry { id: number; text: string; tone: "info" | "hit" | "crit" | "loot" | "warn" }
 
@@ -73,6 +74,13 @@ interface GameState {
   hideoutStage: HideoutStage;
   placedItems: Record<string, string>; // slotId -> itemId
   activeCutscene: { chapterId: string; phase: "intro" | "outro"; panel: number } | null;
+  /** Reward panel shown after a chapter outro before returning to gameplay. */
+  pendingReward: { chapterId: string; newEvolution?: EvolutionStage } | null;
+
+  // progression milestones
+  roomsCleared: number;
+  bossesBeaten: number;
+  divesCompleted: number;
 
   selectDumpster: (id: string) => void;
   setActiveCat: (id: string) => void;
@@ -97,6 +105,9 @@ interface GameState {
   makeChoice: (chapterId: string, optionId: string) => void;
   placeItem: (slotId: string, itemId: string) => void;
   unplaceItem: (slotId: string) => void;
+  dismissReward: () => void;
+  /** Derived: current evolution from milestones. */
+  getEvolution: () => EvolutionStage;
 }
 
 let _logId = 0;
