@@ -41,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="pointer-events-none fixed right-[14%] top-[34%] z-30 animate-fly text-xl select-none" style={{ animationDelay: "1.4s" }}>🪰</div>
 
       {/* Top HUD */}
-      <header className="relative z-30 flex flex-wrap items-start justify-between gap-3 p-4 md:p-6">
+      <header className="relative z-30 flex flex-wrap items-start justify-between gap-2 p-2 md:p-4">
         <Link to="/" className="flex items-end gap-3">
           <div className="chunky-panel rotate-[-2deg] bg-accent px-3 py-1.5 text-black">
             <div className="text-[10px] font-bold uppercase tracking-tight leading-none">Lvl</div>
@@ -61,12 +61,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="relative z-20 mx-auto w-full max-w-7xl px-4 pb-40 md:px-6">
+      <main className="relative z-20 mx-auto w-full max-w-7xl px-3 pb-24 md:px-6 md:pb-28">
         {children}
       </main>
 
       {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 z-40 w-full px-4 pb-4 md:pb-6">
+      <nav className="fixed bottom-0 left-0 z-40 w-full px-2 pb-2 md:pb-4">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-2">
           {NAV.map(n => {
             const active = (n.to === "/" && pathname === "/") || (n.to !== "/" && pathname.startsWith(n.to));
@@ -74,7 +74,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 key={n.to}
                 to={n.to}
-                className={`chunky-button px-4 py-2 text-xs md:text-sm font-bold uppercase tracking-wider ${active ? "bg-primary text-black" : "bg-slate-900 text-foreground hover:bg-slate-800"}`}
+                className={`chunky-button px-3 py-1.5 text-[11px] md:text-sm font-bold uppercase tracking-wider ${active ? "bg-primary text-black" : "bg-slate-900 text-foreground hover:bg-slate-800"}`}
               >
                 {n.label}
               </Link>
