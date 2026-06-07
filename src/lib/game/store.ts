@@ -36,11 +36,16 @@ interface DiveState {
   catFlashKey: number;
   enemyDefeatKey: number;
   lastLootKey: number;
-  catPose: "idle" | "scratch" | "pounce" | "item" | "hurt" | "block" | "ko" | "victory";
-  enemyPose: "idle" | "attack" | "hurt" | "ko";
-  mangaFx: "slash" | "impact" | "crit" | "heal" | "block" | "miss" | null;
-  mangaWord: "bam" | "pow" | "slash" | "crit" | null;
+  catPose: "idle" | "scratch" | "pounce" | "item" | "hurt" | "block" | "ko" | "victory" | "combo" | "knockback";
+  enemyPose: "idle" | "attack" | "hurt" | "ko" | "knockback";
+  mangaFx: "slash" | "impact" | "crit" | "heal" | "block" | "miss" | "combo" | null;
+  mangaWord: "bam" | "pow" | "slash" | "crit" | "combo" | null;
   mangaFocus: "cat" | "enemy" | "center" | null;
+  combo: number;             // current consecutive attack streak
+  comboLastAction: "scratch" | "pounce" | null;
+  panelSplitKey: number;     // bumps to trigger split-screen overlay
+  knockbackKey: number;      // bumps to trigger enemy knockback animation
+  catKnockbackKey: number;   // bumps to trigger cat knockback animation
 }
 
 interface GameState {
