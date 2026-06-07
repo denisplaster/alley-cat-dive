@@ -219,6 +219,12 @@ export const STORY_CHAPTERS: Chapter[] = [
         text: "Tonight, she sleeps. Tomorrow… she hunts." },
     ],
     unlocksStage: "tin_can",
+    unlockRequirement: "Available from the start.",
+    rewards: [
+      { icon: "🥫", label: "Hideout Unlocked", detail: "The Tin Can — your first home." },
+      { icon: "🐈", label: "Evolution: Alley Cat", detail: "Bigger. Braver. Sharper claws." },
+      { icon: "🗑️", label: "Tutorial Dive Unlocked", detail: "Greasy Spoon Dumpster opens." },
+    ],
   },
   {
     id: "ch2_first_scraps",
@@ -253,6 +259,12 @@ export const STORY_CHAPTERS: Chapter[] = [
         text: "The kitten had a teacher now. And a roof. Sort of." },
     ],
     unlocksStage: "cardboard_box",
+    unlockRequirement: "Finish Chapter 1.",
+    rewards: [
+      { icon: "📦", label: "Hideout Upgraded", detail: "Cardboard Den with a window." },
+      { icon: "🐾", label: "Scrapper Form", detail: "New combat stance unlocked." },
+      { icon: "💥", label: "New Attacks", detail: "Swat and Bite added to your kit." },
+    ],
     choice: {
       question: "Gerald the rat begs you for half your fish — his pups are starving.",
       options: [
@@ -290,6 +302,12 @@ export const STORY_CHAPTERS: Chapter[] = [
         text: "A kitten waits for help. A stray decides who gets it." },
     ],
     unlocksStage: "crate_fort",
+    unlockRequirement: "Finish Chapter 2.",
+    rewards: [
+      { icon: "🔗", label: "Combo Meter", detail: "Chain attacks for finisher damage." },
+      { icon: "⚠️", label: "Tougher Enemies", detail: "Mid-tier dumpsters now spawn elites." },
+      { icon: "🏚️", label: "Crate Fort Hideout", detail: "Trophy wall + weapon rack." },
+    ],
   },
   {
     id: "ch4_rival_meeting",
@@ -312,6 +330,11 @@ export const STORY_CHAPTERS: Chapter[] = [
         text: "…not bad, stray. Not bad at all." },
       { image: c4p7, speaker: "narrator",
         text: "Domino vanished into the dark. He'd be back. They always are." },
+    ],
+    unlockRequirement: "Finish Chapter 3.",
+    rewards: [
+      { icon: "😼", label: "Rival Cat Encounter", detail: "Domino can now appear in dives." },
+      { icon: "🎯", label: "New Enemy Type", detail: "Stray Tom prowls the back alleys." },
     ],
   },
   {
@@ -341,6 +364,11 @@ export const STORY_CHAPTERS: Chapter[] = [
         text: "…you got a crew now, kid. Lead 'em right." },
     ],
     unlocksStage: "crate_fort",
+    unlockRequirement: "Finish Chapter 4.",
+    rewards: [
+      { icon: "🐱‍👤", label: "Cat Crew System", detail: "Recruit crewmates from the Crew tab." },
+      { icon: "🦝", label: "New Enemy Type", detail: "Raccoon raiders enter the pool." },
+    ],
     choice: {
       question: "The raccoon boss offers a truce — split the alley fifty-fifty.",
       options: [
@@ -374,6 +402,12 @@ export const STORY_CHAPTERS: Chapter[] = [
         text: "Tell every cat in the city. This block answers to me now." },
     ],
     unlocksStage: "pallet_throne",
+    unlockRequirement: "Finish Chapter 5.",
+    rewards: [
+      { icon: "👑", label: "Boss Dumpster Chain", detail: "Boss runs unlock across the map." },
+      { icon: "🐈‍⬛", label: "Evolution: Dumpster Diver", detail: "Better loot, hazard sense." },
+      { icon: "🪑", label: "Pallet Throne Hideout", detail: "Power has a smell. It's fish." },
+    ],
     choice: {
       question: "The defeated Bin Boss lies at your paws.",
       options: [
@@ -406,6 +440,11 @@ export const STORY_CHAPTERS: Chapter[] = [
       { image: c7p8, speaker: "kitten",
         text: "I still carry it. Right here." },
     ],
+    unlockRequirement: "Finish Chapter 6.",
+    rewards: [
+      { icon: "👥", label: "Multi-Cat Dive Support", detail: "Bring crewmates into a run." },
+      { icon: "📣", label: "Rally Buff", detail: "Crew morale boosts attack in tough rooms." },
+    ],
   },
   {
     id: "ch8_hero",
@@ -434,6 +473,12 @@ export const STORY_CHAPTERS: Chapter[] = [
         text: "Hero of the trash. Legend of the alley. And somewhere out there — a tin can, still rolling." },
     ],
     unlocksStage: "alley_palace",
+    unlockRequirement: "Finish Chapter 7.",
+    rewards: [
+      { icon: "🏰", label: "Final Dungeon Unlocked", detail: "Luxury Condo Trash Room opens." },
+      { icon: "⭐", label: "Evolution: Alley Legend", detail: "Leadership aura + crew synergies." },
+      { icon: "🏆", label: "Alley Palace Hideout", detail: "Throne room, banners, fountain." },
+    ],
   },
 ];
 
