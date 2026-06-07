@@ -488,6 +488,12 @@ export const useGame = create<GameState>((set, get) => ({
       const rooms = d.rooms.map((r, i) => i === d.room - 1 ? { ...r, cleared: true } : r);
       enemyDefeatKey += 1;
       lastLootKey += 1;
+      // milestone bookkeeping: every cleared combat room counts, bosses too.
+      const isBossClear = d.currentKind === "boss";
+      set({
+        roomsCleared: s.roomsCleared + 1,
+        bossesBeaten: s.bossesBeaten + (isBossClear ? 1 : 0),
+      });
       set({ dive: { ...d, enemy, catHp, collected, log: clog, bonesFound, capsFound, fx, rooms,
         roomCleared: true, autoDive: false,
         roomEvent: `+${bonesGain} 🦴  +${capsGain} 🧴  ·  ${dropCount} item${dropCount>1?"s":""}`,
