@@ -11,6 +11,8 @@ import dMall from "@/assets/dumpster-mall.jpg";
 import dFish from "@/assets/dumpster-fish.jpg";
 import dHaunted from "@/assets/dumpster-haunted.jpg";
 import dLuxury from "@/assets/dumpster-luxury.jpg";
+import dRooftop from "@/assets/dumpster-rooftop.jpg";
+import dSubway from "@/assets/dumpster-subway.jpg";
 
 export const portraits = {
   hero: heroCat,
@@ -78,6 +80,13 @@ export const ENEMIES: Record<string, Omit<Enemy, "id" | "hp" | "maxHp"> & { base
   scrap_serpent:  { name: "Scrap Serpent",  baseHp: 120, attack: 18, emoji: "🪤" },
   spoiled_imp:    { name: "Spoiled Imp",    baseHp: 98, attack: 16, emoji: "😈" },
   condo_hound:    { name: "Condo Hound",    baseHp: 132, attack: 20, emoji: "🐩" },
+  // Rooftop & subway themed foes for late-chapter dumpsters
+  pigeon_lord:    { name: "Pigeon Lord",    baseHp: 140, attack: 19, emoji: "🕊️" },
+  vent_wisp:      { name: "Vent Wisp",      baseHp: 105, attack: 17, emoji: "💨" },
+  antenna_imp:    { name: "Antenna Imp",    baseHp: 115, attack: 18, emoji: "📡" },
+  subway_rat_king:{ name: "Subway Rat King",baseHp: 160, attack: 21, emoji: "🐀" },
+  tunnel_ghoul:   { name: "Tunnel Ghoul",   baseHp: 145, attack: 22, emoji: "👻" },
+  graffiti_wraith:{ name: "Graffiti Wraith",baseHp: 125, attack: 20, emoji: "🎨" },
 };
 
 export const DUMPSTERS: Dumpster[] = [
@@ -99,6 +108,12 @@ export const DUMPSTERS: Dumpster[] = [
   { id: "luxury", name: "Luxury Condo Trash Room", image: dLuxury, difficulty: 6,
     expectedLoot: "mythic", enemyPool: ["raccoon","trash_bag","mold_goblin","condo_hound","spoiled_imp","scrap_serpent"], rooms: 10,
     truckTimerSec: 300, recommendedPower: 200, status: "locked", rewardCaps: 80, rewardBones: 900 },
+  { id: "rooftop", name: "Rooftop AC Bin", image: dRooftop, difficulty: 5,
+    expectedLoot: "legendary", enemyPool: ["pigeon_lord","vent_wisp","antenna_imp","alley_crow","gull_raider","grease_sprite"], rooms: 9,
+    truckTimerSec: 270, recommendedPower: 160, status: "locked", rewardCaps: 50, rewardBones: 560 },
+  { id: "subway", name: "Subway Platform Dumpster", image: dSubway, difficulty: 5,
+    expectedLoot: "legendary", enemyPool: ["subway_rat_king","tunnel_ghoul","graffiti_wraith","rat_swarm","mold_goblin","scrap_serpent"], rooms: 9,
+    truckTimerSec: 270, recommendedPower: 170, status: "locked", rewardCaps: 55, rewardBones: 620 },
 ];
 
 let _itemId = 1000;

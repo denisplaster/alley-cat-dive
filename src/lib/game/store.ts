@@ -5,7 +5,7 @@ import {
 import type {
   Cat, Dumpster, Enemy, Fx, HideoutUpgrade, Item, Rarity, Room, RoomKind,
 } from "./types";
-import { STORY_CHAPTERS, STAGE_ORDER, type HideoutStage, chapterById } from "./story";
+import { STORY_CHAPTERS, STAGE_ORDER, CHAPTER_DUMPSTER, type HideoutStage, chapterById } from "./story";
 import { computeEvolution, type EvolutionStage } from "./evolution";
 
 interface CombatEntry { id: number; text: string; tone: "info" | "hit" | "crit" | "loot" | "warn" }
@@ -238,9 +238,27 @@ export const useGame = create<GameState>((set, get) => ({
 
   startDive: () => {
     const s = get();
-    const dump = s.dumpsters.find(d => d.id === s.selectedDumpsterId);
+    // While the player still has an unfinished story chapter, force the dive
+    // into that chapter's themed dumpster so every chapter shows different
+    // art and a different enemy pool. Free-roam picks (post-campaign or via
+    // the map) still honor selectedDumpsterId.
+    const currentChapter = STORY_CHAPTERS[s.storyChapterIdx];
+    const chapterDumpsterId = currentChapter && !s.completedChapters.includes(currentChapter.id)
+      ? CHAPTER_DUMPSTER[currentChapter.id]
+      : null;
+    const dumpId = chapterDumpsterId ?? s.selectedDumpsterId;
+    // Auto-unlock the chapter's dumpster so a "locked" flag can't block the
+    // forced dive.
+    const dumpsters = chapterDumpsterId
+      ? s.dumpsters.map(d => d.id === chapterDumpsterId && d.status === "locked"
+          ? { ...d, status: "unlocked" as const } : d)
+      : s.dumpsters;
+    const dump = dumpsters.find(d => d.id === dumpId);
     const cat = s.cats.find(c => c.id === s.activeCatId);
     if (!dump || !cat || dump.status === "locked") return;
+    if (chapterDumpsterId) {
+      set({ dumpsters, selectedDumpsterId: chapterDumpsterId });
+    }
     const rooms = generateRooms(dump.rooms);
     const firstKind = rooms[0].kind;
     const wave = (firstKind === "enemy" || firstKind === "swarm" || firstKind === "elite" || firstKind === "miniboss" || firstKind === "boss")
