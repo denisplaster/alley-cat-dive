@@ -25,6 +25,7 @@ export function ActionBar() {
   const dive = useGame(s => s.dive)!;
   const hideoutStage = useGame(s => s.hideoutStage);
   const stage = lifeStageFromHideout(hideoutStage);
+  const snackCount = useGame(s => s.inventory.filter(i => i.kind === "food").length);
   const doAction = useGame(s => s.doAction);
   const goDeeper = useGame(s => s.goDeeper);
   const resolve = useGame(s => s.resolveNonCombat);
@@ -73,15 +74,19 @@ export function ActionBar() {
     <Bar>
       {moves.map((m, i) => {
         const isHeal = m.id === "item";
+        const noSnacks = isHeal && snackCount === 0;
+        const label = isHeal
+          ? (snackCount === 0 ? "No Snacks" : (lowHp ? `Heal (${snackCount})` : `Snack (${snackCount})`))
+          : m.label;
         return (
           <Btn
             key={m.id}
-            label={isHeal && lowHp ? "Heal" : m.label}
+            label={label}
             onClick={() => doAction(m.id)}
             primary={i === 0}
             tone={m.tone}
-            highlight={isHeal && lowHp}
-            disabled={locked}
+            highlight={isHeal && lowHp && !noSnacks}
+            disabled={locked || noSnacks}
           />
         );
       })}

@@ -11,8 +11,8 @@ const ICON: Record<RoomKind, string> = {
 
 export function RoomPath({ rooms, current }: { rooms: Room[]; current: number }) {
   return (
-    <div className="chunky-panel bg-black/85 px-3 py-3">
-      <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+    <div className="chunky-panel bg-black/85 px-2 py-1.5">
+      <div className="mb-1 flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
         <span>Run Path</span>
         <span>{rooms.filter(r => r.cleared).length}/{rooms.length} cleared</span>
       </div>
@@ -23,7 +23,7 @@ export function RoomPath({ rooms, current }: { rooms: Room[]; current: number })
           const revealed = r.revealed || r.cleared || isCurrent;
           return (
             <div key={i} className="flex items-center gap-1 shrink-0">
-              <div className={`relative flex size-11 md:size-12 items-center justify-center chunky-panel text-xl md:text-2xl
+              <div className={`relative flex size-7 md:size-9 items-center justify-center chunky-panel text-sm md:text-lg
                 ${r.cleared ? "bg-slate-900/80 opacity-60 grayscale" :
                   isCurrent ? "bg-primary text-primary-foreground scale-110 animate-pulse-glow" :
                   revealed ? "bg-slate-800" : "bg-slate-900/60 text-muted-foreground"}
@@ -31,11 +31,11 @@ export function RoomPath({ rooms, current }: { rooms: Room[]; current: number })
               `}>
                 {revealed || isCurrent ? ICON[r.kind] : "?"}
                 {r.cleared && (
-                  <span className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full border-2 border-black bg-primary text-[11px] text-primary-foreground">🐾</span>
+                  <span className="absolute -right-1 -top-1 flex size-3.5 items-center justify-center rounded-full border-2 border-black bg-primary text-[8px] text-primary-foreground">🐾</span>
                 )}
               </div>
               {!isLast && (
-                <div className={`h-1 w-3 md:w-4 ${r.cleared ? "bg-primary" : "bg-slate-700"}`} />
+                <div className={`h-1 w-2 md:w-3 ${r.cleared ? "bg-primary" : "bg-slate-700"}`} />
               )}
             </div>
           );

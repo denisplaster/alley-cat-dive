@@ -9,7 +9,6 @@ import { ActionBar } from "@/components/game/dive/ActionBar";
 import { CombatLog } from "@/components/game/dive/CombatLog";
 import { RunPile } from "@/components/game/dive/RunPile";
 import { LootToast } from "@/components/game/dive/LootToast";
-import { Objective } from "@/components/game/dive/Objective";
 
 export const Route = createFileRoute("/dive")({
   head: () => ({
@@ -55,15 +54,16 @@ function DiveScreen() {
   const dump = dumpsters.find(d => d.id === dive.dumpsterId)!;
 
   return (
-    <div className="mt-1 flex flex-col gap-2 pb-2">
-      {/* Compact top strip: dumpster + room + truck timer all on one line */}
+    <div className="mt-1 flex flex-col gap-1.5 pb-2">
+      {/* Ultra-compact top strip */}
       <RunHeader dump={dump} room={dive.room} totalRooms={dive.totalRooms} />
-      <RoomPath rooms={dive.rooms} current={dive.room} />
-      <TruckTimer sec={dive.timerSec} total={dive.truckTimerStart} />
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-1.5">
+        <TruckTimer sec={dive.timerSec} total={dive.truckTimerStart} />
+        <RoomPath rooms={dive.rooms} current={dive.room} />
+      </div>
 
-      {/* Main stage (large on desktop, fills available space on mobile) */}
+      {/* Main stage */}
       <DungeonStage cat={cat} enemy={dive.enemy} />
-      <Objective />
 
       {/* Actions */}
       <ActionBar />

@@ -136,7 +136,7 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
 
       {/* Stage with shake */}
       <div key={shakeId} className={dive.shakeKey > 0 ? (dive.shakeHard ? "animate-shake-hard" : "animate-shake") : ""}>
-        <div className="relative grid grid-cols-2 gap-4 p-6 md:p-10 min-h-[360px] md:min-h-[440px]">
+        <div className="relative grid grid-cols-2 gap-3 p-3 md:p-6 min-h-[240px] md:min-h-[340px]">
           <CombatantSprite
             name={cat.name}
             sub={cat.catClass}
