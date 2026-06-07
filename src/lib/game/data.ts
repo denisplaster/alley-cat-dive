@@ -66,14 +66,18 @@ export const ENEMIES: Record<string, Omit<Enemy, "id" | "hp" | "maxHp"> & { base
   mold_goblin:  { name: "Mold Goblin",     baseHp: 70,  attack: 12, emoji: "👹" },
   pigeon_thief: { name: "Pigeon Thief",    baseHp: 35,  attack: 10, emoji: "🐦" },
   trash_bag:    { name: "Sentient Trash Bag", baseHp: 110, attack: 16, emoji: "🗑️" },
+  // Beginner enemies for kitten/juvenile stage dives
+  garbage_beetle: { name: "Garbage Beetle", baseHp: 28, attack: 5, emoji: "🪲" },
+  dust_bunny:     { name: "Dust Bunny",     baseHp: 22, attack: 4, emoji: "🌫️" },
+  litter_mouse:   { name: "Litter Mouse",   baseHp: 18, attack: 3, emoji: "🐁" },
 };
 
 export const DUMPSTERS: Dumpster[] = [
   { id: "greasy", name: "Greasy Spoon Dumpster", image: dGreasy, difficulty: 1,
-    expectedLoot: "uncommon", enemyPool: ["rat_swarm","trash_slime"], rooms: 3,
+    expectedLoot: "uncommon", enemyPool: ["litter_mouse","garbage_beetle","dust_bunny"], rooms: 3,
     truckTimerSec: 180, recommendedPower: 30, status: "unlocked", rewardCaps: 8, rewardBones: 60 },
   { id: "apartment", name: "Apartment Alley Bin", image: dApartment, difficulty: 2,
-    expectedLoot: "rare", enemyPool: ["rat_swarm","pigeon_thief","raccoon"], rooms: 4,
+    expectedLoot: "rare", enemyPool: ["garbage_beetle","rat_swarm","pigeon_thief"], rooms: 4,
     truckTimerSec: 200, recommendedPower: 55, status: "unlocked", rewardCaps: 14, rewardBones: 120 },
   { id: "mall", name: "Mall Food Court Compactor", image: dMall, difficulty: 3,
     expectedLoot: "rare", enemyPool: ["raccoon","mold_goblin","trash_bag"], rooms: 5,
