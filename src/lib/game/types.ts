@@ -46,6 +46,21 @@ export interface Enemy {
 
 export type DumpsterStatus = "unlocked" | "locked" | "completed" | "dangerous";
 
+export type RoomKind = "enemy" | "loot" | "hazard" | "rest" | "miniboss" | "boss";
+
+export interface Room {
+  kind: RoomKind;
+  cleared: boolean;
+  revealed: boolean;
+}
+
+export interface Fx {
+  id: number;
+  target: "cat" | "enemy";
+  kind: "dmg" | "crit" | "heal" | "miss";
+  amount: number;
+}
+
 export interface Dumpster {
   id: string;
   name: string;
