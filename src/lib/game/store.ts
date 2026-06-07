@@ -182,7 +182,6 @@ const spawnEnemy = (dump: Dumpster, kind: RoomKind, roomIdx: number): Enemy => {
     hp = Math.round(hp * hpMult);
     atk = Math.round(atk * atkMult);
     name = (isFinal ? "FINAL BOSS — " : "BOSS — ") + name;
-    emoji = "👑";
   }
   return { id: enemyKey, name, hp, maxHp: hp, attack: atk, emoji };
 };
