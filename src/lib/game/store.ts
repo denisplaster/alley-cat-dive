@@ -321,6 +321,16 @@ export const useGame = create<GameState>((set, get) => ({
       mangaFocus = "enemy";
     }
 
+    // Cat speech bubble for panel 1
+    let bubble: DiveState["bubble"] = null;
+    if (action === "item") {
+      bubble = { side: "cat", text: pick(CAT_LINES.item), key: nextBubbleKey() };
+    } else {
+      const wasFinisher = combo >= 3 && comboLastAction !== d.comboLastAction;
+      const pool = wasFinisher ? CAT_LINES.combo : action === "pounce" ? CAT_LINES.pounce : CAT_LINES.scratch;
+      bubble = { side: "cat", text: pick(pool), key: nextBubbleKey() };
+    }
+
     // ---- Panel 2: enemy counter-attack (data computed now, visuals deferred) ----
     let counter: null | {
       incoming: number;
@@ -336,9 +346,10 @@ export const useGame = create<GameState>((set, get) => ({
     } = null;
 
     if (enemy.hp > 0 && action !== "item") {
-      const incoming = Math.max(1, Math.round(enemy.attack * (0.8 + Math.random() * 0.4) - cat.defense * 0.4));
-      const blocked = incoming <= Math.max(4, Math.round(cat.defense * 0.55));
-      const heavy = incoming >= 14;
+      // Enemies hit harder: bigger base swing, lower defense scaling.
+      const incoming = Math.max(2, Math.round(enemy.attack * (1.25 + Math.random() * 0.55) - cat.defense * 0.22));
+      const blocked = incoming <= Math.max(3, Math.round(cat.defense * 0.35));
+      const heavy = incoming >= 18;
       const nextCatFlash = catFlashKey + 1;
       const nextCatKb = heavy ? catKnockbackKey + 1 : catKnockbackKey;
       if (heavy) { combo = 0; comboLastAction = null; }
@@ -387,13 +398,19 @@ export const useGame = create<GameState>((set, get) => ({
     set({ dive: { ...d, catHp: d.catHp, enemy, collected, log: clog, fx, bonesFound, capsFound,
       shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey,
       catPose, enemyPose, mangaFx, mangaWord, mangaFocus,
-      combo, comboLastAction, knockbackKey, catKnockbackKey, panelSplitKey } });
+      combo, comboLastAction, knockbackKey, catKnockbackKey, panelSplitKey, bubble } });
 
     // Panel 2: enemy counter-attack — apply HP loss and swap to counter visuals after a beat.
     if (counter) {
       const ctr = counter;
       const finalCatHp = Math.max(0, catHp - ctr.incoming);
       const willKo = finalCatHp <= 0;
+      // Pick enemy bubble pool based on context
+      const enemyPool = d.currentKind === "boss" ? ENEMY_LINES.boss
+        : d.currentKind === "miniboss" ? ENEMY_LINES.miniboss
+        : ctr.incoming >= 18 ? ENEMY_LINES.heavy
+        : ENEMY_LINES.attack;
+      const enemyText = pick(enemyPool);
       setTimeout(() => {
         const cur = get().dive;
         if (!cur || cur.ended || cur.roomCleared) return;
@@ -413,11 +430,12 @@ export const useGame = create<GameState>((set, get) => ({
           catFlashKey: ctr.catFlashKey,
           catKnockbackKey: ctr.catKnockbackKey,
           log: log2,
+          bubble: { side: "enemy", text: enemyText, key: nextBubbleKey() },
           ended: willKo ? true : cur.ended,
           fled: willKo ? true : cur.fled,
         } });
         if (willKo) get().endDive(false);
-      }, 850);
+      }, 1800);
     }
   },
 
