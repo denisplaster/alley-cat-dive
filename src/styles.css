@@ -253,6 +253,21 @@
   0%, 100% { box-shadow: inset 0 0 0 4px rgba(239,68,68,0.0); }
   50% { box-shadow: inset 0 0 0 6px rgba(239,68,68,0.9); }
 }
+@keyframes manga-speedlines {
+  0% { opacity: 0; transform: scale(1.08); }
+  20% { opacity: 0.18; }
+  100% { opacity: 0; transform: scale(1); }
+}
+@keyframes manga-fx-pop {
+  0% { opacity: 0; transform: scale(0.5) rotate(-10deg); }
+  25% { opacity: 1; transform: scale(1.08) rotate(3deg); }
+  100% { opacity: 0; transform: scale(1.2) rotate(0deg); }
+}
+@keyframes manga-word-slam {
+  0% { opacity: 0; transform: scale(1.8) rotate(-8deg); }
+  35% { opacity: 1; transform: scale(0.95) rotate(-2deg); }
+  100% { opacity: 0; transform: scale(1.05) rotate(0deg); }
+}
 .animate-flicker { animation: flicker 3s linear infinite; }
 .animate-floaty { animation: floaty 4s ease-in-out infinite; }
 .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
@@ -265,3 +280,6 @@
 .animate-banner-slam { animation: banner-slam 0.45s cubic-bezier(.2,1.3,.4,1) forwards; }
 .animate-drip { animation: drip 4s linear infinite; }
 .animate-danger-border { animation: danger-border 0.8s ease-in-out infinite; }
+.manga-speedlines-active { animation: manga-speedlines 0.45s ease-out forwards; mix-blend-mode: multiply; }
+.manga-fx-pop { animation: manga-fx-pop 0.55s ease-out forwards; filter: drop-shadow(0 0 18px rgba(255,255,255,0.45)); }
+.manga-word-slam { animation: manga-word-slam 0.65s cubic-bezier(.2,1.3,.4,1) forwards; filter: drop-shadow(0 6px 0 rgba(0,0,0,0.6)); }

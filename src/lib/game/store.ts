@@ -164,7 +164,7 @@ export const useGame = create<GameState>((set, get) => ({
         capsFound: 0,
         log: [
           mklog(`Diving into ${dump.name}…`, "info"),
-          enemy ? mklog(`A ${enemy.name} ${enemy.emoji} blocks the way!`, "warn")
+          enemy ? mklog(`A ${enemy.name} blocks the way!`, "warn")
                 : mklog(roomDescriptor(firstKind), "info"),
         ],
         autoDive: false,
@@ -384,7 +384,7 @@ export const useGame = create<GameState>((set, get) => ({
       ? spawnEnemy(dump, nextKind, nextIdx) : null;
     const log2 = [...d.log,
       mklog(`Crawl deeper… Room ${nextRoom}/${d.totalRooms} — ${roomLabel(nextKind)}`, "info"),
-      enemy ? mklog(`A ${enemy.name} ${enemy.emoji} appears!`, "warn") : mklog(roomDescriptor(nextKind), "info"),
+      enemy ? mklog(`A ${enemy.name} appears!`, "warn") : mklog(roomDescriptor(nextKind), "info"),
     ];
     set({ dive: { ...d, room: nextRoom, rooms, currentKind: nextKind, enemy,
       roomCleared: false, roomEvent: null, log: log2,

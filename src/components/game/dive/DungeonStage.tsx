@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useGame } from "@/lib/game/store";
 import type { Cat, Enemy, Fx, RoomKind } from "@/lib/game/types";
 import { NextRoomPreview } from "./NextRoomPreview";
@@ -333,11 +333,11 @@ function NonCombatPanel({ kind, cleared }: { kind: RoomKind; cleared: boolean })
     miniboss: { icon: "👹", title: "EMPTY", desc: "" },
     boss: { icon: "👑", title: "EMPTY", desc: "" },
   }[kind];
+  const isArtRoom = kind === "loot" || kind === "hazard" || kind === "rest";
   return (
     <div className="relative flex flex-col items-end justify-end gap-2">
-      {typeof meta.icon === "string" && meta.icon.startsWith("/") ? null : null}
       <div className={`w-32 h-32 md:w-40 md:h-40 flex items-center justify-center ${cleared ? "opacity-40 grayscale" : "animate-floaty"}`}>
-        {typeof meta.icon === "string" && meta.icon.endsWith(".png") ? (
+        {isArtRoom ? (
           <img src={meta.icon} alt={meta.title} className="size-full object-contain" loading="lazy" width={1024} height={1024} />
         ) : (
           <div className="text-7xl">{meta.icon}</div>
