@@ -273,60 +273,70 @@ export const useGame = create<GameState>((set, get) => ({
       if (isFinisher) { panelSplitKey += 1; }
     }
 
-    // enemy counter-attack
-    let catPose: DiveState["catPose"] = d.catPose;
-    let enemyPose: DiveState["enemyPose"] = d.enemyPose;
-    let mangaFx: DiveState["mangaFx"] = null;
-    let mangaWord: DiveState["mangaWord"] = null;
-    let mangaFocus: DiveState["mangaFocus"] = null;
+    // ---- Panel 1: the CAT's action ----
+    let catPose: DiveState["catPose"];
+    let enemyPose: DiveState["enemyPose"];
+    let mangaFx: DiveState["mangaFx"];
+    let mangaWord: DiveState["mangaWord"];
+    let mangaFocus: DiveState["mangaFocus"];
 
     if (action === "item") {
       catPose = "item";
       enemyPose = enemy.hp <= 0 ? "ko" : "idle";
       mangaFx = "heal";
+      mangaWord = null;
       mangaFocus = "cat";
     } else {
-      const isFinisher = combo >= 3 && (comboLastAction !== d.comboLastAction);
-      catPose = isFinisher ? "combo" : action === "pounce" ? "pounce" : "scratch";
+      const wasFinisher = combo >= 3 && comboLastAction !== d.comboLastAction;
+      catPose = wasFinisher ? "combo" : action === "pounce" ? "pounce" : "scratch";
       enemyPose = enemy.hp <= 0 ? "ko" : "hurt";
-      mangaFx = isFinisher ? "combo"
+      mangaFx = wasFinisher ? "combo"
         : enemy.hp <= 0 && action === "pounce" ? "crit"
         : action === "scratch" ? "slash" : "impact";
-      mangaWord = isFinisher ? "combo"
+      mangaWord = wasFinisher ? "combo"
         : enemy.hp <= 0 ? "crit"
         : action === "scratch" ? "slash"
         : action === "pounce" ? "pow" : "bam";
       mangaFocus = "enemy";
     }
 
+    // ---- Panel 2: enemy counter-attack (data computed now, visuals deferred) ----
+    let counter: null | {
+      incoming: number;
+      blocked: boolean;
+      enemyName: string;
+      catPose: DiveState["catPose"];
+      enemyPose: DiveState["enemyPose"];
+      mangaFx: DiveState["mangaFx"];
+      mangaWord: DiveState["mangaWord"];
+      mangaFocus: DiveState["mangaFocus"];
+      catFlashKey: number;
+      catKnockbackKey: number;
+    } = null;
+
     if (enemy.hp > 0 && action !== "item") {
       const incoming = Math.max(1, Math.round(enemy.attack * (0.8 + Math.random() * 0.4) - cat.defense * 0.4));
       const blocked = incoming <= Math.max(4, Math.round(cat.defense * 0.55));
-      catHp = Math.max(0, catHp - incoming);
-      clog = [...clog, mklog(`${enemy.name} hits back for ${incoming}`, "warn")];
-      fx = [...fx, { id: nextFxId(), target: "cat", kind: "dmg", amount: incoming }];
-      catFlashKey += 1;
-      // big incoming hits send the cat flying & break combo
       const heavy = incoming >= 14;
-      catPose = blocked ? "block" : heavy ? "knockback" : "hurt";
-      enemyPose = "attack";
-      mangaFx = blocked ? "block" : "impact";
-      mangaWord = blocked ? null : incoming >= 12 ? "bam" : "pow";
-      mangaFocus = "cat";
-      if (heavy) { catKnockbackKey += 1; combo = 0; comboLastAction = null; }
-      if (!blocked && !heavy && combo > 2) combo = Math.max(0, combo - 1);
+      const nextCatFlash = catFlashKey + 1;
+      const nextCatKb = heavy ? catKnockbackKey + 1 : catKnockbackKey;
+      if (heavy) { combo = 0; comboLastAction = null; }
+      else if (!blocked && combo > 2) combo = Math.max(0, combo - 1);
+      counter = {
+        incoming,
+        blocked,
+        enemyName: enemy.name,
+        catPose: blocked ? "block" : heavy ? "knockback" : "hurt",
+        enemyPose: "attack",
+        mangaFx: blocked ? "block" : "impact",
+        mangaWord: blocked ? null : incoming >= 12 ? "bam" : "pow",
+        mangaFocus: "cat",
+        catFlashKey: nextCatFlash,
+        catKnockbackKey: nextCatKb,
+      };
     }
 
-    if (catHp <= 0) {
-      clog = [...clog, mklog(`💀 ${cat.name} went down! Dragging them out…`, "warn")];
-      set({ dive: { ...d, catHp: 0, enemy, log: clog, ended: true, fled: true,
-        fx, catFlashKey, enemyFlashKey, shakeKey, shakeHard,
-        catPose: "ko", enemyPose: enemy.hp <= 0 ? "ko" : "attack", mangaFx, mangaWord, mangaFocus,
-        combo: 0, comboLastAction: null, knockbackKey, catKnockbackKey, panelSplitKey } });
-      get().endDive(false);
-      return;
-    }
-
+    // Enemy dead from the cat's hit — show victory panel, no counter to schedule.
     if (enemy.hp <= 0) {
       const isBoss = d.currentKind === "boss";
       const isMini = d.currentKind === "miniboss";
@@ -352,10 +362,42 @@ export const useGame = create<GameState>((set, get) => ({
       return;
     }
 
-    set({ dive: { ...d, catHp, enemy, collected, log: clog, fx, bonesFound, capsFound,
+    // Panel 1: cat-attacker view (enemy hurt). Damage already applied.
+    set({ dive: { ...d, catHp: d.catHp, enemy, collected, log: clog, fx, bonesFound, capsFound,
       shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey,
       catPose, enemyPose, mangaFx, mangaWord, mangaFocus,
       combo, comboLastAction, knockbackKey, catKnockbackKey, panelSplitKey } });
+
+    // Panel 2: enemy counter-attack — apply HP loss and swap to counter visuals after a beat.
+    if (counter) {
+      const ctr = counter;
+      const finalCatHp = Math.max(0, catHp - ctr.incoming);
+      const willKo = finalCatHp <= 0;
+      setTimeout(() => {
+        const cur = get().dive;
+        if (!cur || cur.ended || cur.roomCleared) return;
+        const counterLog = mklog(`${ctr.enemyName} hits back for ${ctr.incoming}`, "warn");
+        const log2 = willKo
+          ? [...cur.log, counterLog, mklog(`💀 ${cat.name} went down! Dragging them out…`, "warn")]
+          : [...cur.log, counterLog];
+        const newFx = [...cur.fx, { id: nextFxId(), target: "cat" as const, kind: "dmg" as const, amount: ctr.incoming }];
+        set({ dive: { ...cur,
+          catHp: finalCatHp,
+          fx: newFx,
+          catPose: willKo ? "ko" : ctr.catPose,
+          enemyPose: ctr.enemyPose,
+          mangaFx: ctr.mangaFx,
+          mangaWord: ctr.mangaWord,
+          mangaFocus: ctr.mangaFocus,
+          catFlashKey: ctr.catFlashKey,
+          catKnockbackKey: ctr.catKnockbackKey,
+          log: log2,
+          ended: willKo ? true : cur.ended,
+          fled: willKo ? true : cur.fled,
+        } });
+        if (willKo) get().endDive(false);
+      }, 850);
+    }
   },
 
   resolveNonCombat: () => {
