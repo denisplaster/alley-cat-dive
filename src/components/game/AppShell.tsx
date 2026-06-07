@@ -21,7 +21,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: s => s.location.pathname });
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden bg-background text-foreground selection:bg-secondary/40">
+    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background text-foreground selection:bg-secondary/40">
       {/* Background */}
       <div className="fixed inset-0 z-0">
         <img
@@ -41,47 +41,46 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="pointer-events-none fixed right-[14%] top-[34%] z-30 animate-fly text-xl select-none" style={{ animationDelay: "1.4s" }}>🪰</div>
 
       {/* Top HUD */}
-      <header className="relative z-30 flex flex-wrap items-start justify-between gap-2 p-2 md:p-4">
-        <Link to="/" className="flex items-end gap-3">
-          <div className="chunky-panel rotate-[-2deg] bg-accent px-3 py-1.5 text-black">
-            <div className="text-[10px] font-bold uppercase tracking-tight leading-none">Lvl</div>
-            <div className="font-display text-2xl leading-none">{playerLevel}</div>
-          </div>
-          <div className="mt-1 flex flex-col gap-1">
-            <div className="font-display text-sm uppercase tracking-widest text-primary leading-none">Alley Cat</div>
-            <div className="chunky-panel h-3 w-32 bg-black p-[2px]">
-              <div className="h-full bg-secondary" style={{ width: `${playerXp}%` }} />
+      <header className="relative z-30 flex flex-col gap-2 p-2 md:p-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <Link to="/" className="flex items-end gap-3">
+            <div className="chunky-panel rotate-[-2deg] bg-accent px-3 py-1.5 text-black">
+              <div className="text-[10px] font-bold uppercase tracking-tight leading-none">Lvl</div>
+              <div className="font-display text-2xl leading-none">{playerLevel}</div>
             </div>
+            <div className="mt-1 flex flex-col gap-1">
+              <div className="font-display text-sm uppercase tracking-widest text-primary leading-none">Alley Cat</div>
+              <div className="chunky-panel h-3 w-32 bg-black p-[2px]">
+                <div className="h-full bg-secondary" style={{ width: `${playerXp}%` }} />
+              </div>
+            </div>
+          </Link>
+
+          <div className="flex gap-2 md:gap-3">
+            <Currency label="Fishbones" value={fishbones} bg="bg-white" text="text-black" pip="bg-accent" />
+            <Currency label="Caps" value={bottlecaps} bg="bg-slate-800" text="text-secondary" pip="bg-secondary" />
           </div>
-        </Link>
-
-        <div className="flex gap-2 md:gap-3">
-          <Currency label="Fishbones" value={fishbones} bg="bg-white" text="text-black" pip="bg-accent" />
-          <Currency label="Caps" value={bottlecaps} bg="bg-slate-800" text="text-secondary" pip="bg-secondary" />
         </div>
-      </header>
 
-      <main className="relative z-20 mx-auto w-full max-w-7xl px-3 pb-24 md:px-6 md:pb-28">
-        {children}
-      </main>
-
-      {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 z-40 w-full px-2 pb-2 md:pb-4">
-        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-2">
+        <nav className="flex w-full flex-wrap items-center justify-center gap-1.5 md:gap-2">
           {NAV.map(n => {
             const active = (n.to === "/" && pathname === "/") || (n.to !== "/" && pathname.startsWith(n.to));
             return (
               <Link
                 key={n.to}
                 to={n.to}
-                className={`chunky-button px-3 py-1.5 text-[11px] md:text-sm font-bold uppercase tracking-wider ${active ? "bg-primary text-black" : "bg-slate-900 text-foreground hover:bg-slate-800"}`}
+                className={`chunky-button px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider md:px-3 md:py-1.5 md:text-sm ${active ? "bg-primary text-black" : "bg-slate-900 text-foreground hover:bg-slate-800"}`}
               >
                 {n.label}
               </Link>
             );
           })}
-        </div>
-      </nav>
+        </nav>
+      </header>
+
+      <main className="relative z-20 mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col px-3 pb-3 md:px-6">
+        {children}
+      </main>
     </div>
   );
 }
