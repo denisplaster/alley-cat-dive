@@ -11,6 +11,8 @@ import catHurt from "@/assets/anime/cat-hurt.png";
 import catBlock from "@/assets/anime/cat-block.png";
 import catKo from "@/assets/anime/cat-ko.png";
 import catVictory from "@/assets/anime/cat-victory.png";
+import catCombo from "@/assets/anime/cat-combo.png";
+import catKnockback from "@/assets/anime/cat-knockback.png";
 import enemyIdle from "@/assets/anime/enemy-idle.png";
 import enemyAttack from "@/assets/anime/enemy-attack.png";
 import enemyHurt from "@/assets/anime/enemy-hurt.png";
@@ -18,8 +20,11 @@ import enemyKo from "@/assets/anime/enemy-ko.png";
 import bossIdle from "@/assets/anime/boss-idle.png";
 import bossAttack from "@/assets/anime/boss-attack.png";
 import bossHurt from "@/assets/anime/boss-hurt.png";
+import bossKo from "@/assets/anime/boss-ko.png";
 import minibossIdle from "@/assets/anime/miniboss-idle.png";
 import minibossAttack from "@/assets/anime/miniboss-attack.png";
+import minibossHurt from "@/assets/anime/miniboss-hurt.png";
+import minibossKo from "@/assets/anime/miniboss-ko.png";
 import roomLoot from "@/assets/anime/room-loot.png";
 import roomHazard from "@/assets/anime/room-hazard.png";
 import roomRest from "@/assets/anime/room-rest.png";
@@ -29,11 +34,14 @@ import fxCrit from "@/assets/anime/fx-crit.png";
 import fxHeal from "@/assets/anime/fx-heal.png";
 import fxMiss from "@/assets/anime/fx-miss.png";
 import fxBlock from "@/assets/anime/fx-block.png";
+import fxCombo from "@/assets/anime/fx-combo.png";
 import fxSpeedlines from "@/assets/anime/fx-speedlines.png";
 import wordBam from "@/assets/anime/word-bam.png";
 import wordPow from "@/assets/anime/word-pow.png";
 import wordSlash from "@/assets/anime/word-slash.png";
 import wordCrit from "@/assets/anime/word-crit.png";
+import wordCombo from "@/assets/anime/word-combo.png";
+import panelSplit from "@/assets/anime/panel-split.png";
 
 const KIND_TINT: Record<RoomKind, string> = {
   enemy: "from-emerald-950/60 via-black to-black",
@@ -185,15 +193,18 @@ const CAT_ART = {
   block: catBlock,
   ko: catKo,
   victory: catVictory,
+  combo: catCombo,
+  knockback: catKnockback,
 } as const;
 
-const FX_ART = { slash: fxSlash, impact: fxImpact, crit: fxCrit, heal: fxHeal, block: fxBlock, miss: fxMiss } as const;
-const WORD_ART = { bam: wordBam, pow: wordPow, slash: wordSlash, crit: wordCrit } as const;
+const FX_ART = { slash: fxSlash, impact: fxImpact, crit: fxCrit, heal: fxHeal, block: fxBlock, miss: fxMiss, combo: fxCombo } as const;
+const WORD_ART = { bam: wordBam, pow: wordPow, slash: wordSlash, crit: wordCrit, combo: wordCombo } as const;
 
-function getEnemyArt(kind: RoomKind, pose: "idle" | "attack" | "hurt" | "ko") {
-  if (kind === "boss") return ({ idle: bossIdle, attack: bossAttack, hurt: bossHurt, ko: bossHurt } as const)[pose];
-  if (kind === "miniboss") return ({ idle: minibossIdle, attack: minibossAttack, hurt: enemyHurt, ko: enemyKo } as const)[pose];
-  return ({ idle: enemyIdle, attack: enemyAttack, hurt: enemyHurt, ko: enemyKo } as const)[pose];
+function getEnemyArt(kind: RoomKind, pose: "idle" | "attack" | "hurt" | "ko" | "knockback") {
+  const p = pose === "knockback" ? "hurt" : pose;
+  if (kind === "boss") return ({ idle: bossIdle, attack: bossAttack, hurt: bossHurt, ko: bossKo } as const)[p];
+  if (kind === "miniboss") return ({ idle: minibossIdle, attack: minibossAttack, hurt: minibossHurt, ko: minibossKo } as const)[p];
+  return ({ idle: enemyIdle, attack: enemyAttack, hurt: enemyHurt, ko: enemyKo } as const)[p];
 }
 
 function MangaOverlay({ fxSrc, wordSrc, focus }: { fxSrc: string | null; wordSrc: string | null; focus: "cat" | "enemy" | "center" | null }) {
