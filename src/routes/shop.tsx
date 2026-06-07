@@ -1,0 +1,81 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import raccoon from "@/assets/raccoon-merchant.png";
+import { useGame, rarityClass } from "@/lib/game/store";
+import { LOOT_POOL, newItemId } from "@/lib/game/data";
+import { SHOP_ITEMS } from "@/lib/game/data";
+
+export const Route = createFileRoute("/shop")({
+  head: () => ({
+    meta: [
+      { title: "Raccoon Shop — Alley Cat Dumpster Divers" },
+      { name: "description", content: "A shifty raccoon will sell you almost anything. Cash up front." },
+      { property: "og:title", content: "Raccoon Shop" },
+      { property: "og:description", content: "A shifty raccoon merchant." },
+    ],
+  }),
+  component: ShopScreen,
+});
+
+function ShopScreen() {
+  const buy = useGame(s => s.buy);
+  const fishbones = useGame(s => s.fishbones);
+  const caps = useGame(s => s.bottlecaps);
+  const [flash, setFlash] = useState<string | null>(null);
+
+  return (
+    <div className="mt-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <aside className="lg:col-span-4">
+          <div className="chunky-panel bg-black/80 p-4 text-center">
+            <img src={raccoon} alt="Raccoon merchant" width={320} height={320} className="mx-auto h-64 w-auto" />
+            <h2 className="font-display text-3xl uppercase text-secondary drop-shadow-[0_0_12px_rgba(217,70,239,0.5)]">Trash Rico</h2>
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Probably bites. Definitely cheats.</p>
+            <p className="mt-3 text-xs italic text-muted-foreground">"Pssst… for you, friend, half price. ‘Half.’"</p>
+          </div>
+        </aside>
+
+        <div className="lg:col-span-8">
+          <header className="mb-4 flex items-end justify-between">
+            <h1 className="font-display text-4xl uppercase md:text-5xl">Shop</h1>
+            {flash && <span className="text-xs font-bold uppercase text-primary animate-flicker">{flash}</span>}
+          </header>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {SHOP_ITEMS.map(s => {
+              const canAfford = fishbones >= s.costBones && caps >= s.costCaps;
+              return (
+                <div key={s.id} className="chunky-panel flex items-start justify-between gap-3 bg-black/80 p-4">
+                  <div className="flex-1">
+                    <div className={`mb-1 inline-block border-2 px-2 py-0.5 text-[10px] font-bold uppercase ${rarityClass(s.rarity)}`}>{s.rarity}</div>
+                    <h3 className="font-display text-lg uppercase leading-tight">{s.name}</h3>
+                    <p className="text-[11px] italic text-muted-foreground">{s.description}</p>
+                    <div className="mt-2 flex gap-2 text-[11px]">
+                      {s.costBones > 0 && <span className="border-2 border-black bg-slate-900 px-2 py-0.5">{s.costBones} 🦴</span>}
+                      {s.costCaps > 0 && <span className="border-2 border-black bg-slate-900 px-2 py-0.5">{s.costCaps} 🪙</span>}
+                    </div>
+                  </div>
+                  <button
+                    disabled={!canAfford}
+                    onClick={() => {
+                      // grant a random item matching shop rarity
+                      const pool = LOOT_POOL.filter(i => i.rarity === s.rarity);
+                      const pick = pool[Math.floor(Math.random() * pool.length)] ?? LOOT_POOL[0];
+                      const ok = buy({ bones: s.costBones, caps: s.costCaps }, { ...pick, id: newItemId() });
+                      if (ok) {
+                        setFlash(`Bought ${s.name}`);
+                        setTimeout(() => setFlash(null), 1500);
+                      }
+                    }}
+                    className="chunky-button bg-primary px-4 py-2 text-xs font-bold uppercase text-black"
+                  >
+                    {canAfford ? "Buy" : "Nope"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
