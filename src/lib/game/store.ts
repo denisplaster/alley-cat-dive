@@ -333,16 +333,7 @@ export const useGame = create<GameState>((set, get) => ({
       };
     }
 
-    if (catHp <= 0) {
-      clog = [...clog, mklog(`💀 ${cat.name} went down! Dragging them out…`, "warn")];
-      set({ dive: { ...d, catHp: 0, enemy, log: clog, ended: true, fled: true,
-        fx, catFlashKey, enemyFlashKey, shakeKey, shakeHard,
-        catPose: "ko", enemyPose: enemy.hp <= 0 ? "ko" : "attack", mangaFx, mangaWord, mangaFocus,
-        combo: 0, comboLastAction: null, knockbackKey, catKnockbackKey, panelSplitKey } });
-      get().endDive(false);
-      return;
-    }
-
+    // Enemy dead from the cat's hit — show victory panel, no counter to schedule.
     if (enemy.hp <= 0) {
       const isBoss = d.currentKind === "boss";
       const isMini = d.currentKind === "miniboss";
@@ -368,10 +359,37 @@ export const useGame = create<GameState>((set, get) => ({
       return;
     }
 
-    set({ dive: { ...d, catHp, enemy, collected, log: clog, fx, bonesFound, capsFound,
+    // Panel 1: cat-attacker view (enemy hurt). Damage already applied.
+    set({ dive: { ...d, catHp: d.catHp, enemy, collected, log: clog, fx, bonesFound, capsFound,
       shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey,
       catPose, enemyPose, mangaFx, mangaWord, mangaFocus,
       combo, comboLastAction, knockbackKey, catKnockbackKey, panelSplitKey } });
+
+    // Panel 2: enemy counter-attack — apply HP loss and swap to counter visuals after a beat.
+    if (counter) {
+      const finalCatHp = catHp;
+      const willKo = finalCatHp <= 0;
+      const ctr = counter;
+      setTimeout(() => {
+        const cur = get().dive;
+        if (!cur || cur.ended || cur.roomCleared) return;
+        const log2 = willKo ? [...cur.log, mklog(`💀 ${cat.name} went down! Dragging them out…`, "warn")] : cur.log;
+        set({ dive: { ...cur,
+          catHp: Math.max(0, finalCatHp),
+          catPose: willKo ? "ko" : ctr.catPose,
+          enemyPose: ctr.enemyPose,
+          mangaFx: ctr.mangaFx,
+          mangaWord: ctr.mangaWord,
+          mangaFocus: ctr.mangaFocus,
+          catFlashKey: ctr.catFlashKey,
+          catKnockbackKey: ctr.catKnockbackKey,
+          log: log2,
+          ended: willKo ? true : cur.ended,
+          fled: willKo ? true : cur.fled,
+        } });
+        if (willKo) get().endDive(false);
+      }, 850);
+    }
   },
 
   resolveNonCombat: () => {
