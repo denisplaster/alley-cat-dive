@@ -370,15 +370,20 @@ export const useGame = create<GameState>((set, get) => ({
 
     // Panel 2: enemy counter-attack — apply HP loss and swap to counter visuals after a beat.
     if (counter) {
-      const finalCatHp = catHp;
-      const willKo = finalCatHp <= 0;
       const ctr = counter;
+      const finalCatHp = Math.max(0, catHp - ctr.incoming);
+      const willKo = finalCatHp <= 0;
       setTimeout(() => {
         const cur = get().dive;
         if (!cur || cur.ended || cur.roomCleared) return;
-        const log2 = willKo ? [...cur.log, mklog(`💀 ${cat.name} went down! Dragging them out…`, "warn")] : cur.log;
+        const counterLog = mklog(`${ctr.enemyName} hits back for ${ctr.incoming}`, "warn");
+        const log2 = willKo
+          ? [...cur.log, counterLog, mklog(`💀 ${cat.name} went down! Dragging them out…`, "warn")]
+          : [...cur.log, counterLog];
+        const newFx = [...cur.fx, { id: nextFxId(), target: "cat" as const, kind: "dmg" as const, amount: ctr.incoming }];
         set({ dive: { ...cur,
-          catHp: Math.max(0, finalCatHp),
+          catHp: finalCatHp,
+          fx: newFx,
           catPose: willKo ? "ko" : ctr.catPose,
           enemyPose: ctr.enemyPose,
           mangaFx: ctr.mangaFx,
