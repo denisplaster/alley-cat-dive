@@ -7,6 +7,7 @@ import { lifeStageFromHideout, type LifeStage } from "@/lib/game/lifestage";
 const MOVES: Record<LifeStage, { id: "scratch" | "pounce" | "item"; label: string; tone?: "secondary" | "accent" }[]> = {
   kitten: [
     { id: "scratch", label: "Swat" },
+    { id: "pounce",  label: "Bite",  tone: "secondary" },
     { id: "item",    label: "Snack",   tone: "accent" },
   ],
   juvenile: [

@@ -194,7 +194,7 @@ export const STORY_CHAPTERS: Chapter[] = [
       { image: c1p1, speaker: "narrator",
         text: "It rained for three days straight. The kind of rain that washes names off mailboxes and memories off doorsteps." },
       { image: c1p2, speaker: "narrator",
-        text: "On the third night, a cardboard box was left behind Mama Wu's noodle shop. Inside it: one shivering bundle of gray fluff." },
+        text: "On the third night, a cardboard box was left behind the diner on the corner. Inside it: one shivering bundle of gray fluff." },
       { image: c1p3, speaker: "kitten",
         text: "…m-mew?" },
       { image: c1p4, speaker: "narrator",
@@ -285,6 +285,7 @@ export const STORY_CHAPTERS: Chapter[] = [
       { image: c3p10, speaker: "scrapper",
         text: "A kitten waits for help. A stray decides who gets it." },
     ],
+    unlocksStage: "crate_fort",
   },
   {
     id: "ch4_rival_meeting",
