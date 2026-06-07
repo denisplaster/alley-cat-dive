@@ -28,6 +28,11 @@ import bunnyAttack from "@/assets/anime/bunny-attack.png";
 import bunnyHurt from "@/assets/anime/bunny-hurt.png";
 import bunnyKo from "@/assets/anime/bunny-ko.png";
 
+import raccoonIdle from "@/assets/anime/raccoon-idle.png";
+import raccoonAttack from "@/assets/anime/raccoon-attack.png";
+import raccoonHurt from "@/assets/anime/raccoon-hurt.png";
+import raccoonKo from "@/assets/anime/raccoon-ko.png";
+
 export type LifeStage = "kitten" | "juvenile" | "adult";
 
 export const lifeStageFromHideout = (s: HideoutStage): LifeStage => {
@@ -93,6 +98,13 @@ export const BUNNY_POSES = {
   ko: bunnyKo,
 } as const;
 
+export const RACCOON_POSES = {
+  idle: raccoonIdle,
+  attack: raccoonAttack,
+  hurt: raccoonHurt,
+  ko: raccoonKo,
+} as const;
+
 /**
  * Enemy id -> custom sprite override. Enemies not listed here fall back to
  * the generic enemy/miniboss/boss sprite set in DungeonStage.
@@ -101,4 +113,5 @@ export const ENEMY_SPRITE_OVERRIDES: Record<string, typeof BEETLE_POSES> = {
   garbage_beetle: BEETLE_POSES,
   litter_mouse: MOUSE_POSES,
   dust_bunny: BUNNY_POSES,
+  raccoon: RACCOON_POSES,
 };
