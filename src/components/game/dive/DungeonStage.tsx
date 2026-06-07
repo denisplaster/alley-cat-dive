@@ -265,7 +265,6 @@ function CombatantSprite({
         <FloatingNumbers fx={fx} />
         {dead && defeatKey > 0 && <DefeatBurst k={defeatKey} />}
         <div className={`relative ${portraitSize} ${low ? "animate-pulse-glow" : "animate-floaty"} ${dead ? "opacity-30 grayscale !animate-none" : ""}`}>
-          <div className="absolute inset-0 rounded-[10px] bg-black/35 blur-xl" />
           {Object.entries(poses).map(([key, src]) => (
             <img
               key={key}
