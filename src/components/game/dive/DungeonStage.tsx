@@ -278,9 +278,16 @@ function CombatantSprite({
               className={`absolute inset-0 size-full object-contain transition-opacity duration-200 ease-out ${side === "right" ? "-scale-x-100" : ""} ${key === activePose ? "opacity-100" : "opacity-0"}`}
             />
           ))}
-          {/* hit flash */}
+          {/* hit flash — radial burst growing from character */}
           {flashId > 0 && (
-            <div key={flashId} className="pointer-events-none absolute inset-0 bg-destructive/40 animate-flash-hit" />
+            <div
+              key={flashId}
+              className="pointer-events-none absolute inset-0 animate-flash-hit rounded-full mix-blend-screen"
+              style={{
+                background:
+                  "radial-gradient(circle at center, rgba(239,68,68,0.85) 0%, rgba(239,68,68,0.5) 35%, rgba(239,68,68,0) 70%)",
+              }}
+            />
           )}
         </div>
         {/* platform + shadow */}
