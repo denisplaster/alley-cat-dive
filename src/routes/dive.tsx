@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useGame } from "@/lib/game/store";
 import { DungeonStage } from "@/components/game/dive/DungeonStage";
 import { RunHeader } from "@/components/game/dive/RunHeader";
@@ -31,6 +31,7 @@ function DiveScreen() {
   const dumpsters = useGame(s => s.dumpsters);
   const lastRewards = useGame(s => s.lastRewards);
   const navigate = useNavigate();
+  const [drawer, setDrawer] = useState<null | "log" | "pile">(null);
 
   useEffect(() => {
     if (!dive && !lastRewards) startDive();
@@ -54,22 +55,37 @@ function DiveScreen() {
   const dump = dumpsters.find(d => d.id === dive.dumpsterId)!;
 
   return (
-    <div className="mt-2 space-y-3 pb-32 md:pb-36">
+    <div className="mt-1 flex flex-col gap-2 pb-2">
+      {/* Compact top strip: dumpster + room + truck timer all on one line */}
       <RunHeader dump={dump} room={dive.room} totalRooms={dive.totalRooms} />
+      <RoomPath rooms={dive.rooms} current={dive.room} />
+      <TruckTimer sec={dive.timerSec} total={dive.truckTimerStart} />
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
-        <div className="space-y-3 lg:col-span-8">
-          <RoomPath rooms={dive.rooms} current={dive.room} />
-          <TruckTimer sec={dive.timerSec} total={dive.truckTimerStart} />
-          <DungeonStage cat={cat} enemy={dive.enemy} />
-          <Objective />
-          <ActionBar />
-        </div>
-        <div className="space-y-3 lg:col-span-4">
-          <CombatLog />
-          <RunPile />
-        </div>
+      {/* Main stage (large on desktop, fills available space on mobile) */}
+      <DungeonStage cat={cat} enemy={dive.enemy} />
+      <Objective />
+
+      {/* Actions */}
+      <ActionBar />
+
+      {/* Drawer toggles — open log or pile on demand instead of pinning them */}
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={() => setDrawer(d => d === "log" ? null : "log")}
+          className={`chunky-button px-3 py-2 text-xs font-bold uppercase ${drawer === "log" ? "bg-primary text-primary-foreground" : "bg-slate-900"}`}
+        >
+          📜 Combat Log
+        </button>
+        <button
+          onClick={() => setDrawer(d => d === "pile" ? null : "pile")}
+          className={`chunky-button px-3 py-2 text-xs font-bold uppercase ${drawer === "pile" ? "bg-secondary text-black" : "bg-slate-900"}`}
+        >
+          🎒 Pile ({dive.collected.length})
+        </button>
       </div>
+
+      {drawer === "log" && <CombatLog />}
+      {drawer === "pile" && <RunPile />}
 
       <LootToast />
     </div>
