@@ -394,7 +394,7 @@ export const useGame = create<GameState>((set, get) => ({
 
     if (enemy.hp > 0 && action !== "item") {
       // Enemies hit harder: bigger base swing, lower defense scaling.
-      const incoming = Math.max(2, Math.round(enemy.attack * (1.25 + Math.random() * 0.55) - cat.defense * 0.22));
+      const incoming = Math.max(2, Math.round(enemy.attack * (0.95 + Math.random() * 0.45) - cat.defense * 0.28));
       const blocked = incoming <= Math.max(3, Math.round(cat.defense * 0.35));
       const heavy = incoming >= 18;
       const nextCatFlash = catFlashKey + 1;
