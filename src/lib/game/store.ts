@@ -88,6 +88,7 @@ interface GameState {
   sell: (itemId: string) => void;
   upgrade: (id: string) => void;
   buy: (cost: { bones: number; caps: number }, granted: Item) => boolean;
+  buySnack: () => boolean;
 
   openCutscene: (chapterId: string, phase: "intro" | "outro") => void;
   advanceCutscene: () => void;
@@ -647,6 +648,33 @@ export const useGame = create<GameState>((set, get) => ({
       fishbones: s.fishbones - cost.bones,
       bottlecaps: s.bottlecaps - cost.caps,
       inventory: [...s.inventory, granted],
+    });
+    return true;
+  },
+
+  // Mid-dive snack vendor: spend fishbones to top up consumables when the
+  // bag runs dry. Price climbs a little per snack already in inventory so it
+  // can't be spammed to trivialize a fight.
+  buySnack: () => {
+    const s = get();
+    const snacks = s.inventory.filter(i => i.kind === "food").length;
+    const price = 30 + snacks * 15;
+    if (s.fishbones < price) {
+      if (s.dive) {
+        const warnLog = [...s.dive.log, mklog(`Need ${price} 🦴 for a snack from the alley vendor.`, "warn")];
+        set({ dive: { ...s.dive, log: warnLog } });
+      }
+      return false;
+    }
+    const sardine = LOOT_POOL.find(i => i.name === "Sardine of Healing") ?? LOOT_POOL[8];
+    const item: Item = { ...sardine, id: newItemId() };
+    const log = s.dive
+      ? [...s.dive.log, mklog(`Bought ${item.name} from a passing rat. -${price} 🦴`, "loot")]
+      : null;
+    set({
+      fishbones: s.fishbones - price,
+      inventory: [...s.inventory, item],
+      dive: s.dive && log ? { ...s.dive, log } : s.dive,
     });
     return true;
   },
