@@ -224,6 +224,10 @@ export const useGame = create<GameState>((set, get) => ({
   hideoutStage: "tin_can",
   placedItems: {},
   activeCutscene: { chapterId: STORY_CHAPTERS[0].id, phase: "intro", panel: 0 },
+  pendingReward: null,
+  roomsCleared: 0,
+  bossesBeaten: 0,
+  divesCompleted: 0,
 
   selectDumpster: (id) => set({ selectedDumpsterId: id }),
   setActiveCat: (id) => {
@@ -792,6 +796,15 @@ export const useGame = create<GameState>((set, get) => ({
     const next = { ...s.placedItems };
     delete next[slotId];
     set({ placedItems: next });
+  },
+  dismissReward: () => set({ pendingReward: null }),
+  getEvolution: () => {
+    const s = get();
+    return computeEvolution({
+      completedChapters: s.completedChapters,
+      roomsCleared: s.roomsCleared,
+      bossesBeaten: s.bossesBeaten,
+    });
   },
 }));
 
