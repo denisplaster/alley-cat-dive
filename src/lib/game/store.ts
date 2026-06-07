@@ -137,8 +137,19 @@ const spawnEnemy = (dump: Dumpster, kind: RoomKind, roomIdx: number): Enemy => {
   let atk = tmpl.attack;
   let name = tmpl.name;
   let emoji = tmpl.emoji;
-  if (kind === "miniboss") { hp = Math.round(hp * 1.6); atk = Math.round(atk * 1.3); name = "Mini-Boss " + name; }
-  if (kind === "boss") { hp = Math.round(hp * 2.4); atk = Math.round(atk * 1.5); name = "BOSS — " + name; emoji = "👑"; }
+  // Boss/mini scaling ramps with dumpster difficulty so the first dumpster's
+  // boss isn't a brick wall for a fresh kitten.
+  if (kind === "miniboss") {
+    hp = Math.round(hp * (1.25 + dump.difficulty * 0.08));
+    atk = Math.round(atk * (1.10 + dump.difficulty * 0.04));
+    name = "Mini-Boss " + name;
+  }
+  if (kind === "boss") {
+    hp = Math.round(hp * (1.45 + dump.difficulty * 0.18));
+    atk = Math.round(atk * (1.15 + dump.difficulty * 0.06));
+    name = "BOSS — " + name;
+    emoji = "👑";
+  }
   return { id: enemyKey, name, hp, maxHp: hp, attack: atk, emoji };
 };
 
