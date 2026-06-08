@@ -359,6 +359,7 @@ export class RaidScene extends Phaser.Scene {
         v.shadow.setPosition(v.baseX, v.baseY + dispH / 2 + 2);
         v.nameText.setPosition(v.baseX, v.baseY + dispH / 2 + 6);
         v.hpText.setPosition(v.baseX, v.baseY + dispH / 2 + 6);
+        v.hpBar.setPosition(v.baseX, v.baseY + dispH / 2 + 6);
         this.drawHpBar(v, (v as any)._actor as Actor);
       });
     };
