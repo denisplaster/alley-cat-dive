@@ -14,6 +14,7 @@ import { OVERDRIVES } from "./raidTypes";
 import {
   PARTY_TEMPLATES, RAID_ENEMIES, RAIDS, SKILLS, type RaidDef,
 } from "./raidData";
+import { ENEMY_SPRITES } from "./enemySprites";
 import {
   BASE_TICK, chooseEnemyAction, gainOD, normalizeTicks, pickActive,
   rollDamage, rollHeal, tickFor, tickStatuses,
@@ -1305,6 +1306,7 @@ function buildEnemiesForRoom(def: RaidDef, roomIdx: number): Actor[] {
       side: "enemy",
       name: t.name,
       emoji: t.emoji,
+      portrait: ENEMY_SPRITES[eid],
       hp, maxHp: hp,
       mp: t.mp ?? 30, maxMp: t.mp ?? 30,
       atk: t.atk, def: t.def, spd: t.spd,
