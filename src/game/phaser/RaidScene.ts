@@ -417,32 +417,52 @@ function createRaidSceneClass() {
     const all = [...this.state.party, ...this.state.enemies];
     const q = previewQueue(all, 7);
     const { width } = this.scale;
-    const tileW = 80, tileH = 28, gap = 6;
+    const tileW = 86, tileH = 30, gap = 6;
     const totalW = q.length * tileW + (q.length - 1) * gap;
     let x = (width - totalW) / 2 + tileW / 2;
     q.forEach((a, i) => {
-      const c = this.add.container(x, 30);
+      const isActive = i === 0;                       // first in queue = acting now
+      const isParty = a.side === "party";
+      const c = this.add.container(x, isActive ? 34 : 30);
       const bg = this.add.graphics();
-      const isActive = i === 0 && a.uid === this.state?.activeUid;
-      const fill = isActive ? 0xffd54a : a.side === "party" ? 0x1f2a3a : 0x4a1020;
-      bg.fillStyle(fill, 0.92); bg.fillRoundedRect(-tileW/2, -tileH/2, tileW, tileH, 4);
-      bg.lineStyle(1, 0x000000, 1); bg.strokeRoundedRect(-tileW/2, -tileH/2, tileW, tileH, 4);
-      const num = this.add.text(-tileW/2 + 6, 0, String(i + 1), {
-        fontFamily: "monospace", fontSize: "11px",
-        color: isActive ? "#000" : "#ffd54a",
+      // Color by side; the active tile is gold and larger.
+      const fill = isActive ? 0xffd54a : isParty ? 0x1f3350 : 0x4a1224;
+      const w = isActive ? tileW + 8 : tileW;
+      const h = isActive ? tileH + 6 : tileH;
+      bg.fillStyle(fill, isActive ? 1 : 0.85);
+      bg.fillRoundedRect(-w/2, -h/2, w, h, 5);
+      bg.lineStyle(isActive ? 2 : 1, isActive ? 0xffffff : 0x000000, 1);
+      bg.strokeRoundedRect(-w/2, -h/2, w, h, 5);
+      // small side pip so party/enemy read at a glance
+      const pip = this.add.graphics();
+      pip.fillStyle(isParty ? 0x4fc3ff : 0xff6b6b, 1);
+      pip.fillRoundedRect(-w/2 + 3, -h/2 + 3, 4, h - 6, 2);
+      const label = isActive ? "▶ " + a.name.slice(0, 9) : a.name.slice(0, 10);
+      const name = this.add.text(-w/2 + 12, isActive ? -3 : 0, label, {
+        fontFamily: "monospace", fontSize: isActive ? "11px" : "10px",
+        color: isActive ? "#000" : "#fff", fontStyle: isActive ? "bold" : "normal",
       }).setOrigin(0, 0.5);
-      const name = this.add.text(-tileW/2 + 18, 0, a.name.slice(0, 10), {
-        fontFamily: "monospace", fontSize: "10px",
-        color: isActive ? "#000" : "#fff",
-      }).setOrigin(0, 0.5);
-      c.add([bg, num, name]);
+      c.add([bg, pip, name]);
+      if (isActive) {
+        const now = this.add.text(-w/2 + 12, 8, "NOW", {
+          fontFamily: "monospace", fontSize: "8px", color: "#7a3b00", fontStyle: "bold",
+        }).setOrigin(0, 0.5);
+        c.add(now);
+        // gentle pulse to draw the eye
+        this.tweens.add({ targets: c, scale: { from: 1, to: 1.06 }, duration: 520, yoyo: true, repeat: -1, ease: "Sine.InOut" });
+      }
       this.queueGroup.add(c);
       x += tileW + gap;
     });
+    // "NEXT UP" caption under the strip
+    const cap = this.add.text(width / 2, 52, "TURN ORDER", {
+      fontFamily: "monospace", fontSize: "8px", color: "#8aa0c0",
+    }).setOrigin(0.5, 0).setAlpha(0.7);
+    this.queueGroup.add(cap);
     this.queueGroup.setDepth(20);
   }
 
-  // ---- Floating damage numbers ------------------------------------------
+  // ---- Floating damage numbers  // ---- Floating damage numbers ------------------------------------------
 
   private processFloats(floats: FloatingNumber[]) {
     for (const f of floats) {
@@ -450,44 +470,126 @@ function createRaidSceneClass() {
       this.floats.add(f.id);
       const v = this.actors.get(f.uid);
       if (!v) continue;
-      this.spawnFloat(v, f);
-      // also play a hit effect for damage kinds
-      if (f.kind !== "heal" && f.kind !== "null") {
-        this.playHitEffect(v, f.element);
-        // attacker lunges — find active actor
-        const active = this.state?.activeUid;
-        if (active && active !== f.uid) {
-          const av = this.actors.get(active);
-          if (av) this.lunge(av, v);
-        }
-      } else if (f.kind === "heal") {
-        this.playHealEffect(v);
+
+      if (f.kind === "heal") { this.playHealEffect(v); this.spawnFloat(v, f); continue; }
+      if (f.kind === "null") { this.spawnFloat(v, f); continue; }
+
+      const big = f.kind === "crit" || f.kind === "weak" || f.amount >= 40;
+      const attackerUid = this.state?.activeUid;
+      const av = attackerUid && attackerUid !== f.uid ? this.actors.get(attackerUid) : undefined;
+
+      if (av) {
+        // Sequenced: anticipation -> lunge -> IMPACT (at apex) -> recover.
+        this.cinematicStrike(av, v, f, big);
+      } else {
+        // No attacker (e.g. hazard/dot) — just resolve the impact.
+        this.impact(v, f, big);
       }
     }
-    // bound the set so it doesn't grow unbounded
     if (this.floats.size > 200) this.floats = new Set([...this.floats].slice(-100));
+  }
+
+  /** FF-style staged melee: wind-up, dash to the target, land the blow at the apex. */
+  private cinematicStrike(att: ActorView, tgt: ActorView, f: FloatingNumber, big: boolean) {
+    att.idleTween?.pause();
+    const dir = att.side === "party" ? 1 : -1;
+    const dx = (tgt.baseX - att.baseX) * 0.62;
+    const dy = (tgt.baseY - att.baseY) * 0.32;
+    att.sprite.setDepth(8); // draw over everyone during the strike
+
+    // 1) Anticipation — small pull-back away from the target.
+    this.tweens.add({
+      targets: att.sprite,
+      x: att.baseX - dir * 14,
+      scaleX: att.sprite.scaleX * 1.04,
+      duration: 130, ease: "Quad.Out",
+      onComplete: () => {
+        // 2) Dash in fast.
+        this.tweens.add({
+          targets: att.sprite,
+          x: att.baseX + dx, y: att.baseY + dy,
+          duration: big ? 110 : 90, ease: "Quint.In",
+          onComplete: () => {
+            // 3) IMPACT at the apex.
+            this.impact(tgt, f, big);
+            // 4) Recover to home.
+            this.tweens.add({
+              targets: att.sprite,
+              x: att.baseX, y: att.baseY,
+              scaleX: att.sprite.scaleX, 
+              duration: 230, ease: "Back.Out", delay: big ? 90 : 40,
+              onComplete: () => { att.sprite.setDepth(1); att.idleTween?.resume(); },
+            });
+          },
+        });
+      },
+    });
+  }
+
+  /** The moment of contact: hitstop, shake, burst, recoil, number pop, optional camera punch. */
+  private impact(tgt: ActorView, f: FloatingNumber, big: boolean) {
+    const cam = this.cameras.main;
+    // Hitstop — briefly slow time so the blow reads as weighty.
+    const freeze = f.kind === "crit" ? 0.18 : big ? 0.32 : 0.6;
+    this.time.timeScale = freeze;
+    this.tweens.timeScale = freeze;
+    this.time.delayedCall((f.kind === "crit" ? 90 : big ? 70 : 45) * freeze, () => {
+      this.time.timeScale = 1; this.tweens.timeScale = 1;
+    });
+
+    // Camera punch-in on big/crit hits.
+    if (big) {
+      const z = f.kind === "crit" ? 1.10 : 1.06;
+      cam.zoomTo(z, 90, "Quad.Out");
+      cam.pan(tgt.baseX, tgt.baseY - 30, 90, "Quad.Out");
+      this.time.delayedCall(220, () => { cam.zoomTo(1, 240, "Quad.InOut"); cam.pan(this.scale.width/2, this.scale.height/2, 240, "Quad.InOut"); });
+    }
+
+    // Shake scaled to severity.
+    const intensity = f.kind === "crit" ? 0.018 : big ? 0.013 : 0.006;
+    cam.shake(big ? 260 : 150, intensity);
+
+    this.playHitEffect(tgt, f.element, big, f.kind === "crit");
+    this.spawnFloat(tgt, f);
   }
 
   private spawnFloat(v: ActorView, f: FloatingNumber) {
     const colorMap = {
-      dmg: "#fff", crit: "#ffd54a", heal: "#3ddc84",
-      weak: "#ff8a8a", resist: "#8be9ff", null: "#999",
+      dmg: "#ffffff", crit: "#ffd54a", heal: "#3ddc84",
+      weak: "#ff8a8a", resist: "#8be9ff", null: "#999999",
     } as const;
-    const text = f.kind === "null" ? "—" : f.kind === "heal" ? `+${f.amount}` : `${f.amount}${f.kind === "weak" ? "!" : ""}${f.kind === "crit" ? " ★" : ""}`;
-    const size = f.kind === "crit" ? "26px" : "20px";
-    const t = this.add.text(v.baseX, v.baseY - 80, text, {
-      fontFamily: "monospace, sans-serif",
-      fontSize: size, color: colorMap[f.kind],
-      stroke: "#000", strokeThickness: 4, fontStyle: "bold",
-    }).setOrigin(0.5).setDepth(40);
-    this.tweens.add({
-      targets: t, y: t.y - 60, alpha: { from: 1, to: 0 },
-      scale: { from: 0.7, to: 1.15 }, duration: 1000, ease: "Cubic.Out",
-      onComplete: () => t.destroy(),
+    const crit = f.kind === "crit";
+    const text = f.kind === "null" ? "MISS"
+      : f.kind === "heal" ? `+${f.amount}`
+      : `${f.amount}${f.kind === "weak" ? " WEAK!" : ""}${crit ? "" : ""}`;
+    const size = crit ? 40 : f.kind === "weak" ? 28 : f.amount >= 40 ? 30 : 22;
+    const startX = v.baseX + Phaser.Math.Between(-10, 10);
+    const t = this.add.text(startX, v.baseY - 70, text, {
+      fontFamily: "Impact, monospace, sans-serif",
+      fontSize: `${size}px`, color: colorMap[f.kind],
+      stroke: "#000", strokeThickness: crit ? 7 : 5, fontStyle: "bold",
+    }).setOrigin(0.5).setDepth(40).setScale(0.2);
+
+    if (crit) {
+      // "CRITICAL!" tag above the number.
+      const tag = this.add.text(startX, v.baseY - 104, "CRITICAL!", {
+        fontFamily: "Impact, monospace", fontSize: "16px", color: "#ffec8a",
+        stroke: "#000", strokeThickness: 4, fontStyle: "bold",
+      }).setOrigin(0.5).setDepth(41).setScale(0.4).setAlpha(0);
+      this.tweens.add({ targets: tag, alpha: 1, scale: 1, y: tag.y - 8, duration: 200, ease: "Back.Out",
+        onComplete: () => this.tweens.add({ targets: tag, alpha: 0, y: tag.y - 26, delay: 500, duration: 350, onComplete: () => tag.destroy() }) });
+    }
+
+    // Pop in big, settle, then float up & fade.
+    this.tweens.add({ targets: t, scale: crit ? 1.35 : 1.1, duration: 150, ease: "Back.Out",
+      onComplete: () => {
+        this.tweens.add({ targets: t, y: t.y - 64, alpha: { from: 1, to: 0 }, scale: t.scale * 0.85,
+          duration: 760, delay: crit ? 220 : 90, ease: "Quad.In", onComplete: () => t.destroy() });
+      },
     });
   }
 
-  // ---- Hit / heal particle bursts ---------------------------------------
+  // ---- Hit / heal particle bursts  // ---- Hit / heal particle bursts ---------------------------------------
 
   private ensureParticleTexture() {
     if (this.textures.exists("fx_dot")) return;
@@ -497,28 +599,41 @@ function createRaidSceneClass() {
     g.destroy();
   }
 
-  private playHitEffect(v: ActorView, element?: string) {
+  private playHitEffect(v: ActorView, element?: string, big = false, crit = false) {
     this.ensureParticleTexture();
     const color = ELEMENT_COLOR[element ?? "claw"] ?? 0xffffff;
-    const e = this.add.particles(v.baseX, v.baseY - 50, "fx_dot", {
-      lifespan: 480,
-      speed: { min: 80, max: 260 },
-      scale: { start: 1.3, end: 0 },
-      tint: color,
+    const cx = v.baseX, cy = v.baseY - 50;
+
+    // Layer 1 — expanding shock ring.
+    const ring = this.add.circle(cx, cy, 8, color, 0).setStrokeStyle(crit ? 5 : 3, color, 0.9).setDepth(38);
+    this.tweens.add({ targets: ring, radius: crit ? 86 : big ? 64 : 44, alpha: { from: 0.9, to: 0 },
+      duration: crit ? 380 : 280, ease: "Cubic.Out", onComplete: () => ring.destroy() });
+
+    // Layer 2 — white flash sprite (the "pop").
+    const flash = this.add.circle(cx, cy, crit ? 46 : 30, 0xffffff, 0.85).setDepth(37).setBlendMode("ADD");
+    this.tweens.add({ targets: flash, scale: 1.8, alpha: 0, duration: 180, ease: "Quad.Out", onComplete: () => flash.destroy() });
+
+    // Layer 3 — directional spark spray + element-tinted dots.
+    const qty = crit ? 34 : big ? 24 : 16;
+    const e = this.add.particles(cx, cy, "fx_dot", {
+      lifespan: crit ? 620 : 460,
+      speed: { min: 90, max: crit ? 420 : 280 },
+      angle: { min: 0, max: 360 },
+      scale: { start: crit ? 1.8 : 1.3, end: 0 },
+      tint: [color, 0xffffff],
       blendMode: "ADD",
-      quantity: 18,
-      emitting: false,
+      quantity: qty, emitting: false,
     });
-    e.explode(18);
-    this.time.delayedCall(700, () => e.destroy());
-    // Flash sprite white
+    e.explode(qty);
+    this.time.delayedCall(800, () => e.destroy());
+
+    // Sprite hit: white fill flash + a stronger directional recoil.
     v.sprite.setTint(0xffffff).setTintMode(P.TintModes.FILL);
-    this.time.delayedCall(80, () => v.sprite.clearTint().setTintMode(P.TintModes.MULTIPLY));
-    // Quick recoil
-    this.tweens.add({
-      targets: v.sprite, x: v.baseX + (v.side === "party" ? -8 : 8),
-      duration: 60, yoyo: true, ease: "Sine.Out",
-    });
+    this.time.delayedCall(crit ? 110 : 70, () => v.sprite.clearTint().setTintMode(P.TintModes.MULTIPLY));
+    const push = (crit ? 26 : big ? 18 : 11) * (v.side === "party" ? -1 : 1);
+    this.tweens.add({ targets: v.sprite, x: v.baseX + push, angle: v.side === "party" ? -6 : 6,
+      duration: 70, yoyo: true, ease: "Sine.Out",
+      onComplete: () => v.sprite.setPosition(v.baseX, v.baseY).setAngle(0) });
   }
 
   private playHealEffect(v: ActorView) {
@@ -535,17 +650,6 @@ function createRaidSceneClass() {
     });
     e.explode(14);
     this.time.delayedCall(900, () => e.destroy());
-  }
-
-  private lunge(attacker: ActorView, target: ActorView) {
-    const dx = (target.baseX - attacker.baseX) * 0.55;
-    const dy = (target.baseY - attacker.baseY) * 0.3;
-    this.tweens.add({
-      targets: attacker.sprite,
-      x: attacker.baseX + dx, y: attacker.baseY + dy,
-      duration: 140, ease: "Cubic.Out", yoyo: true,
-      onComplete: () => attacker.sprite.setPosition(attacker.baseX, attacker.baseY),
-    });
   }
 
   // ---- Flash / shake / banners ------------------------------------------
