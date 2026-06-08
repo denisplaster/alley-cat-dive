@@ -1,58 +1,123 @@
-# Story Mode + Living Hideout
 
-Turn the game into a narrative arc: a kitten abandoned in an alley grows into a legendary dumpster diver. Story is told in manga-style chapters between dives. The hideout becomes a real, illustrated room that physically evolves (tin can → cardboard box → crate fort → alley throne room) and lets the player place trophies and stash inside.
+# Post-Story Raid Mode (FFX-Inspired)
 
-## Story Arc (5 chapters)
+Solo dives stay exactly as they are. A new **Raids** tab unlocks the moment the campaign's final chapter is marked complete. Raids run on a different combat engine and use a separate progression layer (sphere grid + gear) layered on top of existing cats.
 
-1. **Abandoned** — Rainy alley. Kitten finds a tin can. Tutorial dive: one rat.
-2. **First Scraps** — Meets Scrapper. Cardboard box hideout. Choice: share food (Kind path) or hoard (Cunning path).
-3. **The Alley Pact** — Forms the crew. Crate fort hideout. Choice: ally with raccoons or fight them.
-4. **King of the Bins** — Defeats a miniboss. Pallet throne hideout. Choice: mercy or dominance.
-5. **Hero of the Trash** — Boss dive (Luxury Condo). Final hideout: full alley throne room.
+## What unlocks and where
 
-Each chapter = 1 cutscene before + 1-2 dives + 1 cutscene after + 1 choice. Choices affect later flavor text, a stat buff, and which hideout decor unlocks.
+- New route `src/routes/raids.tsx` — hidden in `AppShell` nav until `completedChapters` contains the last chapter id.
+- New route `src/routes/raid.$dungeonId.tsx` — the actual fight screen.
+- New route `src/routes/grid.$catId.tsx` — sphere grid screen.
+- Story screen gets a "Raids Unlocked" callout once the campaign is done.
 
-## Cutscene Format
+## Combat model (CTB)
 
-Manga-panel cutscene component: 2-4 panels with a background image, a character pose, and a speech bubble (reusing the bubble system we just shipped). Player taps to advance panels. Final panel of "choice" cutscenes shows 2 buttons.
+- Turn queue: every actor has a `speed` stat. Time-to-next-turn = `baseTick / speed`. The queue is recomputed on every action and shown as a vertical strip on the right of the battle screen (portraits + tick numbers, FFX-style).
+- Haste / slow / wait-actions modify the actor's next tick (e.g. heavy attack adds +30% tick cost, sets the actor further back in the queue).
+- 3 active cats vs. 1–4 enemies. No bench swapping (per your choice).
+- Action menu per cat: **Attack, Skill ▸, Item, Defend, Overdrive (when full), Flee**.
+- Skills cost MP, can target single/all, can carry an element.
 
-## Hideout Evolution
+## Elements & weaknesses
 
-Replace the current upgrades grid with a **room view**: an illustrated interior that swaps as the story progresses. Stages: `tin_can` → `cardboard_box` → `crate_fort` → `pallet_throne` → `alley_palace`.
+- 5 elements: `claw` (physical), `fire`, `ice`, `shock`, `stink` (the cat-flavoured "poison/dark").
+- Each enemy has `weak`, `resist`, `null` arrays. Hitting weakness = ×1.5 damage + advances that actor's next turn (FFX-style speed-up). Resist = ×0.5. Null = 0.
+- UI: weakness icons revealed after first hit of that type (Scan mechanic via Snack item later — for v1 always reveal after first hit).
 
-Inside the room, **placement slots** (3-6 spots depending on stage): floor, wall, shelf, corner. Player drags trophies/stash items from inventory into slots. Each placed item shows as a small icon overlay on the room image with a tooltip.
+## Overdrives
 
-The existing upgrades (gym, pantry, etc.) move to a secondary "Build" tab on the same page so we don't lose them.
+- Each cat has an `overdrive` meter 0–100. Fills from damage taken (+dmg%) and damage dealt (+half).
+- Three flavours mapped to life stage / personality (data-driven):
+  - **Hairball Cannon** (offense, single target, big number + screen shake)
+  - **Nine Lives** (support, full party heal + cleanse)
+  - **Alley Swarm** (aoe, 5 quick hits with stray-cat silhouettes)
+- Triggered from the action menu when meter full, consumes meter, plays a 1.5–2s framer-motion animation (no new assets required — reuse cat portraits + tween effects, colored flashes, scaled SVG slashes).
 
-## Technical Plan
+## Sphere Grid (per cat)
 
-**New files**
-- `src/lib/game/story.ts` — chapter definitions, panel scripts, choice effects, `STORY_CHAPTERS` array.
-- `src/components/game/story/Cutscene.tsx` — full-screen manga panel player with bubble + advance/choice UI.
-- `src/components/game/hideout/HideoutRoom.tsx` — illustrated room with placement slots.
-- `src/components/game/hideout/PlacedItem.tsx` — draggable item icon.
-- `src/routes/story.tsx` — chapter list / replay screen.
-- 5 hideout-stage images in `src/assets/` (tin_can, cardboard_box, crate_fort, pallet_throne, alley_palace) — generated via imagegen.
-- ~6-8 cutscene background images (alley_rain, dumpster_first, raccoon_standoff, crew_pact, throne_moment, hero_dawn).
+- Hex / square grid of ~40 nodes per cat: `+HP`, `+ATK`, `+SPD`, `+MP`, skill unlocks, element affinity unlocks.
+- Earn `spheres` (new resource) from raid completion. Spend on the active cat in `grid.$catId`.
+- Implemented as a JSON layout per cat archetype; render with SVG, pan/zoom optional v2.
+- Saved in `cat.grid: { unlocked: string[] }` on the cat record.
 
-**Edits**
-- `src/lib/game/store.ts` — add `story: { chapter, panel, choices: Record<string,string>, completedChapters: string[] }`, `hideoutStage`, `placedItems: Record<slotId, itemId>`. Add `advanceStory()`, `makeChoice(id)`, `placeItem(slot,itemId)`, `unplaceItem(slot)`. Trigger cutscene after each dive completion if chapter milestone met.
-- `src/routes/hideout.tsx` — render `HideoutRoom` on top, existing upgrades grid below in a "Build" tab.
-- `src/routes/index.tsx` — add "Continue Story" CTA showing current chapter.
-- `src/routes/__root.tsx` — mount `<Cutscene/>` overlay when `story.activeCutscene` is set.
-- `src/components/game/AppShell.tsx` — add Story nav link.
+## Gear
 
-**Persistence** — extend the existing zustand persist slice to include story + hideout state.
+- 3 slots: **Collar** (weapon-ish, sets base ATK & element), **Charm** (defensive/utility), **Trinket** (overdrive/speed mods).
+- Each item has 1–3 affixes (e.g. `+10% fire dmg`, `+5 spd`, `start battle with +25% OD`).
+- Dropped by raid bosses + crafted at hideout (reuse fishbones/caps).
+- New inventory section under existing `/inventory`.
 
-## Scope / Order of Implementation
+## Raids (dungeons with teams)
 
-This plan is the scaffold + Chapter 1 fully playable, with chapters 2-5 stubbed with placeholder text/images you can flesh out turn-by-turn. That keeps the first PR reviewable.
+- 4 raids at launch, themed off existing dumpster art (Subway King, Mall Wraith, Luxury Tyrant, Haunted Den).
+- Each raid = 4 rooms + boss; encounters use CTB combat.
+- Reward table: spheres, gear drops, fishbones, story flavor unlock.
+- Difficulty scales with team's combined grid progress.
 
-1. Store + types + persistence
-2. Cutscene component + 1 generated alley_rain background
-3. Chapter 1 script + trigger on first dive completion
-4. Hideout room view + tin_can image + 3 placement slots
-5. Story route + nav link
-6. Stub chapters 2-5 with titles and "Coming soon" panels
+## State changes (`src/lib/game/store.ts`)
 
-After you approve, I'll ask which art style you want for the cutscene backgrounds (gritty noir manga vs colorful shonen vs watercolor) before generating images.
+- Add `raid: RaidState | null`, `spheres: number`, per-cat `grid` and `equipment`.
+- Existing `dive` flow untouched.
+- New actions: `startRaid`, `raidAction`, `swapTarget`, `spendSphere`, `equipGear`.
+
+## File-level plan
+
+```text
+src/lib/game/
+  raidTypes.ts          # CTB types, elements, overdrive defs
+  raidData.ts           # 4 raid definitions, enemy stats, drop tables
+  raidEngine.ts         # turn queue, damage calc, status effects (pure fns)
+  gridData.ts           # per-archetype sphere grid layouts
+  gearData.ts           # affix pool, gear templates
+  store.ts              # extend with raid/grid/gear state + actions
+
+src/components/game/raid/
+  RaidStage.tsx         # battle scene (party left, enemies right)
+  TurnQueue.tsx         # vertical CTB portrait list
+  ActorCard.tsx         # HP/MP/OD bars, status icons
+  RaidActionBar.tsx     # Attack/Skill/Item/Defend/OD/Flee
+  SkillMenu.tsx
+  OverdriveOverlay.tsx  # framer-motion cinematic
+  DamageNumber.tsx      # floating damage popups
+  ElementIcon.tsx
+
+src/components/game/grid/
+  SphereGrid.tsx        # SVG grid, click-to-unlock
+  GridNode.tsx
+
+src/components/game/gear/
+  GearSlot.tsx
+  GearTooltip.tsx
+
+src/routes/
+  raids.tsx             # raid select list (locked until campaign done)
+  raid.$dungeonId.tsx   # active raid
+  grid.$catId.tsx       # sphere grid for one cat
+```
+
+## Animations
+
+- `framer-motion` only (already in stack). No new sprite art required for v1.
+- Per attack: actor scale-bump + slide toward target + impact flash + damage number float.
+- Element hits tint the impact (fire = orange burst, ice = cyan shards via CSS clip-paths, etc).
+- Overdrives: full-screen radial gradient sweep + character zoom + 3–5 staged hits, ~1.8s total. Skippable.
+- Turn-queue reshuffle animates portraits sliding to new positions (layout animation).
+
+## Out of scope (v1)
+
+- Party swap mid-battle (you chose 3 active only).
+- Pan/zoom on sphere grid (static layout fits in viewport).
+- Crafting UI for gear (drops only in v1; crafting can come later).
+- Multiplayer / co-op raids.
+
+## Rollout order
+
+1. Types + engine + store wiring (no UI).
+2. Raid screen + CTB queue + basic Attack/Defend/Flee.
+3. Skills, elements, items.
+4. Overdrives + animations.
+5. Sphere grid screen.
+6. Gear slots + drops.
+7. Polish: damage numbers, screen shake, sound stub.
+
+This is a sizable build (~10–14 new files, ~1500 LOC). I'll implement in the order above so you can play-test after each milestone.
