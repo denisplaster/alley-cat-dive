@@ -195,7 +195,7 @@ export class RaidScene extends Phaser.Scene {
         g.destroy();
       }
       const sprite = this.add.image(0, 0, useKey)
-        .setOrigin(0.5, 1);
+        .setOrigin(0.5, 0.5);
       if (side === "enemy") sprite.setFlipX(true);
       // Click handler for target selection
       const onTap = () => {
