@@ -51,6 +51,10 @@ interface DiveState {
   catKnockbackKey: number;   // bumps to trigger cat knockback animation
   bubble: { side: "cat" | "enemy"; text: string; key: number } | null;
   inAction: boolean;          // true while enemy is mid-counter-attack — locks player input
+  /** Telegraphed enemy intent for the upcoming exchange. */
+  enemyIntent: "attack" | "heavy" | "block" | null;
+  /** Turns until Pounce is ready again (0 = ready). */
+  pounceCd: number;
   /** True while the cat is animating between rooms (side-scrolling transition). */
   transitioning: boolean;
   /** Short flavor text shown during a room transition. */
@@ -94,7 +98,7 @@ interface GameState {
   selectDumpster: (id: string) => void;
   setActiveCat: (id: string) => void;
   startDive: () => void;
-  doAction: (action: "scratch" | "pounce" | "item" | "flee") => void;
+  doAction: (action: "scratch" | "pounce" | "block" | "item" | "flee") => void;
   goDeeper: () => void;
   resolveNonCombat: () => void;
   toggleAuto: () => void;
