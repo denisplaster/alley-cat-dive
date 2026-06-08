@@ -342,22 +342,23 @@ export class RaidScene extends Phaser.Scene {
         v.baseX = x + (i % 2 === 0 ? -38 : 38);
         v.baseY = y;
         // Scale by frame size to fit a fixed target height
-        const target = arr === party ? 140 : 150;
+        const target = arr === party ? 130 : 140;
         const frameH = v.sprite.frame?.height ?? 0;
         const s = frameH > 2 ? target / frameH : 1;
         v.sprite.setScale(s);
-        const tex = { width: v.sprite.frame?.width ?? 80, height: frameH || 80 };
+        const dispH = v.sprite.displayHeight || target;
+        const dispW = v.sprite.displayWidth || target;
         v.sprite.setPosition(v.baseX, v.baseY);
-        const hitW = Math.max(140, tex.width * s * 0.7);
-        const hitH = Math.max(170, tex.height * s * 0.78);
-        v.hitZone.setPosition(v.baseX, v.baseY - (arr === party ? 100 : 110));
+        const hitW = Math.max(110, dispW * 0.8);
+        const hitH = Math.max(120, dispH * 0.85);
+        v.hitZone.setPosition(v.baseX, v.baseY);
         v.hitZone.setSize(hitW, hitH);
         if (v.hitZone.input?.hitArea) {
           (v.hitZone.input.hitArea as Phaser.Geom.Rectangle).setTo(0, 0, hitW, hitH);
         }
-        v.shadow.setPosition(v.baseX, v.baseY + 4);
-        v.nameText.setPosition(v.baseX, v.baseY + 10);
-        v.hpText.setPosition(v.baseX, v.baseY + 10);
+        v.shadow.setPosition(v.baseX, v.baseY + dispH / 2 + 2);
+        v.nameText.setPosition(v.baseX, v.baseY + dispH / 2 + 6);
+        v.hpText.setPosition(v.baseX, v.baseY + dispH / 2 + 6);
         this.drawHpBar(v, (v as any)._actor as Actor);
       });
     };
