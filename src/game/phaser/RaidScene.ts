@@ -43,8 +43,13 @@ interface ActorView {
   nameText: Phaser.GameObjects.Text;
   hpBar: Phaser.GameObjects.Graphics;
   hpText: Phaser.GameObjects.Text;
-  baseX: number;
-  baseY: number;
+  baseX: number;       // current "home" anchor X (where idle plays)
+  baseY: number;       // current "home" anchor Y
+  homeX: number;       // line position X (returns here after stepping up)
+  homeY: number;       // line position Y
+  depthScale: number;  // size/z multiplier from depth in the formation
+  stepped: boolean;    // currently stepped forward (active turn)?
+  idlePhase: number;   // per-actor phase offset so motion isn't synchronized
   side: "party" | "enemy";
   alive: boolean;
   idleTween?: Phaser.Tweens.Tween;
@@ -134,12 +139,45 @@ function createRaidSceneClass() {
     });
   }
 
-  update() {
+  update(time: number) {
     const nextTargetMode = this.init_?.getTargetMode?.() ?? false;
     if (nextTargetMode !== this.targetMode) {
       this.targetMode = nextTargetMode;
       this.updateTargetRings();
     }
+    this.animateIdle(time);
+    this.driftCamera(time);
+  }
+
+  /** Procedural "living" idle: breathing scale, vertical bob, gentle sway.
+   *  Skipped for an actor while it is mid-strike (busy flag) so tweens win. */
+  private animateIdle(time: number) {
+    for (const v of this.actors.values()) {
+      if (!v.alive || (v as any)._busy) continue;
+      const ph = v.idlePhase;
+      const tt = time * 0.001;
+      // breathing — subtle scale pulse around the depth scale
+      const breathe = 1 + Math.sin(tt * 1.6 + ph) * 0.025;
+      const base = v.depthScale * (v.stepped ? 1.12 : 1);
+      v.sprite.setScale(base * breathe);
+      // vertical bob + tiny horizontal sway (more when stepped/active)
+      const amp = v.stepped ? 6 : 3;
+      const bobY = Math.sin(tt * 1.6 + ph) * amp;
+      const swayX = Math.cos(tt * 0.9 + ph) * (v.stepped ? 4 : 2);
+      v.sprite.setPosition(v.baseX + swayX, v.baseY + bobY);
+      // keep shadow/labels following the anchor (not the bob)
+      this.positionLabels(v);
+    }
+  }
+
+  /** Slow Ken-Burns drift so the locked wide shot never feels frozen. */
+  private driftCamera(time: number) {
+    if ((this as any)._camBusy) return;          // don't fight punch-in pans
+    const cam = this.cameras.main;
+    const tt = time * 0.001;
+    const ox = Math.sin(tt * 0.18) * 10;
+    const oy = Math.cos(tt * 0.13) * 6;
+    cam.setScroll(ox, oy);
   }
 
   private handleResize = () => {
@@ -210,12 +248,14 @@ function createRaidSceneClass() {
       }
     }
     this.layoutActors();
-    // Highlight active actor
+    // Highlight active actor + make it step forward out of the line.
     const active = state.activeUid;
     for (const [uid, v] of this.actors) {
       const isActive = uid === active;
       v.nameText.setBackgroundColor(isActive ? "#ffd54a" : "rgba(0,0,0,0.6)");
       v.nameText.setColor(isActive ? "#000" : "#fff");
+      if (isActive && !v.stepped && v.alive) this.stepForward(v);
+      else if (!isActive && v.stepped) this.stepBack(v);
     }
   }
 
@@ -265,14 +305,12 @@ function createRaidSceneClass() {
 
       view = {
         uid: a.uid, sprite, hitZone, shadow, nameText, hpBar, hpText,
-        baseX: 0, baseY: 0, side, alive: a.alive, hitListener: onTap,
+        baseX: 0, baseY: 0, homeX: 0, homeY: 0, depthScale: 1, stepped: false,
+        idlePhase: Math.random() * Math.PI * 2,
+        side, alive: a.alive, hitListener: onTap,
       };
       this.actors.set(a.uid, view);
-      // Idle bob
-      view.idleTween = this.tweens.add({
-        targets: sprite, angle: { from: -1.2, to: 1.2 }, duration: 1400 + index * 120,
-        ease: "Sine.InOut", yoyo: true, repeat: -1,
-      });
+      // Idle motion is driven procedurally in update() (see animateIdle()).
     }
     // Death handling — once
     if (view.alive && !a.alive) {
@@ -364,52 +402,103 @@ function createRaidSceneClass() {
   private layoutActors() {
     const { width, height } = this.scale;
     const stageH = height - this.bottomPad - 70;
-    const partyX = width * 0.22, enemyX = width * 0.78;
-    const baseY = stageH;
     const party = (this.state?.party ?? []);
     const enemies = (this.state?.enemies ?? []);
-    const place = (arr: Actor[], x: number) => {
+
+    // Formation: each side fans along a diagonal so members sit at different
+    // depths. Front members are lower on screen (closer => bigger), back members
+    // are higher and pushed toward the centre line. This reads as a 3D space.
+    const place = (arr: Actor[], side: "party" | "enemy") => {
+      const n = arr.length;
+      const dir = side === "party" ? 1 : -1;             // party faces right, enemies left
+      const frontX = side === "party" ? width * 0.20 : width * 0.80;
+      const topY = stageH * 0.34, botY = stageH * 0.92;
       arr.forEach((a, i) => {
         const v = this.actors.get(a.uid);
         if (!v) return;
-        const n = arr.length;
-        const yFrac = n === 1 ? 0.5 : i / (n - 1);
-        const y = stageH * (0.30 + yFrac * 0.62);
-        v.baseX = x + (i % 2 === 0 ? -38 : 38);
-        v.baseY = y;
-        // Scale by frame size to fit a fixed target height
-        const target = arr === party ? 130 : 140;
+        // t: 0 = front/bottom, 1 = back/top
+        const t = n === 1 ? 0.5 : i / (n - 1);
+        const y = botY + (topY - botY) * t;
+        // back ranks step inward (toward centre) and shrink — fake perspective
+        const inset = t * width * 0.10 * dir;
+        const x = frontX + inset;
+        const depthScale = 1.12 - t * 0.34;              // front 1.12 -> back 0.78
+
+        v.homeX = x; v.homeY = y; v.depthScale = depthScale;
+        if (!v.stepped) { v.baseX = x; v.baseY = y; }
+
+        // size scaled by depth
+        const target = (side === "party" ? 128 : 138) * depthScale;
         const frameH = v.sprite.frame?.height ?? 0;
         const frameW = v.sprite.frame?.width ?? 0;
         if (frameH > 2 && frameW > 2) {
-          const s = target / frameH;
-          v.sprite.setDisplaySize(frameW * s, frameH * s);
+          const sc = target / frameH;
+          v.sprite.setDisplaySize(frameW * sc, frameH * sc);
         } else {
           v.sprite.setDisplaySize(target, target);
         }
         const dispH = v.sprite.displayHeight || target;
         const dispW = v.sprite.displayWidth || target;
-        v.sprite.setPosition(v.baseX, v.baseY);
-        const hitW = Math.max(110, dispW * 0.8);
-        const hitH = Math.max(120, dispH * 0.85);
+
+        if (!v.stepped) v.sprite.setPosition(v.baseX, v.baseY);
+        // depth z-order: closer (front) draws on top
+        v.sprite.setDepth(2 + (1 - t) * 4);
+        v.shadow.setDepth(1);
+        v.shadow.setScale(depthScale);
+
+        const hitW = Math.max(100, dispW * 0.8);
+        const hitH = Math.max(110, dispH * 0.85);
         v.hitZone.setPosition(v.baseX, v.baseY);
         v.hitZone.setSize(hitW, hitH);
         if (v.hitZone.input?.hitArea) {
           (v.hitZone.input.hitArea as Phaser.Geom.Rectangle).setTo(0, 0, hitW, hitH);
         }
         v.shadow.setPosition(v.baseX, v.baseY + dispH / 2 + 2);
-        v.nameText.setPosition(v.baseX, v.baseY + dispH / 2 + 6);
-        v.hpText.setPosition(v.baseX, v.baseY + dispH / 2 + 6);
-        v.hpBar.setPosition(v.baseX, v.baseY + dispH / 2 + 6);
+        this.positionLabels(v, dispH);
         this.drawHpBar(v, (v as any)._actor as Actor);
       });
     };
-    place(party, partyX);
-    place(enemies, enemyX);
-    void baseY;
+    place(party, "party");
+    place(enemies, "enemy");
   }
 
-  // ---- Turn queue strip --------------------------------------------------
+  /** Keep name/hp UI glued under a sprite at its current position. */
+  private positionLabels(v: ActorView, dispH?: number) {
+    const h = dispH ?? v.sprite.displayHeight ?? 120;
+    const yo = v.baseY + h / 2 + 6;
+    v.nameText.setPosition(v.baseX, yo);
+    v.hpText.setPosition(v.baseX, yo);
+    v.hpBar.setPosition(v.baseX, yo);
+    v.shadow.setPosition(v.baseX, v.baseY + h / 2 + 2);
+  }
+
+  /** Active actor steps forward toward the centre line. */
+  private stepForward(v: ActorView) {
+    v.stepped = true;
+    const dir = v.side === "party" ? 1 : -1;
+    v.baseX = v.homeX + dir * 70;
+    v.baseY = v.homeY - 8;
+    (v as any)._busy = true;
+    this.tweens.add({
+      targets: v.sprite, x: v.baseX, y: v.baseY, duration: 260, ease: "Quad.Out",
+      onComplete: () => { (v as any)._busy = false; },
+    });
+    v.sprite.setDepth(7);
+  }
+
+  /** Return to the formation line when the turn ends. */
+  private stepBack(v: ActorView) {
+    v.stepped = false;
+    v.baseX = v.homeX;
+    v.baseY = v.homeY;
+    (v as any)._busy = true;
+    this.tweens.add({
+      targets: v.sprite, x: v.baseX, y: v.baseY, duration: 280, ease: "Quad.InOut",
+      onComplete: () => { (v as any)._busy = false; },
+    });
+  }
+
+  // ---- Turn queue strip  // ---- Turn queue strip --------------------------------------------------
 
   private layoutQueue() {
     this.queueGroup.removeAll(true);
@@ -491,34 +580,42 @@ function createRaidSceneClass() {
 
   /** FF-style staged melee: wind-up, dash to the target, land the blow at the apex. */
   private cinematicStrike(att: ActorView, tgt: ActorView, f: FloatingNumber, big: boolean) {
-    att.idleTween?.pause();
+    (att as any)._busy = true;                 // idle hands off to the strike
     const dir = att.side === "party" ? 1 : -1;
-    const dx = (tgt.baseX - att.baseX) * 0.62;
-    const dy = (tgt.baseY - att.baseY) * 0.32;
-    att.sprite.setDepth(8); // draw over everyone during the strike
+    // Land just SHORT of the target on its near side (real travel, full distance).
+    const stopX = tgt.baseX - dir * (tgt.sprite.displayWidth * 0.5 + 24);
+    const stopY = tgt.baseY;
+    const homeX = att.baseX, homeY = att.baseY;
+    att.sprite.setDepth(9);                     // over everyone mid-strike
 
-    // 1) Anticipation — small pull-back away from the target.
+    // 1) Anticipation — crouch back away from the target.
     this.tweens.add({
       targets: att.sprite,
-      x: att.baseX - dir * 14,
-      scaleX: att.sprite.scaleX * 1.04,
-      duration: 130, ease: "Quad.Out",
+      x: homeX - dir * 22, y: homeY + 4,
+      duration: 150, ease: "Quad.Out",
       onComplete: () => {
-        // 2) Dash in fast.
+        // 2) Dash the full distance to the target.
         this.tweens.add({
           targets: att.sprite,
-          x: att.baseX + dx, y: att.baseY + dy,
-          duration: big ? 110 : 90, ease: "Quint.In",
+          x: stopX, y: stopY,
+          duration: big ? 200 : 165, ease: "Quint.In",
           onComplete: () => {
-            // 3) IMPACT at the apex.
+            // 3) IMPACT.
             this.impact(tgt, f, big);
-            // 4) Recover to home.
+            // brief overshoot lunge into the target for contact feel
+            this.tweens.add({
+              targets: att.sprite, x: stopX + dir * 14, duration: 70, yoyo: true, ease: "Sine.Out",
+            });
+            // 4) Travel back home.
             this.tweens.add({
               targets: att.sprite,
-              x: att.baseX, y: att.baseY,
-              scaleX: att.sprite.scaleX, 
-              duration: 230, ease: "Back.Out", delay: big ? 90 : 40,
-              onComplete: () => { att.sprite.setDepth(1); att.idleTween?.resume(); },
+              x: homeX, y: homeY,
+              duration: 320, ease: "Cubic.InOut", delay: big ? 150 : 90,
+              onComplete: () => {
+                att.sprite.setPosition(homeX, homeY);
+                att.sprite.setDepth(att.stepped ? 7 : 4);
+                (att as any)._busy = false;
+              },
             });
           },
         });
@@ -537,12 +634,19 @@ function createRaidSceneClass() {
       this.time.timeScale = 1; this.tweens.timeScale = 1;
     });
 
-    // Camera punch-in on big/crit hits.
+    // Camera punch-in on big/crit hits. Pause the idle drift so they don't fight,
+    // then hand control back to drift afterward.
     if (big) {
-      const z = f.kind === "crit" ? 1.10 : 1.06;
-      cam.zoomTo(z, 90, "Quad.Out");
-      cam.pan(tgt.baseX, tgt.baseY - 30, 90, "Quad.Out");
-      this.time.delayedCall(220, () => { cam.zoomTo(1, 240, "Quad.InOut"); cam.pan(this.scale.width/2, this.scale.height/2, 240, "Quad.InOut"); });
+      (this as any)._camBusy = true;
+      const z = f.kind === "crit" ? 1.12 : 1.06;
+      cam.zoomTo(z, 110, "Quad.Out");
+      // nudge the focal point toward the target via the zoom origin
+      cam.pan(tgt.baseX, tgt.baseY - 20, 110, "Quad.Out");
+      this.time.delayedCall(260, () => {
+        cam.zoomTo(1, 260, "Quad.InOut");
+        cam.pan(this.scale.width / 2, this.scale.height / 2, 260, "Quad.InOut");
+        this.time.delayedCall(280, () => { (this as any)._camBusy = false; });
+      });
     }
 
     // Shake scaled to severity.
