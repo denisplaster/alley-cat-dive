@@ -39,14 +39,15 @@ export const NODE_META: Record<GridNodeKind, { color: string; label: string }> =
  * Helper to build a 5x4 grid that branches from a center start.
  * Layout is the same shape per cat, but stat distribution differs.
  */
-function makeGrid(catId: string, plan: GridNodeKind[][]): GridLayout {
+function makeGrid(catId: string, plan: P[][]): GridLayout {
   const cols = 6;
   const rows = plan.length;
   const nodes: GridNode[] = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const kind = plan[r][c];
-      if (!kind) continue;
+      const kindRaw = plan[r][c];
+      if (!kindRaw) continue;
+      const kind = kindRaw as GridNodeKind;
       const id = `${catId}-r${r}c${c}`;
       const value = kind === "hp" ? 12
         : kind === "atk" ? 2
