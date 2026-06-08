@@ -172,12 +172,12 @@ function createRaidSceneClass() {
       if (!v.alive || (v as any)._busy) continue;
       const ph = v.idlePhase;
       const stepped = v.stepped;
-      const base = v.depthScale;
-
-      // Breathing squash & stretch (clearly visible: ±6% on Y, opposite on X).
+      // Breathing squash & stretch (±6% on Y, opposite on X) multiplied
+      // against the raw scale chosen by setDisplaySize in layoutActors.
       const breathe = Math.sin(tt * 2.2 + ph);
-      const sx = base * (1 - breathe * 0.04) * (stepped ? 1.12 : 1);
-      const sy = base * (1 + breathe * 0.06) * (stepped ? 1.12 : 1);
+      const step = stepped ? 1.12 : 1;
+      const sx = v.baseScaleX * (1 - breathe * 0.04) * step;
+      const sy = v.baseScaleY * (1 + breathe * 0.06) * step;
       v.sprite.setScale(sx, sy);
 
       // Vertical bob (bigger) + horizontal sway + gentle rotation "tail sway".
