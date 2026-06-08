@@ -7,6 +7,7 @@ const NAV = [
   { to: "/", label: "Hub" },
   { to: "/story", label: "Story" },
   { to: "/map", label: "Map" },
+  { to: "/raids", label: "Raids" },
   { to: "/crew", label: "Crew" },
   { to: "/inventory", label: "Stash" },
   { to: "/hideout", label: "Hideout" },
