@@ -52,6 +52,8 @@ interface ActorView {
   idlePhase: number;   // per-actor phase offset so motion isn't synchronized
   side: "party" | "enemy";
   alive: boolean;
+  baseScaleX: number;  // raw sprite scale from last setDisplaySize (idle multiplies this)
+  baseScaleY: number;
   idleTween?: Phaser.Tweens.Tween;
   targetRing?: Phaser.GameObjects.Graphics;
   targetTween?: Phaser.Tweens.Tween;
@@ -170,12 +172,12 @@ function createRaidSceneClass() {
       if (!v.alive || (v as any)._busy) continue;
       const ph = v.idlePhase;
       const stepped = v.stepped;
-      const base = v.depthScale;
-
-      // Breathing squash & stretch (clearly visible: ±6% on Y, opposite on X).
+      // Breathing squash & stretch (±6% on Y, opposite on X) multiplied
+      // against the raw scale chosen by setDisplaySize in layoutActors.
       const breathe = Math.sin(tt * 2.2 + ph);
-      const sx = base * (1 - breathe * 0.04) * (stepped ? 1.12 : 1);
-      const sy = base * (1 + breathe * 0.06) * (stepped ? 1.12 : 1);
+      const step = stepped ? 1.12 : 1;
+      const sx = v.baseScaleX * (1 - breathe * 0.04) * step;
+      const sy = v.baseScaleY * (1 + breathe * 0.06) * step;
       v.sprite.setScale(sx, sy);
 
       // Vertical bob (bigger) + horizontal sway + gentle rotation "tail sway".
@@ -333,6 +335,7 @@ function createRaidSceneClass() {
         baseX: 0, baseY: 0, homeX: 0, homeY: 0, depthScale: 1, stepped: false,
         idlePhase: Math.random() * Math.PI * 2,
         side, alive: a.alive, hitListener: onTap,
+        baseScaleX: 1, baseScaleY: 1,
       };
       this.actors.set(a.uid, view);
       // Idle motion is driven procedurally in update() (see animateIdle()).
@@ -462,6 +465,8 @@ function createRaidSceneClass() {
         } else {
           v.sprite.setDisplaySize(target, target);
         }
+        v.baseScaleX = v.sprite.scaleX;
+        v.baseScaleY = v.sprite.scaleY;
         const dispH = v.sprite.displayHeight || target;
         const dispW = v.sprite.displayWidth || target;
 
