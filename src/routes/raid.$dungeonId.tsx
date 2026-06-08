@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useGame } from "@/lib/game/store";
 import { RAIDS } from "@/lib/game/raidData";
-import { RaidStage } from "@/components/game/raid/RaidStage";
+import { PhaserBattle } from "@/components/game/raid/PhaserBattle";
 
 export const Route = createFileRoute("/raid/$dungeonId")({
   head: () => ({
@@ -45,7 +45,7 @@ function RaidScreen() {
         </div>
       </header>
       <div className="min-h-0 flex-1">
-        <RaidStage bgImage={def.image} />
+        <PhaserBattle bgUrl={def.image ?? ""} />
       </div>
     </div>
   );
