@@ -30,33 +30,11 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
   // Boot phaser once
   useEffect(() => {
     if (gameRef.current || !containerRef.current) return;
-    const cats = useGame.getState().cats;
-    // Build sprite map for every actor that might appear in this raid.
+    // Build stable sprite map: cat:<id> and enemy:<id>. The scene derives the
+    // texture key from each actor's uid (p…-<catId>, e…-<enemyId>).
     const sprites: Record<string, string> = {};
-    cats.forEach(c => {
-      // Use the existing portrait as the actor sprite, keyed by raid actor uid.
-      // RaidScene uses key `actor:${uid}`; populate keys for current party + bench.
-      sprites[`actor:party:${c.id}`] = c.portrait;
-    });
-    Object.entries(ENEMY_SPRITES).forEach(([id, url]) => {
-      sprites[`actor:enemy:${id}`] = url;
-    });
-    // We also need keys for the *current* raid actors; we add aliases below.
-    const r = useGame.getState().raid;
-    if (r) {
-      r.party.forEach(p => {
-        const catId = p.uid.split(":")[1] ?? p.uid;
-        const url = (portraits as Record<string, string>)[catId];
-        if (url) sprites[`actor:${p.uid}`] = url;
-      });
-      r.enemies.forEach(e => {
-        const id = e.uid.split(":")[0] || (e as any).id || "";
-        const enemyId = (e as any).originId ?? Object.keys(ENEMY_SPRITES).find(k => ENEMY_SPRITES[k] && e.name.toLowerCase().includes(k.split("_")[0]));
-        const url = enemyId ? ENEMY_SPRITES[enemyId] : undefined;
-        if (url) sprites[`actor:${e.uid}`] = url;
-        void id;
-      });
-    }
+    Object.entries(portraits).forEach(([id, url]) => { sprites[`cat:${id}`] = url; });
+    Object.entries(ENEMY_SPRITES).forEach(([id, url]) => { sprites[`enemy:${id}`] = url; });
 
     const scene = new RaidScene();
     sceneRef.current = scene;
