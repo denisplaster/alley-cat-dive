@@ -169,7 +169,15 @@ export class RaidScene extends Phaser.Scene {
   private upsertActor(a: Actor, side: "party"|"enemy", index: number, count: number) {
     let view = this.actors.get(a.uid);
     if (!view) {
-      const sprite = this.add.image(0, 0, this.spriteKey(a))
+      const key = this.spriteKey(a);
+      const useKey = this.textures.exists(key) ? key : "__fallback";
+      if (useKey === "__fallback" && !this.textures.exists("__fallback")) {
+        const g = this.make.graphics({ x: 0, y: 0 });
+        g.fillStyle(side === "party" ? 0x4fc3ff : 0xff5050, 1).fillCircle(40, 40, 40);
+        g.generateTexture("__fallback", 80, 80);
+        g.destroy();
+      }
+      const sprite = this.add.image(0, 0, useKey)
         .setOrigin(0.5, 1)
         .setInteractive({ useHandCursor: true });
       if (side === "enemy") sprite.setFlipX(true);
@@ -235,7 +243,15 @@ export class RaidScene extends Phaser.Scene {
   }
 
   private spriteKey(a: Actor) {
-    return `actor:${a.uid}`;
+    // uid formats:
+    //   party:  p${idx}-${catId}        →  cat:<catId>
+    //   enemy:  e${room}-${i}-${enId}   →  enemy:<enId>
+    if (a.side === "party") {
+      const m = /^p\d+-(.+)$/.exec(a.uid);
+      return m ? `cat:${m[1]}` : "__fallback";
+    }
+    const m = /^e\d+-\d+-(.+)$/.exec(a.uid);
+    return m ? `enemy:${m[1]}` : "__fallback";
   }
 
   private drawHpBar(v: ActorView, a: Actor) {
