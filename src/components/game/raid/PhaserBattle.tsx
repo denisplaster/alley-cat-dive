@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import Phaser from "phaser";
 import { useGame } from "@/lib/game/store";
-import { RaidScene } from "@/game/phaser/RaidScene";
 import { ENEMY_SPRITES } from "@/lib/game/enemySprites";
 import { portraits } from "@/lib/game/data";
 import { RaidActionBar } from "./RaidActionBar";
+import type { RaidState } from "@/lib/game/raidTypes";
 
 /**
  * Phaser-powered battle stage. The Zustand `raid` slice remains the source of
@@ -14,8 +13,8 @@ import { RaidActionBar } from "./RaidActionBar";
  */
 export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const gameRef = useRef<Phaser.Game | null>(null);
-  const sceneRef = useRef<RaidScene | null>(null);
+  const gameRef = useRef<any | null>(null);
+  const sceneRef = useRef<{ syncState: (s: RaidState) => void; scene: { isActive: () => boolean } } | null>(null);
   const targetRef = useRef<{ mode: "basic"|"skill"|"od"; skillId?: string } | null>(null);
   const [, force] = useState(0);
 
@@ -30,36 +29,42 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
   // Boot phaser once
   useEffect(() => {
     if (gameRef.current || !containerRef.current) return;
-    // Build stable sprite map: cat:<id> and enemy:<id>. The scene derives the
-    // texture key from each actor's uid (p…-<catId>, e…-<enemyId>).
-    const sprites: Record<string, string> = {};
-    Object.entries(portraits).forEach(([id, url]) => { sprites[`cat:${id}`] = url; });
-    Object.entries(ENEMY_SPRITES).forEach(([id, url]) => { sprites[`enemy:${id}`] = url; });
-
-    const scene = new RaidScene();
-    sceneRef.current = scene;
-    const game = new Phaser.Game({
-      type: Phaser.AUTO,
-      parent: containerRef.current,
-      backgroundColor: "#05060a",
-      width: containerRef.current.clientWidth,
-      height: containerRef.current.clientHeight,
-      scale: {
-        mode: Phaser.Scale.RESIZE,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-      },
-      render: { pixelArt: false, antialias: true },
-      scene: [scene],
-    });
-    gameRef.current = game;
-    game.scene.start(RaidScene.KEY, {
-      bgUrl,
-      sprites,
-      onActorClick: (uid: string) => handleTargetClick(uid),
-      getTargetMode: () => !!targetRef.current,
-    });
+    let cancelled = false;
+    let game: any = null;
+    (async () => {
+      const [{ default: Phaser }, { RaidScene }] = await Promise.all([
+        import("phaser"),
+        import("@/game/phaser/RaidScene"),
+      ]);
+      if (cancelled || !containerRef.current) return;
+      const sprites: Record<string, string> = {};
+      Object.entries(portraits).forEach(([id, url]) => { sprites[`cat:${id}`] = url as string; });
+      Object.entries(ENEMY_SPRITES).forEach(([id, url]) => { sprites[`enemy:${id}`] = url; });
+      const scene = new RaidScene();
+      sceneRef.current = scene as unknown as typeof sceneRef.current;
+      game = new Phaser.Game({
+        type: Phaser.AUTO,
+        parent: containerRef.current,
+        backgroundColor: "#05060a",
+        width: containerRef.current.clientWidth,
+        height: containerRef.current.clientHeight,
+        scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
+        render: { pixelArt: false, antialias: true },
+        scene: [scene],
+      });
+      gameRef.current = game;
+      game.scene.start(RaidScene.KEY, {
+        bgUrl,
+        sprites,
+        onActorClick: (uid: string) => handleTargetClick(uid),
+        getTargetMode: () => !!targetRef.current,
+      });
+      // Trigger a state push as soon as the scene is up.
+      force(x => x + 1);
+    })();
     return () => {
-      game.destroy(true);
+      cancelled = true;
+      if (game) { try { game.destroy(true); } catch { /* ignore */ } }
       gameRef.current = null;
       sceneRef.current = null;
     };
