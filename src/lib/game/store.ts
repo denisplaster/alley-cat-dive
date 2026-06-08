@@ -115,6 +115,9 @@ interface GameState {
   bossesBeaten: number;
   divesCompleted: number;
 
+  /** Dev / testing flag — bypasses storyline requirements for raids. */
+  skipStoryline: boolean;
+
   selectDumpster: (id: string) => void;
   setActiveCat: (id: string) => void;
   startDive: () => void;
@@ -156,6 +159,9 @@ interface GameState {
   dismissReward: () => void;
   /** Derived: current evolution from milestones. */
   getEvolution: () => EvolutionStage;
+
+  /** Toggle dev flag to skip storyline requirements. */
+  toggleSkipStoryline: () => void;
 }
 
 let _logId = 0;
@@ -304,6 +310,7 @@ export const useGame = create<GameState>((set, get) => ({
   spheres: 0,
   catGrid: {},
   raidTeam: ["scrapper", "sneakpaw", "moldmancer"],
+  skipStoryline: false,
 
   selectDumpster: (id) => set({ selectedDumpsterId: id }),
   setActiveCat: (id) => {
@@ -1014,6 +1021,7 @@ export const useGame = create<GameState>((set, get) => ({
       bossesBeaten: s.bossesBeaten,
     });
   },
+  toggleSkipStoryline: () => set(s => ({ skipStoryline: !s.skipStoryline })),
 
   // ============================================================
   // RAID MODE — FFX-inspired CTB combat (post-story unlock)
