@@ -150,6 +150,7 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
           active={active}
           enemies={raid.enemies}
           onPickTarget={onPickTarget}
+          onSelectTarget={handleTargetClick}
           foodCount={foodCount}
           onTargetMode={!!targetRef.current}
         />
