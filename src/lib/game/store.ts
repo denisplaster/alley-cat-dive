@@ -1014,7 +1014,516 @@ export const useGame = create<GameState>((set, get) => ({
       bossesBeaten: s.bossesBeaten,
     });
   },
+
+  // ============================================================
+  // RAID MODE — FFX-inspired CTB combat (post-story unlock)
+  // ============================================================
+
+  setRaidTeam: (catIds) => {
+    const s = get();
+    const valid = catIds
+      .filter(id => s.cats.find(c => c.id === id))
+      .slice(0, 3);
+    set({ raidTeam: valid });
+  },
+
+  startRaid: (dungeonId) => {
+    const s = get();
+    const def = RAIDS.find(r => r.id === dungeonId);
+    if (!def) return;
+    const team = (s.raidTeam.length ? s.raidTeam : s.cats.slice(0, 3).map(c => c.id))
+      .slice(0, 3);
+    const party = team.map((id, i) => buildPartyActor(s, id, i)).filter(Boolean) as Actor[];
+    if (party.length === 0) return;
+    const enemies = buildEnemiesForRoom(def, 0);
+    const startLog: RaidLogEntry[] = [
+      mklog(`Raid started — ${def.name}`, "info") as unknown as RaidLogEntry,
+      mklog(`Room 1/${def.rooms.length} — ${def.rooms[0].flavor}`, "info") as unknown as RaidLogEntry,
+    ];
+    const raid: RaidState = {
+      dungeonId,
+      party,
+      enemies,
+      log: startLog,
+      floats: [],
+      activeUid: null,
+      resolving: false,
+      overdriveOverlay: null,
+      shakeKey: 0,
+      flash: {},
+      ended: false,
+      victory: false,
+      rewards: null,
+    };
+    set({ raid });
+    // Kick off the first actor.
+    setTimeout(() => advanceTurn(get, set), 80);
+  },
+
+  raidBasicAttack: (targetUid) => {
+    actAsActive(get, set, (active, raid) => {
+      const target = raid.enemies.find(e => e.uid === targetUid && e.alive);
+      if (!target) return null;
+      const hit = rollDamage(active, target, 1, active.element);
+      applyDamage(raid, active, target, hit);
+      return { tickCost: 1 };
+    });
+  },
+
+  raidUseSkill: (skillId, targetUid) => {
+    const skill = SKILLS[skillId];
+    if (!skill) return;
+    actAsActive(get, set, (active, raid) => {
+      if (active.mp < skill.mpCost) return null;
+      active.mp -= skill.mpCost;
+      const targets = resolveTargets(skill, active, raid, targetUid);
+      if (!targets.length) return null;
+      for (const t of targets) {
+        if (skill.kind === "heal") {
+          const amt = rollHeal(active, t, skill.power);
+          t.hp = Math.min(t.maxHp, t.hp + amt);
+          raid.floats.push(newFloat(t.uid, amt, "heal"));
+          pushLog(raid, `${active.name} heals ${t.name} +${amt}`, "heal");
+        } else {
+          const hit = rollDamage(active, t, skill.power, skill.element);
+          applyDamage(raid, active, t, hit);
+        }
+      }
+      return { tickCost: skill.tickCost ?? 1 };
+    });
+  },
+
+  raidDefend: () => {
+    actAsActive(get, set, (active, raid) => {
+      active.statuses = [...active.statuses.filter(s => s.id !== "defend"),
+        { id: "defend", turnsLeft: 2 }];
+      active.od = Math.min(active.odMax, active.od + 6);
+      pushLog(raid, `${active.name} braces — incoming damage reduced.`, "info");
+      return { tickCost: 0.7 };
+    });
+  },
+
+  raidUseItem: () => {
+    const s = get();
+    if (!s.raid) return;
+    const foodIdx = s.inventory.findIndex(i => i.kind === "food");
+    if (foodIdx === -1) return;
+    const food = s.inventory[foodIdx];
+    const heal = Math.max(20, food.health ?? 30);
+    actAsActive(get, set, (active, raid) => {
+      active.hp = Math.min(active.maxHp, active.hp + heal);
+      raid.floats.push(newFloat(active.uid, heal, "heal"));
+      pushLog(raid, `${active.name} munches ${food.name}. +${heal} HP`, "heal");
+      return { tickCost: 0.8 };
+    });
+    set({ inventory: [...s.inventory.slice(0, foodIdx), ...s.inventory.slice(foodIdx + 1)] });
+  },
+
+  raidOverdrive: (targetUid) => {
+    actAsActive(get, set, (active, raid) => {
+      if (active.od < active.odMax) return null;
+      const def = active.overdrive;
+      active.od = 0;
+      raid.overdriveOverlay = { uid: active.uid, def, key: Date.now() };
+      raid.shakeKey += 1;
+      pushLog(raid, `${active.name} unleashes ${def.name}!`, "crit");
+      const enemies = raid.enemies.filter(e => e.alive);
+      const party = raid.party.filter(p => p.alive);
+      if (def.kind === "heal") {
+        for (const ally of raid.party) {
+          if (!ally.alive) {
+            ally.alive = true;
+            ally.hp = Math.round(ally.maxHp * 0.5);
+            pushLog(raid, `${ally.name} revives!`, "heal");
+          } else {
+            const amt = rollHeal(active, ally, def.power);
+            ally.hp = Math.min(ally.maxHp, ally.hp + amt);
+            raid.floats.push(newFloat(ally.uid, amt, "heal"));
+          }
+        }
+      } else {
+        const targets = def.target === "one"
+          ? (targetUid ? enemies.filter(e => e.uid === targetUid) : enemies.slice(0, 1))
+          : enemies;
+        for (let h = 0; h < def.hits; h++) {
+          for (const t of targets) {
+            if (!t.alive) continue;
+            const hit = rollDamage(active, t, def.power, def.element);
+            applyDamage(raid, active, t, hit);
+          }
+        }
+      }
+      return { tickCost: 1.4 };
+    });
+  },
+
+  raidFlee: () => {
+    const s = get();
+    if (!s.raid) return;
+    const raid: RaidState = { ...s.raid, ended: true, victory: false };
+    pushLog(raid, "Your crew bails out the back. No spheres earned.", "warn");
+    set({ raid });
+  },
+
+  raidAdvanceRoom: () => {
+    const s = get();
+    if (!s.raid) return;
+    const def = RAIDS.find(r => r.id === s.raid!.dungeonId);
+    if (!def) return;
+    const currentRoomIdx = roomIndexFromState(s.raid, def);
+    const nextIdx = currentRoomIdx + 1;
+    if (nextIdx >= def.rooms.length) {
+      // victory — already handled in advanceTurn; safety:
+      set({ raid: { ...s.raid, ended: true, victory: true,
+        rewards: def.rewards } });
+      return;
+    }
+    const enemies = buildEnemiesForRoom(def, nextIdx);
+    const party = s.raid.party.map(p => ({
+      ...p, statuses: [], nextTick: tickFor(p),
+      // small inter-room heal
+      hp: p.alive ? Math.min(p.maxHp, p.hp + Math.round(p.maxHp * 0.15)) : p.hp,
+    }));
+    const raid: RaidState = {
+      ...s.raid,
+      party, enemies,
+      activeUid: null, resolving: false, overdriveOverlay: null,
+      log: [...s.raid.log, mklog(`Room ${nextIdx + 1}/${def.rooms.length} — ${def.rooms[nextIdx].flavor}`, "info") as unknown as RaidLogEntry],
+    };
+    set({ raid });
+    setTimeout(() => advanceTurn(get, set), 120);
+  },
+
+  raidClaim: () => {
+    const s = get();
+    if (!s.raid || !s.raid.rewards) {
+      set({ raid: null });
+      return;
+    }
+    const r = s.raid.rewards;
+    set({
+      raid: null,
+      spheres: s.spheres + r.spheres,
+      fishbones: s.fishbones + r.bones,
+      bottlecaps: s.bottlecaps + r.caps,
+      bossesBeaten: s.bossesBeaten + 1,
+    });
+  },
+
+  spendSphere: (catId, nodeId) => {
+    const s = get();
+    if (s.spheres < NODE_COST) return;
+    const layout = GRID_LAYOUTS[catId];
+    if (!layout) return;
+    const unlocked = s.catGrid[catId] ?? [];
+    if (!isUnlockable(layout, unlocked, nodeId)) return;
+    const nextUnlocked = [...unlocked, nodeId];
+    // Re-apply aggregate to the cat's base stats.
+    const cats = s.cats.map(c => {
+      if (c.id !== catId) return c;
+      const prevAgg = aggregateGrid(catId, unlocked);
+      const newAgg = aggregateGrid(catId, nextUnlocked);
+      const dHp = newAgg.hp - prevAgg.hp;
+      const dAtk = newAgg.atk - prevAgg.atk;
+      const dDef = newAgg.def - prevAgg.def;
+      const dSpd = newAgg.spd - prevAgg.spd;
+      return {
+        ...c,
+        maxHp: c.maxHp + dHp,
+        hp: Math.min(c.maxHp + dHp, c.hp + dHp),
+        attack: c.attack + dAtk,
+        defense: c.defense + dDef,
+        speed: c.speed + dSpd,
+      };
+    });
+    set({
+      spheres: s.spheres - NODE_COST,
+      catGrid: { ...s.catGrid, [catId]: nextUnlocked },
+      cats,
+    });
+  },
 }));
+
+// ============================================================
+// Raid helpers (module-level)
+// ============================================================
+
+function newFloat(uid: string, amount: number, kind: FloatingNumber["kind"], element?: import("./raidTypes").Element): FloatingNumber {
+  return { id: ++_fxId, uid, amount, kind, element };
+}
+
+function pushLog(raid: RaidState, text: string, tone: RaidLogEntry["tone"] = "info") {
+  raid.log.push({ id: ++_logId, text, tone });
+}
+
+function buildPartyActor(s: GameState, catId: string, idx: number): Actor | null {
+  const cat = s.cats.find(c => c.id === catId);
+  if (!cat) return null;
+  const tpl = PARTY_TEMPLATES[catId] ?? PARTY_TEMPLATES.scrapper;
+  const skills = tpl.skills.map(id => SKILLS[id]).filter(Boolean);
+  const agg = aggregateGrid(catId, s.catGrid[catId] ?? []);
+  return {
+    uid: `p${idx}-${cat.id}`,
+    side: "party",
+    name: cat.name,
+    portrait: cat.portrait,
+    hp: cat.maxHp, maxHp: cat.maxHp,
+    mp: tpl.mp + agg.mp, maxMp: tpl.mp + agg.mp,
+    atk: cat.attack,
+    def: cat.defense,
+    spd: cat.speed,
+    od: 0, odMax: 100 - agg.od,
+    element: tpl.element,
+    weak: tpl.weak,
+    resist: tpl.resist,
+    nullEl: [],
+    skills,
+    overdrive: tpl.od,
+    statuses: [],
+    nextTick: 0,
+    alive: true,
+    knownTypes: [],
+  };
+}
+
+function buildEnemiesForRoom(def: RaidDef, roomIdx: number): Actor[] {
+  const room = def.rooms[roomIdx];
+  return room.enemyIds.map((eid, i) => {
+    const t = RAID_ENEMIES[eid];
+    const isBoss = roomIdx === def.rooms.length - 1 && room.enemyIds.length === 1;
+    const hp = Math.round(t.hp * (1 + def.difficulty * 0.05));
+    return {
+      uid: `e${roomIdx}-${i}-${eid}`,
+      side: "enemy",
+      name: t.name,
+      emoji: t.emoji,
+      hp, maxHp: hp,
+      mp: t.mp ?? 30, maxMp: t.mp ?? 30,
+      atk: t.atk, def: t.def, spd: t.spd,
+      od: 0, odMax: isBoss ? 100 : 9999,  // only bosses can OD
+      element: t.element,
+      weak: t.weak, resist: t.resist, nullEl: t.nullEl ?? [],
+      skills: (t.skills ?? []).map(id => SKILLS[id]).filter(Boolean),
+      overdrive: { ...OVERDRIVES.hairball_cannon, power: t.odPower ?? 2.4, name: `${t.name} Rage` },
+      statuses: [],
+      nextTick: Math.round(BASE_TICK / Math.max(1, t.spd)) * (i + 1),
+      alive: true,
+      knownTypes: [],
+    } as Actor;
+  });
+}
+
+function roomIndexFromState(raid: RaidState, def: RaidDef): number {
+  // Determine by enemy uid prefix `e{idx}-`.
+  const e = raid.enemies[0];
+  if (!e) return 0;
+  const m = e.uid.match(/^e(\d+)-/);
+  return m ? Number(m[1]) : 0;
+}
+
+function resolveTargets(skill: Skill, attacker: Actor, raid: RaidState, targetUid?: string): Actor[] {
+  const allies = raid.party.filter(p => p.alive);
+  const foes   = raid.enemies.filter(e => e.alive);
+  if (skill.target === "allAllies")  return allies;
+  if (skill.target === "allEnemies") return foes;
+  if (skill.target === "self")       return [attacker];
+  if (targetUid) {
+    const pool = skill.kind === "heal" ? allies : foes;
+    const t = pool.find(a => a.uid === targetUid);
+    if (t) return [t];
+  }
+  return foes.slice(0, 1);
+}
+
+function applyDamage(raid: RaidState, attacker: Actor, target: Actor, hit: ReturnType<typeof rollDamage>) {
+  target.hp = Math.max(0, target.hp - hit.damage);
+  raid.floats.push({
+    id: ++_fxId, uid: target.uid, amount: hit.damage,
+    kind: hit.crit ? "crit" : hit.tag === "weak" ? "weak" : hit.tag === "resist" ? "resist" : hit.tag === "null" ? "null" : "dmg",
+    element: hit.element,
+  });
+  raid.flash = { ...raid.flash, [target.uid]: (raid.flash[target.uid] ?? 0) + 1 };
+  if (hit.crit) raid.shakeKey += 1;
+  // mark known weakness
+  if (hit.tag === "weak" && !target.knownTypes.includes(hit.element)) {
+    target.knownTypes = [...target.knownTypes, hit.element];
+  }
+  const tone: RaidLogEntry["tone"] = hit.crit ? "crit" : hit.tag === "weak" ? "hit" : "info";
+  const flavor = hit.tag === "weak" ? " (WEAK!)" : hit.tag === "resist" ? " (resisted)" : hit.tag === "null" ? " (no effect)" : "";
+  pushLog(raid, `${attacker.name} → ${target.name} ${hit.damage}${flavor}${hit.crit ? " ★" : ""}`, tone);
+  if (target.hp <= 0) {
+    target.alive = false;
+    pushLog(raid, `${target.name} is KO'd!`, "warn");
+  }
+  // OD gains
+  attacker.od = Math.min(attacker.odMax, attacker.od + Math.round(hit.damage * 0.12));
+  target.od   = Math.min(target.odMax,   target.od   + Math.round((hit.damage / Math.max(1,target.maxHp)) * 25));
+}
+
+/** Pull the active actor (from the raid object) and run a player-side action.
+ *  Callback returns the tick cost for the action (or null to cancel). */
+function actAsActive(
+  get: () => GameState,
+  set: (partial: Partial<GameState>) => void,
+  fn: (active: Actor, raid: RaidState) => { tickCost: number } | null,
+) {
+  const s = get();
+  if (!s.raid || s.raid.ended || s.raid.resolving) return;
+  const raid: RaidState = cloneRaid(s.raid);
+  const active = [...raid.party].find(p => p.uid === raid.activeUid && p.alive);
+  if (!active || active.side !== "party") return;
+  const result = fn(active, raid);
+  if (!result) {
+    set({ raid });
+    return;
+  }
+  active.nextTick += tickFor(active, result.tickCost);
+  raid.activeUid = null;
+  raid.resolving = true;
+  set({ raid });
+  setTimeout(() => finishTurnAndAdvance(get, set), 450);
+}
+
+function finishTurnAndAdvance(
+  get: () => GameState,
+  set: (partial: Partial<GameState>) => void,
+) {
+  const s = get();
+  if (!s.raid) return;
+  const raid = cloneRaid(s.raid);
+  // Check end states.
+  if (raid.enemies.every(e => !e.alive)) {
+    // Room cleared — pause for confirmation, advance via raidAdvanceRoom.
+    raid.resolving = false;
+    raid.activeUid = null;
+    pushLog(raid, "Room cleared!", "heal");
+    const def = RAIDS.find(r => r.id === raid.dungeonId)!;
+    const idx = roomIndexFromState(raid, def);
+    if (idx >= def.rooms.length - 1) {
+      raid.ended = true;
+      raid.victory = true;
+      raid.rewards = def.rewards;
+      pushLog(raid, `Raid complete — +${def.rewards.spheres} 💠  +${def.rewards.bones} 🦴`, "heal");
+    }
+    set({ raid });
+    return;
+  }
+  if (raid.party.every(p => !p.alive)) {
+    raid.ended = true;
+    raid.victory = false;
+    pushLog(raid, "Party wiped. Raid failed.", "warn");
+    set({ raid });
+    return;
+  }
+  raid.resolving = false;
+  set({ raid });
+  advanceTurn(get, set);
+}
+
+function advanceTurn(
+  get: () => GameState,
+  set: (partial: Partial<GameState>) => void,
+) {
+  const s = get();
+  if (!s.raid || s.raid.ended) return;
+  const raid = cloneRaid(s.raid);
+  const allActors = [...raid.party, ...raid.enemies];
+  const normalized = normalizeTicks(allActors);
+  const N = raid.party.length;
+  raid.party = normalized.slice(0, N);
+  raid.enemies = normalized.slice(N);
+  const next = pickActive([...raid.party, ...raid.enemies]);
+  if (!next) return;
+  // Tick statuses at start of turn.
+  if (next.side === "party") {
+    raid.party = raid.party.map(p => p.uid === next.uid ? tickStatuses(p) : p);
+  } else {
+    raid.enemies = raid.enemies.map(e => e.uid === next.uid ? tickStatuses(e) : e);
+  }
+  raid.activeUid = next.uid;
+  set({ raid });
+
+  if (next.side === "enemy") {
+    raid.resolving = true;
+    set({ raid });
+    setTimeout(() => runEnemyTurn(get, set, next.uid), 700);
+  }
+}
+
+function runEnemyTurn(
+  get: () => GameState,
+  set: (partial: Partial<GameState>) => void,
+  enemyUid: string,
+) {
+  const s = get();
+  if (!s.raid) return;
+  const raid = cloneRaid(s.raid);
+  const self = raid.enemies.find(e => e.uid === enemyUid && e.alive);
+  if (!self) {
+    raid.resolving = false;
+    set({ raid });
+    advanceTurn(get, set);
+    return;
+  }
+  const decision = chooseEnemyAction(self, raid.party);
+  let tickCost = 1;
+  if (decision.kind === "attack") {
+    const t = raid.party.find(p => p.uid === decision.target.uid && p.alive);
+    if (t) {
+      const hit = rollDamage(self, t, 1, self.element);
+      applyDamage(raid, self, t, hit);
+    }
+  } else if (decision.kind === "skill") {
+    self.mp -= decision.skill.mpCost;
+    const targets = decision.targets
+      .map(t => (t.side === "enemy" ? raid.enemies : raid.party).find(a => a.uid === t.uid))
+      .filter((a): a is Actor => !!a && a.alive);
+    for (const t of targets) {
+      if (decision.skill.kind === "heal") {
+        const amt = rollHeal(self, t, decision.skill.power);
+        t.hp = Math.min(t.maxHp, t.hp + amt);
+        raid.floats.push(newFloat(t.uid, amt, "heal"));
+        pushLog(raid, `${self.name} heals ${t.name} +${amt}`, "heal");
+      } else {
+        const hit = rollDamage(self, t, decision.skill.power, decision.skill.element);
+        applyDamage(raid, self, t, hit);
+      }
+    }
+    tickCost = decision.skill.tickCost ?? 1;
+  } else if (decision.kind === "defend") {
+    self.statuses = [...self.statuses.filter(s => s.id !== "defend"), { id: "defend", turnsLeft: 2 }];
+    pushLog(raid, `${self.name} braces.`, "info");
+    tickCost = 0.7;
+  } else if (decision.kind === "overdrive") {
+    self.od = 0;
+    raid.overdriveOverlay = { uid: self.uid, def: self.overdrive, key: Date.now() };
+    raid.shakeKey += 1;
+    pushLog(raid, `${self.name} unleashes ${self.overdrive.name}!`, "crit");
+    for (const t of decision.targets) {
+      const target = raid.party.find(p => p.uid === t.uid && p.alive);
+      if (!target) continue;
+      const hit = rollDamage(self, target, self.overdrive.power, self.overdrive.element);
+      applyDamage(raid, self, target, hit);
+    }
+    tickCost = 1.4;
+  }
+  self.nextTick += tickFor(self, tickCost);
+  raid.activeUid = null;
+  raid.resolving = true;
+  set({ raid });
+  setTimeout(() => finishTurnAndAdvance(get, set), 550);
+}
+
+function cloneRaid(raid: RaidState): RaidState {
+  return {
+    ...raid,
+    party: raid.party.map(p => ({ ...p, statuses: [...p.statuses], skills: [...p.skills], knownTypes: [...p.knownTypes] })),
+    enemies: raid.enemies.map(e => ({ ...e, statuses: [...e.statuses], skills: [...e.skills], knownTypes: [...e.knownTypes] })),
+    log: [...raid.log],
+    floats: [...raid.floats],
+    flash: { ...raid.flash },
+  };
+}
 
 function roomLabel(k: RoomKind): string {
   return ({ enemy: "Enemy", swarm: "Swarm", elite: "Elite", loot: "Loot", hazard: "Hazard", rest: "Rest", miniboss: "Mini-Boss", boss: "BOSS" } as const)[k];
