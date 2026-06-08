@@ -1021,6 +1021,7 @@ export const useGame = create<GameState>((set, get) => ({
       bossesBeaten: s.bossesBeaten,
     });
   },
+  toggleSkipStoryline: () => set(s => ({ skipStoryline: !s.skipStoryline })),
 
   // ============================================================
   // RAID MODE — FFX-inspired CTB combat (post-story unlock)
