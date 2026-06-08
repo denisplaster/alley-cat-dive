@@ -60,37 +60,39 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
         scene: [],
       });
       gameRef.current = game;
-      // Register the scene class and start it WITH data so init() receives bgUrl
-      // and preload() can actually load the images. Adding the instance to
-      // scene config would auto-start with no data and crash preload.
-      const sceneInstance = game.scene.add(RaidScene.KEY, RaidScene, true, {
-        bgUrl,
-        sprites,
-        onActorClick: (uid: string) => handleTargetClick(uid),
-        getTargetMode: () => !!targetRef.current,
-      }) as unknown as InstanceType<typeof RaidScene>;
-      sceneRef.current = sceneInstance as unknown as typeof sceneRef.current;
-      const scene = sceneInstance;
-      console.log("[PhaserBattle] scene added", scene);
-      // Wait until the scene has run create() (sys.settings.status === RUNNING),
-      // then push the current raid state in directly — we cannot rely on the
-      // [raid] effect re-firing because raid may not have changed since boot.
-      const pushWhenReady = () => {
-        if (cancelled) return;
-        const s: any = scene as any;
-        const ready = s.sys && s.sys.settings && s.sys.settings.status >= 5; // RUNNING
-        console.log("[PhaserBattle] poll status", s?.sys?.settings?.status);
-        if (ready) {
-          sceneReadyRef.current = true;
-          const latest = useGame.getState().raid;
-          console.log("[PhaserBattle] scene ready party=", latest?.party.length, "enemies=", latest?.enemies.length);
-          if (latest) scene.syncState(latest);
-          force(x => x + 1);
-          return;
-        }
-        setTimeout(pushWhenReady, 50);
+      // The Phaser SceneManager isn't ready synchronously after `new Phaser.Game`,
+      // so `scene.add` returns null. Wait for the game's READY event before
+      // adding/starting the scene, then poll until create() has run.
+      const onReady = () => {
+        if (cancelled || !gameRef.current) return;
+        const sceneInstance = game.scene.add(RaidScene.KEY, RaidScene, true, {
+          bgUrl,
+          sprites,
+          onActorClick: (uid: string) => handleTargetClick(uid),
+          getTargetMode: () => !!targetRef.current,
+        }) as unknown as InstanceType<typeof RaidScene> | null;
+        console.log("[PhaserBattle] scene.add result", !!sceneInstance);
+        if (!sceneInstance) return;
+        sceneRef.current = sceneInstance as unknown as typeof sceneRef.current;
+        const scene = sceneInstance;
+        const pushWhenReady = () => {
+          if (cancelled) return;
+          const s: any = scene as any;
+          const status = s?.sys?.settings?.status;
+          if (status !== undefined && status >= 5) {
+            sceneReadyRef.current = true;
+            const latest = useGame.getState().raid;
+            console.log("[PhaserBattle] scene ready party=", latest?.party.length, "enemies=", latest?.enemies.length);
+            if (latest) scene.syncState(latest);
+            force(x => x + 1);
+            return;
+          }
+          setTimeout(pushWhenReady, 50);
+        };
+        pushWhenReady();
       };
-      pushWhenReady();
+      if (game.isBooted) onReady();
+      else game.events.once(Phaser.Core.Events.READY, onReady);
     })();
     return () => {
       cancelled = true;
