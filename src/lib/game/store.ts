@@ -115,6 +115,9 @@ interface GameState {
   bossesBeaten: number;
   divesCompleted: number;
 
+  /** Dev / testing flag — bypasses storyline requirements for raids. */
+  skipStoryline: boolean;
+
   selectDumpster: (id: string) => void;
   setActiveCat: (id: string) => void;
   startDive: () => void;
@@ -156,6 +159,9 @@ interface GameState {
   dismissReward: () => void;
   /** Derived: current evolution from milestones. */
   getEvolution: () => EvolutionStage;
+
+  /** Toggle dev flag to skip storyline requirements. */
+  toggleSkipStoryline: () => void;
 }
 
 let _logId = 0;
