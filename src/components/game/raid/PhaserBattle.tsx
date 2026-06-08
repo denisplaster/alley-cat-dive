@@ -31,6 +31,7 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
 
   // Boot phaser once
   useEffect(() => {
+    console.log("[PhaserBattle] boot effect", { mounted, hasContainer: !!containerRef.current, hasGame: !!gameRef.current, SSR: import.meta.env.SSR });
     if (!mounted) return;
     if (gameRef.current || !containerRef.current) return;
     let cancelled = false;
