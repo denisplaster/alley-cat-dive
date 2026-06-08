@@ -465,6 +465,8 @@ function createRaidSceneClass() {
         } else {
           v.sprite.setDisplaySize(target, target);
         }
+        v.baseScaleX = v.sprite.scaleX;
+        v.baseScaleY = v.sprite.scaleY;
         const dispH = v.sprite.displayHeight || target;
         const dispW = v.sprite.displayWidth || target;
 
