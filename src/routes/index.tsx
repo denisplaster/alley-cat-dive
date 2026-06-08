@@ -27,6 +27,8 @@ function AlleyHub() {
   const openCutscene = useGame(s => s.openCutscene);
   const roomsCleared = useGame(s => s.roomsCleared);
   const bossesBeaten = useGame(s => s.bossesBeaten);
+  const skipStoryline = useGame(s => s.skipStoryline);
+  const toggleSkip = useGame(s => s.toggleSkipStoryline);
   const evo = EVOLUTIONS[computeEvolution({ completedChapters: completed, roomsCleared, bossesBeaten })];
   const selected = dumpsters.find(d => d.id === selectedId)!;
   const activeCat = cats.find(c => c.id === activeCatId)!;
