@@ -65,24 +65,22 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
       // adding/starting the scene, then poll until create() has run.
       const onReady = () => {
         if (cancelled || !gameRef.current) return;
-        const sceneInstance = game.scene.add(RaidScene.KEY, RaidScene, true, {
+        game.scene.add(RaidScene.KEY, RaidScene, true, {
           bgUrl,
           sprites,
           onActorClick: (uid: string) => handleTargetClick(uid),
           getTargetMode: () => !!targetRef.current,
-        }) as unknown as InstanceType<typeof RaidScene> | null;
-        console.log("[PhaserBattle] scene.add result", !!sceneInstance);
-        if (!sceneInstance) return;
-        sceneRef.current = sceneInstance as unknown as typeof sceneRef.current;
-        const scene = sceneInstance;
+        });
         const pushWhenReady = () => {
           if (cancelled) return;
+          const scene = game.scene.getScene(RaidScene.KEY) as unknown as InstanceType<typeof RaidScene> | null;
+          if (!scene) { setTimeout(pushWhenReady, 50); return; }
+          if (!sceneRef.current) sceneRef.current = scene as unknown as typeof sceneRef.current;
           const s: any = scene as any;
           const status = s?.sys?.settings?.status;
           if (status !== undefined && status >= 5) {
             sceneReadyRef.current = true;
             const latest = useGame.getState().raid;
-            console.log("[PhaserBattle] scene ready party=", latest?.party.length, "enemies=", latest?.enemies.length);
             if (latest) scene.syncState(latest);
             force(x => x + 1);
             return;
