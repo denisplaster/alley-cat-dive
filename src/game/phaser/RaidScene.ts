@@ -199,7 +199,8 @@ export class RaidScene extends Phaser.Scene {
       if (side === "enemy") sprite.setFlipX(true);
       // Click handler for target selection
       const onTap = () => {
-        if (side === "enemy" && a.alive && this.init_.getTargetMode()) this.init_.onActorClick(a.uid);
+        const current = this.actors.get(a.uid);
+        if (side === "enemy" && current?.alive && this.init_.getTargetMode()) this.init_.onActorClick(a.uid);
       };
       const hitZone = this.add.zone(0, 0, 180, 240)
         .setOrigin(0.5, 0.5)
@@ -345,8 +346,13 @@ export class RaidScene extends Phaser.Scene {
         const s = Math.min(1.4, target / Math.max(tex.height, 1));
         v.sprite.setScale(s);
         v.sprite.setPosition(v.baseX, v.baseY);
+        const hitW = Math.max(140, tex.width * s * 0.7);
+        const hitH = Math.max(170, tex.height * s * 0.78);
         v.hitZone.setPosition(v.baseX, v.baseY - (arr === party ? 100 : 110));
-        v.hitZone.setSize(Math.max(140, tex.width * s * 0.7), Math.max(170, tex.height * s * 0.78));
+        v.hitZone.setSize(hitW, hitH);
+        if (v.hitZone.input?.hitArea) {
+          (v.hitZone.input.hitArea as Phaser.Geom.Rectangle).setTo(0, 0, hitW, hitH);
+        }
         v.shadow.setPosition(v.baseX, v.baseY + 4);
         v.nameText.setPosition(v.baseX, v.baseY + 10);
         v.hpText.setPosition(v.baseX, v.baseY + 10);
