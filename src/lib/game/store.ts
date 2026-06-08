@@ -57,6 +57,9 @@ interface DiveState {
   transitionMessage: string | null;
   /** Bumps when a new room is revealed so the title card can re-mount. */
   roomRevealKey: number;
+  /** While transitioning, this is the upcoming room's kind so the new
+   * background can slide in over the outgoing one. */
+  nextKind: RoomKind | null;
 }
 
 interface GameState {
