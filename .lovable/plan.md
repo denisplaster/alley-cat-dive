@@ -1,123 +1,86 @@
 
-# Post-Story Raid Mode (FFX-Inspired)
+# Raid Mode → Phaser 3 Rebuild
 
-Solo dives stay exactly as they are. A new **Raids** tab unlocks the moment the campaign's final chapter is marked complete. Raids run on a different combat engine and use a separate progression layer (sphere grid + gear) layered on top of existing cats.
+Replace the React/framer-motion raid stage with a real game canvas. Battles, room transitions, encounter intros, and victory screens all render inside Phaser. React keeps the shell (team picker, sphere grid, menus).
 
-## What unlocks and where
+## 1. Engine setup
 
-- New route `src/routes/raids.tsx` — hidden in `AppShell` nav until `completedChapters` contains the last chapter id.
-- New route `src/routes/raid.$dungeonId.tsx` — the actual fight screen.
-- New route `src/routes/grid.$catId.tsx` — sphere grid screen.
-- Story screen gets a "Raids Unlocked" callout once the campaign is done.
+- `bun add phaser` (Phaser 3.80+).
+- New file `src/game/phaser/RaidGame.ts` — boots a single `Phaser.Game` instance with `Scale.FIT`, `parent` = a div ref, transparent background false (we draw our own).
+- React wrapper `src/components/game/raid/PhaserCanvas.tsx`:
+  - Mounts the game on `useEffect`, destroys on unmount.
+  - Bridges Zustand ↔ Phaser via a typed `EventBus` (`phaser.events`): React subscribes to `damage`, `turn`, `roomCleared`, `raidEnded`; Phaser listens for `command` (basic/skill/od/target/advance/claim).
+  - No re-renders driven by combat state — Phaser owns the frame loop.
 
-## Combat model (CTB)
+## 2. Scenes
 
-- Turn queue: every actor has a `speed` stat. Time-to-next-turn = `baseTick / speed`. The queue is recomputed on every action and shown as a vertical strip on the right of the battle screen (portraits + tick numbers, FFX-style).
-- Haste / slow / wait-actions modify the actor's next tick (e.g. heavy attack adds +30% tick cost, sets the actor further back in the queue).
-- 3 active cats vs. 1–4 enemies. No bench swapping (per your choice).
-- Action menu per cat: **Attack, Skill ▸, Item, Defend, Overdrive (when full), Flee**.
-- Skills cost MP, can target single/all, can carry an element.
+Files in `src/game/phaser/scenes/`:
 
-## Elements & weaknesses
+- `BootScene` — load shared atlases/fonts, then `RaidScene`.
+- `RaidScene` — main combat scene. Owns:
+  - Painted background image (current `def.image`) drawn full-bleed.
+  - 3 party actors on left, up to 3 enemies on right, positioned with depth sort.
+  - CTB turn queue HUD along top.
+  - HP/MP/OD bars under each actor (Phaser `Graphics`).
+  - Action menu rendered as Phaser DOM (`scene.add.dom`) reusing existing `RaidActionBar` markup, OR a native Phaser menu (decision: native — keeps everything in one render layer).
+  - Tweens for: actor lunge on attack, hit recoil, KO fall, damage number float, screen shake (`cameras.main.shake`), white flash on crit, color tint flash on element weakness, OD overlay (radial burst sprite + name banner).
+  - Particle emitters: claw slashes, fire burst, ice shards, shock arcs, stink cloud — one emitter per element, configured in `src/game/phaser/fx.ts`.
+- `RoomTransitionScene` — between rooms: camera pan + parallax scroll on background to the next room's image with a "ROOM 2/3" banner.
+- `EncounterScene` — short zoom-in on enemy line with name label slide, then hand off to `RaidScene`.
+- `VictoryScene` — actors pose (idle bob amplified), rewards count up (spheres/bones/caps), then emits `claim` event.
+- `DefeatScene` — desaturate, "DEFEATED" banner, retry/leave buttons.
 
-- 5 elements: `claw` (physical), `fire`, `ice`, `shock`, `stink` (the cat-flavoured "poison/dark").
-- Each enemy has `weak`, `resist`, `null` arrays. Hitting weakness = ×1.5 damage + advances that actor's next turn (FFX-style speed-up). Resist = ×0.5. Null = 0.
-- UI: weakness icons revealed after first hit of that type (Scan mechanic via Snack item later — for v1 always reveal after first hit).
+Scene flow: `Boot → Encounter → Raid → (RoomTransition → Encounter → Raid)* → Victory|Defeat`.
 
-## Overdrives
+## 3. Art pipeline (mixed style)
 
-- Each cat has an `overdrive` meter 0–100. Fills from damage taken (+dmg%) and damage dealt (+half).
-- Three flavours mapped to life stage / personality (data-driven):
-  - **Hairball Cannon** (offense, single target, big number + screen shake)
-  - **Nine Lives** (support, full party heal + cleanse)
-  - **Alley Swarm** (aoe, 5 quick hits with stray-cat silhouettes)
-- Triggered from the action menu when meter full, consumes meter, plays a 1.5–2s framer-motion animation (no new assets required — reuse cat portraits + tween effects, colored flashes, scaled SVG slashes).
+- **Backgrounds**: keep current painted dungeon images (`def.image`). Generate one painted image per *room* (so transitions feel new) — 3 per dungeon × 4 dungeons = 12 backgrounds. Use existing `imagegen` premium tier, 1536×864.
+- **Actors → pixel sprites**: regenerate every cat and every enemy as a pixel sprite sheet (idle 4f, attack 4f, cast 4f, hit 2f, ko 1f). Style prompt: "16-bit JRPG sprite, Octopath Traveler HD-2D, clean pixel art on transparent background, front-facing, 4-frame idle". 5 cats + 12 enemies = 17 sprite sheets.
+  - Generate each as a single PNG with frames in a row; pack into Phaser atlases at load.
+- **VFX**: tiny pixel particle textures (claw slash, spark, flame, ice shard, lightning, stink puff) — 6 small PNGs.
 
-## Sphere Grid (per cat)
+This is a LOT of asset generation. To stay tractable, **phase 1** will generate the 5 cat sprite sheets, regenerate 4 boss enemies with full frames, and use single-frame static sprites for the remaining 8 enemies (still pixel art, just no animation frames yet). Phase 2 (follow-up) fills out the rest.
 
-- Hex / square grid of ~40 nodes per cat: `+HP`, `+ATK`, `+SPD`, `+MP`, skill unlocks, element affinity unlocks.
-- Earn `spheres` (new resource) from raid completion. Spend on the active cat in `grid.$catId`.
-- Implemented as a JSON layout per cat archetype; render with SVG, pan/zoom optional v2.
-- Saved in `cat.grid: { unlocked: string[] }` on the cat record.
+## 4. Game logic — keep the engine
 
-## Gear
+`raidEngine.ts`, `raidTypes.ts`, `raidData.ts`, and the Zustand `raid` slice stay the source of truth for combat math, CTB, statuses, rewards, sphere grid. Phaser is a *view* over that state.
 
-- 3 slots: **Collar** (weapon-ish, sets base ATK & element), **Charm** (defensive/utility), **Trinket** (overdrive/speed mods).
-- Each item has 1–3 affixes (e.g. `+10% fire dmg`, `+5 spd`, `start battle with +25% OD`).
-- Dropped by raid bosses + crafted at hideout (reuse fishbones/caps).
-- New inventory section under existing `/inventory`.
+Flow:
+1. React calls `startRaid(dungeonId)` → Zustand builds `RaidState`.
+2. `PhaserCanvas` mounts, `RaidScene` reads initial state from store, draws actors.
+3. When it's a party member's turn, scene shows action menu, emits `command`.
+4. React handler calls the existing `raidBasicAttack` / `raidUseSkill` / `raidOverdrive` store actions.
+5. Store mutation produces `floats`, `flash`, log entries, queue changes; store emits a `combatTick` event (new) on each mutation.
+6. Scene consumes the tick, plays the appropriate tween/particle, then advances.
 
-## Raids (dungeons with teams)
+This keeps all rules in TypeScript and lets Phaser focus on presentation.
 
-- 4 raids at launch, themed off existing dumpster art (Subway King, Mall Wraith, Luxury Tyrant, Haunted Den).
-- Each raid = 4 rooms + boss; encounters use CTB combat.
-- Reward table: spheres, gear drops, fishbones, story flavor unlock.
-- Difficulty scales with team's combined grid progress.
+## 5. Routes & files
 
-## State changes (`src/lib/game/store.ts`)
+- Replace body of `src/routes/raid.$dungeonId.tsx` with `<PhaserCanvas dungeonId=... />`. Keep header.
+- Old React components (`RaidStage`, `ActorCard`, `TurnQueue`, `OverdriveOverlay`, `RaidActionBar`, `DamageNumbers`, `ElementIcon`) — retire `RaidStage`, `ActorCard`, `TurnQueue`, `OverdriveOverlay`, `DamageNumbers`. Keep `ElementIcon` (still used by `raids.tsx` list) and `RaidActionBar` (could reuse on mobile if Phaser DOM menus prove cramped — decide during build).
+- Sphere grid (`grid.$catId.tsx`) and raid list (`raids.tsx`) untouched.
 
-- Add `raid: RaidState | null`, `spheres: number`, per-cat `grid` and `equipment`.
-- Existing `dive` flow untouched.
-- New actions: `startRaid`, `raidAction`, `swapTarget`, `spendSphere`, `equipGear`.
+## 6. Store additions
 
-## File-level plan
+- New `combatTick` event channel: a small `mitt`-style emitter exported from `store.ts` so Phaser subscribes without re-rendering React. Each existing action (`raidBasicAttack`, etc.) emits `{ kind: 'attack' | 'skill' | 'od' | 'enemyTurn', actorUid, targetUid, damage, element, crit, weak }` after mutating state.
+- Cap `floats` already exists; keep.
 
-```text
-src/lib/game/
-  raidTypes.ts          # CTB types, elements, overdrive defs
-  raidData.ts           # 4 raid definitions, enemy stats, drop tables
-  raidEngine.ts         # turn queue, damage calc, status effects (pure fns)
-  gridData.ts           # per-archetype sphere grid layouts
-  gearData.ts           # affix pool, gear templates
-  store.ts              # extend with raid/grid/gear state + actions
+## 7. Implementation order
 
-src/components/game/raid/
-  RaidStage.tsx         # battle scene (party left, enemies right)
-  TurnQueue.tsx         # vertical CTB portrait list
-  ActorCard.tsx         # HP/MP/OD bars, status icons
-  RaidActionBar.tsx     # Attack/Skill/Item/Defend/OD/Flee
-  SkillMenu.tsx
-  OverdriveOverlay.tsx  # framer-motion cinematic
-  DamageNumber.tsx      # floating damage popups
-  ElementIcon.tsx
+1. Install Phaser, scaffold `RaidGame.ts` + `PhaserCanvas.tsx` rendering a single test sprite over the current background.
+2. Wire `EventBus` + `combatTick` from store.
+3. Generate Phase 1 sprite assets (5 cats + 4 boss enemies animated, 8 enemies static, 6 VFX particles, 12 room backgrounds).
+4. Build `RaidScene` (actors, bars, queue HUD, menu, tweens, particles).
+5. Add `EncounterScene`, `RoomTransitionScene`, `VictoryScene`, `DefeatScene`.
+6. Swap route body; remove retired components.
+7. QA: full raid playthrough in preview, check bars/queue/damage/element FX, mobile viewport.
 
-src/components/game/grid/
-  SphereGrid.tsx        # SVG grid, click-to-unlock
-  GridNode.tsx
+## Risks & notes
 
-src/components/game/gear/
-  GearSlot.tsx
-  GearTooltip.tsx
+- Asset gen volume: ~30 image generations. Will batch in parallel where possible. Phase 1 keeps it to ~20.
+- Bundle size: Phaser is ~1MB gz; acceptable for a game route. Lazy-load `PhaserCanvas` with dynamic import so it only loads on `/raid/$dungeonId`.
+- Mobile: Phaser canvas scales via `Scale.FIT`; touch input works for menu buttons drawn in-scene.
+- SSR: Phaser is client-only — `PhaserCanvas` guards with `if (typeof window === 'undefined') return null` and uses `useEffect` for boot. The route loader does not import Phaser.
 
-src/routes/
-  raids.tsx             # raid select list (locked until campaign done)
-  raid.$dungeonId.tsx   # active raid
-  grid.$catId.tsx       # sphere grid for one cat
-```
-
-## Animations
-
-- `framer-motion` only (already in stack). No new sprite art required for v1.
-- Per attack: actor scale-bump + slide toward target + impact flash + damage number float.
-- Element hits tint the impact (fire = orange burst, ice = cyan shards via CSS clip-paths, etc).
-- Overdrives: full-screen radial gradient sweep + character zoom + 3–5 staged hits, ~1.8s total. Skippable.
-- Turn-queue reshuffle animates portraits sliding to new positions (layout animation).
-
-## Out of scope (v1)
-
-- Party swap mid-battle (you chose 3 active only).
-- Pan/zoom on sphere grid (static layout fits in viewport).
-- Crafting UI for gear (drops only in v1; crafting can come later).
-- Multiplayer / co-op raids.
-
-## Rollout order
-
-1. Types + engine + store wiring (no UI).
-2. Raid screen + CTB queue + basic Attack/Defend/Flee.
-3. Skills, elements, items.
-4. Overdrives + animations.
-5. Sphere grid screen.
-6. Gear slots + drops.
-7. Polish: damage numbers, screen shake, sound stub.
-
-This is a sizable build (~10–14 new files, ~1500 LOC). I'll implement in the order above so you can play-test after each milestone.
+Ready to start with step 1 on approval.
