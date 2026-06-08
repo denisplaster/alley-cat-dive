@@ -12,7 +12,6 @@ import type { RaidState } from "@/lib/game/raidTypes";
  * shake, OD overlay, banners).
  */
 export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
-  console.log("[PhaserBattle] render", { bgUrl });
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<any | null>(null);
   const sceneRef = useRef<{ syncState: (s: RaidState) => void; scene: { isActive: () => boolean } } | null>(null);
@@ -32,20 +31,17 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
 
   // Boot phaser once
   useEffect(() => {
-    console.log("[PhaserBattle] boot effect", { mounted, hasContainer: !!containerRef.current, hasGame: !!gameRef.current, SSR: import.meta.env.SSR });
     if (!mounted) return;
     if (gameRef.current || !containerRef.current) return;
     let cancelled = false;
     let game: any = null;
     if (typeof window === "undefined") return;
     (async () => {
-      console.log("[PhaserBattle] importing phaser…");
       const [{ default: Phaser }, { RaidScene }] = await Promise.all([
         import("phaser"),
         import("@/game/phaser/RaidScene"),
       ]);
       if (cancelled || !containerRef.current) return;
-      console.log("[PhaserBattle] container size", containerRef.current.clientWidth, containerRef.current.clientHeight);
       const sprites: Record<string, string> = {};
       Object.entries(portraits).forEach(([id, url]) => { sprites[`cat:${id}`] = url as string; });
       Object.entries(ENEMY_SPRITES).forEach(([id, url]) => { sprites[`enemy:${id}`] = url; });
@@ -65,24 +61,22 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
       // adding/starting the scene, then poll until create() has run.
       const onReady = () => {
         if (cancelled || !gameRef.current) return;
-        const sceneInstance = game.scene.add(RaidScene.KEY, RaidScene, true, {
+        game.scene.add(RaidScene.KEY, RaidScene, true, {
           bgUrl,
           sprites,
           onActorClick: (uid: string) => handleTargetClick(uid),
           getTargetMode: () => !!targetRef.current,
-        }) as unknown as InstanceType<typeof RaidScene> | null;
-        console.log("[PhaserBattle] scene.add result", !!sceneInstance);
-        if (!sceneInstance) return;
-        sceneRef.current = sceneInstance as unknown as typeof sceneRef.current;
-        const scene = sceneInstance;
+        });
         const pushWhenReady = () => {
           if (cancelled) return;
+          const scene = game.scene.getScene(RaidScene.KEY) as unknown as InstanceType<typeof RaidScene> | null;
+          if (!scene) { setTimeout(pushWhenReady, 50); return; }
+          if (!sceneRef.current) sceneRef.current = scene as unknown as typeof sceneRef.current;
           const s: any = scene as any;
           const status = s?.sys?.settings?.status;
           if (status !== undefined && status >= 5) {
             sceneReadyRef.current = true;
             const latest = useGame.getState().raid;
-            console.log("[PhaserBattle] scene ready party=", latest?.party.length, "enemies=", latest?.enemies.length);
             if (latest) scene.syncState(latest);
             force(x => x + 1);
             return;
