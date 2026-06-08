@@ -340,6 +340,7 @@ export const useGame = create<GameState>((set, get) => ({
         transitioning: false,
         transitionMessage: null,
         roomRevealKey: 0,
+        nextKind: null,
       },
       lastRewards: null,
     });
