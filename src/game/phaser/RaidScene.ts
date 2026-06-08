@@ -349,7 +349,7 @@ function createRaidSceneClass() {
         angle: side === "party" ? 90 : -90,
         alpha: 0.35,
         duration: 480,
-        ease: "Back.In",
+        ease: "Back.easeIn",
       });
       view.shadow.setAlpha(0.2);
     } else if (!view.alive && a.alive) {
@@ -510,7 +510,7 @@ function createRaidSceneClass() {
     v.baseY = v.homeY - 8;
     (v as any)._busy = true;
     this.tweens.add({
-      targets: v.sprite, x: v.baseX, y: v.baseY, duration: 260, ease: "Quad.Out",
+      targets: v.sprite, x: v.baseX, y: v.baseY, duration: 260, ease: "Quad.easeOut",
       onComplete: () => { (v as any)._busy = false; },
     });
     v.sprite.setDepth(7);
@@ -523,7 +523,7 @@ function createRaidSceneClass() {
     v.baseY = v.homeY;
     (v as any)._busy = true;
     this.tweens.add({
-      targets: v.sprite, x: v.baseX, y: v.baseY, duration: 280, ease: "Quad.InOut",
+      targets: v.sprite, x: v.baseX, y: v.baseY, duration: 280, ease: "Quad.easeInOut",
       onComplete: () => { (v as any)._busy = false; },
     });
   }
@@ -568,7 +568,7 @@ function createRaidSceneClass() {
         }).setOrigin(0, 0.5);
         c.add(now);
         // gentle pulse to draw the eye
-        this.tweens.add({ targets: c, scale: { from: 1, to: 1.06 }, duration: 520, yoyo: true, repeat: -1, ease: "Sine.InOut" });
+        this.tweens.add({ targets: c, scale: { from: 1, to: 1.06 }, duration: 520, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
       }
       this.queueGroup.add(c);
       x += tileW + gap;
@@ -622,25 +622,25 @@ function createRaidSceneClass() {
     this.tweens.add({
       targets: att.sprite,
       x: homeX - dir * 22, y: homeY + 4,
-      duration: 150, ease: "Quad.Out",
+      duration: 150, ease: "Quad.easeOut",
       onComplete: () => {
         // 2) Dash the full distance to the target.
         this.tweens.add({
           targets: att.sprite,
           x: stopX, y: stopY,
-          duration: big ? 200 : 165, ease: "Quint.In",
+          duration: big ? 200 : 165, ease: "Quint.easeIn",
           onComplete: () => {
             // 3) IMPACT.
             this.impact(tgt, f, big);
             // brief overshoot lunge into the target for contact feel
             this.tweens.add({
-              targets: att.sprite, x: stopX + dir * 14, duration: 70, yoyo: true, ease: "Sine.Out",
+              targets: att.sprite, x: stopX + dir * 14, duration: 70, yoyo: true, ease: "Sine.easeOut",
             });
             // 4) Travel back home.
             this.tweens.add({
               targets: att.sprite,
               x: homeX, y: homeY,
-              duration: 320, ease: "Cubic.InOut", delay: big ? 150 : 90,
+              duration: 320, ease: "Cubic.easeInOut", delay: big ? 150 : 90,
               onComplete: () => {
                 att.sprite.setPosition(homeX, homeY);
                 att.sprite.setDepth(att.stepped ? 7 : 4);
@@ -710,15 +710,15 @@ function createRaidSceneClass() {
         fontFamily: "Impact, monospace", fontSize: "16px", color: "#ffec8a",
         stroke: "#000", strokeThickness: 4, fontStyle: "bold",
       }).setOrigin(0.5).setDepth(41).setScale(0.4).setAlpha(0);
-      this.tweens.add({ targets: tag, alpha: 1, scale: 1, y: tag.y - 8, duration: 200, ease: "Back.Out",
+      this.tweens.add({ targets: tag, alpha: 1, scale: 1, y: tag.y - 8, duration: 200, ease: "Back.easeOut",
         onComplete: () => this.tweens.add({ targets: tag, alpha: 0, y: tag.y - 26, delay: 500, duration: 350, onComplete: () => tag.destroy() }) });
     }
 
     // Pop in big, settle, then float up & fade.
-    this.tweens.add({ targets: t, scale: crit ? 1.35 : 1.1, duration: 150, ease: "Back.Out",
+    this.tweens.add({ targets: t, scale: crit ? 1.35 : 1.1, duration: 150, ease: "Back.easeOut",
       onComplete: () => {
         this.tweens.add({ targets: t, y: t.y - 64, alpha: { from: 1, to: 0 }, scale: t.scale * 0.85,
-          duration: 760, delay: crit ? 220 : 90, ease: "Quad.In", onComplete: () => t.destroy() });
+          duration: 760, delay: crit ? 220 : 90, ease: "Quad.easeIn", onComplete: () => t.destroy() });
       },
     });
   }
@@ -741,11 +741,11 @@ function createRaidSceneClass() {
     // Layer 1 — expanding shock ring.
     const ring = this.add.circle(cx, cy, 8, color, 0).setStrokeStyle(crit ? 5 : 3, color, 0.9).setDepth(38);
     this.tweens.add({ targets: ring, radius: crit ? 86 : big ? 64 : 44, alpha: { from: 0.9, to: 0 },
-      duration: crit ? 380 : 280, ease: "Cubic.Out", onComplete: () => ring.destroy() });
+      duration: crit ? 380 : 280, ease: "Cubic.easeOut", onComplete: () => ring.destroy() });
 
     // Layer 2 — white flash sprite (the "pop").
     const flash = this.add.circle(cx, cy, crit ? 46 : 30, 0xffffff, 0.85).setDepth(37).setBlendMode("ADD");
-    this.tweens.add({ targets: flash, scale: 1.8, alpha: 0, duration: 180, ease: "Quad.Out", onComplete: () => flash.destroy() });
+    this.tweens.add({ targets: flash, scale: 1.8, alpha: 0, duration: 180, ease: "Quad.easeOut", onComplete: () => flash.destroy() });
 
     // Layer 3 — directional spark spray + element-tinted dots.
     const qty = crit ? 34 : big ? 24 : 16;
@@ -766,7 +766,7 @@ function createRaidSceneClass() {
     this.time.delayedCall(crit ? 110 : 70, () => v.sprite.clearTint().setTintMode(P.TintModes.MULTIPLY));
     const push = (crit ? 26 : big ? 18 : 11) * (v.side === "party" ? -1 : 1);
     this.tweens.add({ targets: v.sprite, x: v.baseX + push, angle: v.side === "party" ? -6 : 6,
-      duration: 70, yoyo: true, ease: "Sine.Out",
+      duration: 70, yoyo: true, ease: "Sine.easeOut",
       onComplete: () => v.sprite.setPosition(v.baseX, v.baseY).setAngle(0) });
   }
 
@@ -823,7 +823,7 @@ function createRaidSceneClass() {
     this.overdriveCard.add([bg, tag, name]);
     this.overdriveCard.setScale(0.3).setAlpha(0);
     this.tweens.add({
-      targets: this.overdriveCard, scale: 1, alpha: 1, duration: 280, ease: "Back.Out",
+      targets: this.overdriveCard, scale: 1, alpha: 1, duration: 280, ease: "Back.easeOut",
     });
     // Radial flash
     this.ensureParticleTexture();
@@ -876,7 +876,7 @@ function createRaidSceneClass() {
       .setOrigin(0.5);
     this.banner.add([bg, t, sub]);
     this.banner.setVisible(true).setAlpha(0).setScale(0.7);
-    this.tweens.add({ targets: this.banner, alpha: 1, scale: 1, duration: 280, ease: "Back.Out" });
+    this.tweens.add({ targets: this.banner, alpha: 1, scale: 1, duration: 280, ease: "Back.easeOut" });
   }
 
   // ---- Target-mode rings -------------------------------------------------
