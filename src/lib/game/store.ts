@@ -636,6 +636,7 @@ export const useGame = create<GameState>((set, get) => ({
   goDeeper: () => {
     const s = get();
     if (!s.dive || s.dive.ended || !s.dive.roomCleared) return;
+    if (s.dive.transitioning) return;
     const d = s.dive;
     const dump = s.dumpsters.find(x => x.id === d.dumpsterId)!;
     if (d.room >= d.totalRooms) {
@@ -645,7 +646,34 @@ export const useGame = create<GameState>((set, get) => ({
       get().endDive(true);
       return;
     }
-    const nextRoom = d.room + 1;
+    // Kick off a short side-scrolling transition: cat runs right, bg scrolls
+    // right-to-left, then the next room loads.
+    const flavorPool = [
+      "Diving deeper…",
+      "Scrapper squeezes through the trash wall…",
+      "Something rustles ahead…",
+      "The dumpster groans around you…",
+      "A new pile shifts in the dark…",
+    ];
+    const flavor = flavorPool[Math.floor(Math.random() * flavorPool.length)];
+    set({ dive: { ...d, transitioning: true, transitionMessage: flavor,
+      roomCleared: false, roomEvent: null,
+      catPose: "idle", enemyPose: "idle", mangaFx: null, mangaWord: null, mangaFocus: null, bubble: null,
+      // hide previous enemy immediately so the arena reads as empty during the run
+      enemy: null, enemies: [],
+    } });
+    setTimeout(() => {
+      const cur = get().dive;
+      if (!cur || cur.ended) return;
+      finishGoDeeper(set, get, dump);
+    }, 1100);
+  },
+
+  toggleAuto: () => {
+    const s = get();
+    if (!s.dive) return;
+    set({ dive: { ...s.dive, autoDive: !s.dive.autoDive } });
+  },
     const nextIdx = nextRoom - 1;
     const nextKind = d.rooms[nextIdx].kind;
     const rooms = d.rooms.map((r, i) => i === nextIdx ? { ...r, revealed: true }
