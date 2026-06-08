@@ -152,20 +152,28 @@ function createRaidSceneClass() {
   /** Procedural "living" idle: breathing scale, vertical bob, gentle sway.
    *  Skipped for an actor while it is mid-strike (busy flag) so tweens win. */
   private animateIdle(time: number) {
+    const tt = time * 0.001;
     for (const v of this.actors.values()) {
       if (!v.alive || (v as any)._busy) continue;
       const ph = v.idlePhase;
-      const tt = time * 0.001;
-      // breathing — subtle scale pulse around the depth scale
-      const breathe = 1 + Math.sin(tt * 1.6 + ph) * 0.025;
-      const base = v.depthScale * (v.stepped ? 1.12 : 1);
-      v.sprite.setScale(base * breathe);
-      // vertical bob + tiny horizontal sway (more when stepped/active)
-      const amp = v.stepped ? 6 : 3;
-      const bobY = Math.sin(tt * 1.6 + ph) * amp;
-      const swayX = Math.cos(tt * 0.9 + ph) * (v.stepped ? 4 : 2);
+      const stepped = v.stepped;
+      const base = v.depthScale;
+
+      // Breathing squash & stretch (clearly visible: ±6% on Y, opposite on X).
+      const breathe = Math.sin(tt * 2.2 + ph);
+      const sx = base * (1 - breathe * 0.04) * (stepped ? 1.12 : 1);
+      const sy = base * (1 + breathe * 0.06) * (stepped ? 1.12 : 1);
+      v.sprite.setScale(sx, sy);
+
+      // Vertical bob (bigger) + horizontal sway + gentle rotation "tail sway".
+      const bobAmp = stepped ? 12 : 7;
+      const bobY = Math.sin(tt * 2.2 + ph) * bobAmp;
+      const swayX = Math.cos(tt * 1.1 + ph) * (stepped ? 7 : 4);
+      const rot = Math.sin(tt * 0.9 + ph) * (stepped ? 0.05 : 0.03); // radians
       v.sprite.setPosition(v.baseX + swayX, v.baseY + bobY);
-      // keep shadow/labels following the anchor (not the bob)
+      v.sprite.setRotation(rot);
+
+      // shadow/labels stay glued to the anchor, not the bob
       this.positionLabels(v);
     }
   }
@@ -175,8 +183,11 @@ function createRaidSceneClass() {
     if ((this as any)._camBusy) return;          // don't fight punch-in pans
     const cam = this.cameras.main;
     const tt = time * 0.001;
-    const ox = Math.sin(tt * 0.18) * 10;
-    const oy = Math.cos(tt * 0.13) * 6;
+    // Visible Ken-Burns: gentle zoom breath (1.00 .. 1.035) + slow parallax drift.
+    const zoom = 1.018 + Math.sin(tt * 0.25) * 0.018;
+    cam.setZoom(zoom);
+    const ox = Math.sin(tt * 0.20) * 16;
+    const oy = Math.cos(tt * 0.15) * 9;
     cam.setScroll(ox, oy);
   }
 
@@ -194,7 +205,8 @@ function createRaidSceneClass() {
     const { width, height } = this.scale;
     if (!this.bg) return;
     const tex = this.bg.texture.getSourceImage() as HTMLImageElement;
-    const scale = Math.max(width / tex.width, height / tex.height);
+    // Overscale ~6% so the Ken-Burns camera drift never reveals black edges.
+    const scale = Math.max(width / tex.width, height / tex.height) * 1.06;
     this.bg.setPosition(width / 2, height / 2).setScale(scale);
   }
 
