@@ -4,6 +4,7 @@ import kittenIdle from "@/assets/anime/kitten-idle.png";
 import kittenScratch from "@/assets/anime/kitten-scratch.png";
 import kittenPounce from "@/assets/anime/kitten-pounce.png";
 import kittenHurt from "@/assets/anime/kitten-hurt.png";
+import kittenBlock from "@/assets/anime/kitten-block.png";
 import kittenKo from "@/assets/anime/kitten-ko.png";
 import kittenVictory from "@/assets/anime/kitten-victory.png";
 
@@ -11,6 +12,7 @@ import juvenileIdle from "@/assets/anime/juvenile-idle.png";
 import juvenileScratch from "@/assets/anime/juvenile-scratch.png";
 import juvenilePounce from "@/assets/anime/juvenile-pounce.png";
 import juvenileHurt from "@/assets/anime/juvenile-hurt.png";
+import juvenileBlock from "@/assets/anime/juvenile-block.png";
 import juvenileKo from "@/assets/anime/juvenile-ko.png";
 
 import beetleIdle from "@/assets/anime/beetle-idle.png";
@@ -81,7 +83,7 @@ export const KITTEN_POSES: Partial<Record<string, string>> = {
   pounce: kittenPounce,
   item: kittenIdle,
   hurt: kittenHurt,
-  block: kittenIdle,
+  block: kittenBlock,
   ko: kittenKo,
   victory: kittenVictory,
   combo: kittenScratch,
@@ -94,7 +96,7 @@ export const JUVENILE_POSES: Partial<Record<string, string>> = {
   pounce: juvenilePounce,
   item: juvenileIdle,
   hurt: juvenileHurt,
-  block: juvenileIdle,
+  block: juvenileBlock,
   ko: juvenileKo,
   victory: juvenileIdle,
   combo: juvenileScratch,
