@@ -384,7 +384,13 @@ export const useGame = create<GameState>((set, get) => ({
     }
     set({ dive: { ...s.dive, timerSec: newTimer } });
     if (s.dive.autoDive && s.dive.enemy && !s.dive.roomCleared) {
-      setTimeout(() => get().doAction("scratch"), 50);
+      // Auto-play picks a sensible move: block big swings, pounce when off cd, else scratch.
+      const d = s.dive;
+      const auto: "scratch" | "pounce" | "block" =
+        d.enemyIntent === "heavy" ? "block"
+        : d.pounceCd === 0 && d.enemyIntent !== "block" ? "pounce"
+        : "scratch";
+      setTimeout(() => get().doAction(auto), 50);
     }
   },
 
