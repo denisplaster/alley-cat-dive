@@ -83,7 +83,6 @@ function makeGrid(catId: string, plan: P[][]): GridLayout {
 // Per-cat plans — different shapes so each grid feels distinct.
 // Cells: "" = empty, otherwise a node kind.
 type P = GridNodeKind | "";
-const blank = "" as P;
 
 const planScrapper: P[][] = [
   ["atk","hp","atk","atk","hp","atk"],
