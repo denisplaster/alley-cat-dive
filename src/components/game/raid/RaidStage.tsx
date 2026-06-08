@@ -5,7 +5,6 @@ import { ActorCard } from "./ActorCard";
 import { TurnQueue } from "./TurnQueue";
 import { RaidActionBar } from "./RaidActionBar";
 import { OverdriveOverlay } from "./OverdriveOverlay";
-import { DamageNumbers } from "./DamageNumbers";
 
 export function RaidStage({ bgImage }: { bgImage?: string }) {
   const raid = useGame(s => s.raid);
@@ -53,7 +52,8 @@ export function RaidStage({ bgImage }: { bgImage?: string }) {
               <div className="text-[10px] font-bold uppercase tracking-widest text-primary">Crew</div>
               {raid.party.map(p => (
                 <ActorCard key={p.uid} a={p} isActive={p.uid === raid.activeUid}
-                  flashKey={raid.flash[p.uid]} />
+                  flashKey={raid.flash[p.uid]}
+                  floats={raid.floats.filter(f => f.uid === p.uid)} />
               ))}
             </div>
             {/* Enemies */}
@@ -63,11 +63,11 @@ export function RaidStage({ bgImage }: { bgImage?: string }) {
                 <ActorCard key={e.uid} a={e} isActive={e.uid === raid.activeUid}
                   isTarget={!!target && e.alive}
                   flashKey={raid.flash[e.uid]}
+                  floats={raid.floats.filter(f => f.uid === e.uid)}
                   onClick={target ? () => handleTargetClick(e.uid) : undefined} />
               ))}
             </div>
           </div>
-          <DamageNumbers floats={raid.floats} />
           <OverdriveOverlay overlay={raid.overdriveOverlay} />
         </div>
         <TurnQueue actors={[...raid.party, ...raid.enemies]} activeUid={raid.activeUid} />

@@ -14,6 +14,7 @@ import { OVERDRIVES } from "./raidTypes";
 import {
   PARTY_TEMPLATES, RAID_ENEMIES, RAIDS, SKILLS, type RaidDef,
 } from "./raidData";
+import { ENEMY_SPRITES } from "./enemySprites";
 import {
   BASE_TICK, chooseEnemyAction, gainOD, normalizeTicks, pickActive,
   rollDamage, rollHeal, tickFor, tickStatuses,
@@ -1305,6 +1306,7 @@ function buildEnemiesForRoom(def: RaidDef, roomIdx: number): Actor[] {
       side: "enemy",
       name: t.name,
       emoji: t.emoji,
+      portrait: ENEMY_SPRITES[eid],
       hp, maxHp: hp,
       mp: t.mp ?? 30, maxMp: t.mp ?? 30,
       atk: t.atk, def: t.def, spd: t.spd,
@@ -1528,7 +1530,7 @@ function cloneRaid(raid: RaidState): RaidState {
     party: raid.party.map(p => ({ ...p, statuses: [...p.statuses], skills: [...p.skills], knownTypes: [...p.knownTypes] })),
     enemies: raid.enemies.map(e => ({ ...e, statuses: [...e.statuses], skills: [...e.skills], knownTypes: [...e.knownTypes] })),
     log: [...raid.log],
-    floats: [...raid.floats],
+    floats: raid.floats.slice(-40),
     flash: { ...raid.flash },
   };
 }
