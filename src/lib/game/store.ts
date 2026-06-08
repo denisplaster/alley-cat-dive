@@ -7,6 +7,18 @@ import type {
 } from "./types";
 import { STORY_CHAPTERS, STAGE_ORDER, CHAPTER_DUMPSTER, type HideoutStage, chapterById } from "./story";
 import { computeEvolution, type EvolutionStage } from "./evolution";
+import type {
+  Actor, FloatingNumber, RaidLogEntry, RaidState, Skill,
+} from "./raidTypes";
+import { OVERDRIVES } from "./raidTypes";
+import {
+  PARTY_TEMPLATES, RAID_ENEMIES, RAIDS, SKILLS, type RaidDef,
+} from "./raidData";
+import {
+  BASE_TICK, chooseEnemyAction, gainOD, normalizeTicks, pickActive,
+  rollDamage, rollHeal, tickFor, tickStatuses,
+} from "./raidEngine";
+import { aggregateGrid, GRID_LAYOUTS, isUnlockable, NODE_COST } from "./gridData";
 
 interface CombatEntry { id: number; text: string; tone: "info" | "hit" | "crit" | "loot" | "warn" }
 
@@ -90,6 +102,14 @@ interface GameState {
   /** Reward panel shown after a chapter outro before returning to gameplay. */
   pendingReward: { chapterId: string; newEvolution?: EvolutionStage } | null;
 
+  // raids (post-story FFX-style party combat)
+  raid: RaidState | null;
+  spheres: number;
+  /** Per-cat sphere-grid progress: cat.id -> unlocked node ids. */
+  catGrid: Record<string, string[]>;
+  /** Selected raid team (cat ids). Defaults to first 3 ready cats. */
+  raidTeam: string[];
+
   // progression milestones
   roomsCleared: number;
   bossesBeaten: number;
@@ -111,6 +131,21 @@ interface GameState {
   upgrade: (id: string) => void;
   buy: (cost: { bones: number; caps: number }, granted: Item) => boolean;
   buySnack: () => boolean;
+
+  // raid actions
+  setRaidTeam: (catIds: string[]) => void;
+  startRaid: (dungeonId: string) => void;
+  raidBasicAttack: (targetUid: string) => void;
+  raidUseSkill: (skillId: string, targetUid?: string) => void;
+  raidDefend: () => void;
+  raidUseItem: () => void;
+  raidOverdrive: (targetUid?: string) => void;
+  raidFlee: () => void;
+  raidAdvanceRoom: () => void;
+  raidClaim: () => void;
+  /** Spend 1 sphere to unlock a grid node on a cat. */
+  spendSphere: (catId: string, nodeId: string) => void;
+
 
   openCutscene: (chapterId: string, phase: "intro" | "outro") => void;
   advanceCutscene: () => void;
@@ -264,6 +299,11 @@ export const useGame = create<GameState>((set, get) => ({
   roomsCleared: 0,
   bossesBeaten: 0,
   divesCompleted: 0,
+
+  raid: null,
+  spheres: 0,
+  catGrid: {},
+  raidTeam: ["scrapper", "sneakpaw", "moldmancer"],
 
   selectDumpster: (id) => set({ selectedDumpsterId: id }),
   setActiveCat: (id) => {
