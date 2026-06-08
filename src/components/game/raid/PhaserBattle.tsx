@@ -12,9 +12,11 @@ import type { RaidState } from "@/lib/game/raidTypes";
  * shake, OD overlay, banners).
  */
 export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
+  console.log("[PhaserBattle] render", { bgUrl });
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<any | null>(null);
   const sceneRef = useRef<{ syncState: (s: RaidState) => void; scene: { isActive: () => boolean } } | null>(null);
+  const sceneReadyRef = useRef(false);
   const targetRef = useRef<{ mode: "basic"|"skill"|"od"; skillId?: string } | null>(null);
   const [, force] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -30,20 +32,23 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
 
   // Boot phaser once
   useEffect(() => {
+    console.log("[PhaserBattle] boot effect", { mounted, hasContainer: !!containerRef.current, hasGame: !!gameRef.current, SSR: import.meta.env.SSR });
+    if (!mounted) return;
     if (gameRef.current || !containerRef.current) return;
     let cancelled = false;
     let game: any = null;
-    if (!import.meta.env.SSR) (async () => {
+    if (typeof window === "undefined") return;
+    (async () => {
+      console.log("[PhaserBattle] importing phaser…");
       const [{ default: Phaser }, { RaidScene }] = await Promise.all([
         import("phaser"),
         import("@/game/phaser/RaidScene"),
       ]);
       if (cancelled || !containerRef.current) return;
+      console.log("[PhaserBattle] container size", containerRef.current.clientWidth, containerRef.current.clientHeight);
       const sprites: Record<string, string> = {};
       Object.entries(portraits).forEach(([id, url]) => { sprites[`cat:${id}`] = url as string; });
       Object.entries(ENEMY_SPRITES).forEach(([id, url]) => { sprites[`enemy:${id}`] = url; });
-      const scene = new RaidScene();
-      sceneRef.current = scene as unknown as typeof sceneRef.current;
       game = new Phaser.Game({
         type: Phaser.AUTO,
         parent: containerRef.current,
@@ -52,36 +57,56 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
         height: containerRef.current.clientHeight,
         scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
         render: { pixelArt: false, antialias: true },
-        scene: [scene],
+        scene: [],
       });
       gameRef.current = game;
-      game.scene.start(RaidScene.KEY, {
+      // Register the scene class and start it WITH data so init() receives bgUrl
+      // and preload() can actually load the images. Adding the instance to
+      // scene config would auto-start with no data and crash preload.
+      const sceneInstance = game.scene.add(RaidScene.KEY, RaidScene, true, {
         bgUrl,
         sprites,
         onActorClick: (uid: string) => handleTargetClick(uid),
         getTargetMode: () => !!targetRef.current,
-      });
-      // Trigger a state push as soon as the scene is up.
-      force(x => x + 1);
+      }) as unknown as InstanceType<typeof RaidScene>;
+      sceneRef.current = sceneInstance as unknown as typeof sceneRef.current;
+      const scene = sceneInstance;
+      console.log("[PhaserBattle] scene added", scene);
+      // Wait until the scene has run create() (sys.settings.status === RUNNING),
+      // then push the current raid state in directly — we cannot rely on the
+      // [raid] effect re-firing because raid may not have changed since boot.
+      const pushWhenReady = () => {
+        if (cancelled) return;
+        const s: any = scene as any;
+        const ready = s.sys && s.sys.settings && s.sys.settings.status >= 5; // RUNNING
+        console.log("[PhaserBattle] poll status", s?.sys?.settings?.status);
+        if (ready) {
+          sceneReadyRef.current = true;
+          const latest = useGame.getState().raid;
+          console.log("[PhaserBattle] scene ready party=", latest?.party.length, "enemies=", latest?.enemies.length);
+          if (latest) scene.syncState(latest);
+          force(x => x + 1);
+          return;
+        }
+        setTimeout(pushWhenReady, 50);
+      };
+      pushWhenReady();
     })();
     return () => {
       cancelled = true;
       if (game) { try { game.destroy(true); } catch { /* ignore */ } }
       gameRef.current = null;
       sceneRef.current = null;
+      sceneReadyRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [mounted]);
 
   // Push state into scene each render
   useEffect(() => {
     if (!raid) return;
     const scene = sceneRef.current;
-    if (!scene || !scene.scene.isActive()) {
-      // Scene not yet booted — wait one tick
-      const id = setTimeout(() => force(x => x + 1), 60);
-      return () => clearTimeout(id);
-    }
+    if (!scene || !sceneReadyRef.current) return; // boot loop will push initial state
     scene.syncState(raid);
   }, [raid]);
 
