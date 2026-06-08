@@ -31,6 +31,7 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
 
   // Boot phaser once
   useEffect(() => {
+    if (!mounted) return;
     if (gameRef.current || !containerRef.current) return;
     let cancelled = false;
     let game: any = null;
@@ -96,7 +97,7 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
       sceneReadyRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [mounted]);
 
   // Push state into scene each render
   useEffect(() => {
