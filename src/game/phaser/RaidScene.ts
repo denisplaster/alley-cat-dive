@@ -1,4 +1,14 @@
-import Phaser from "phaser";
+// SSR-safe Phaser usage.
+// `import type * as Phaser` is 100% erased at build time, so the "phaser" package
+// never enters the server bundle (Phaser 4 touches browser globals at module-eval
+// time and crashes TanStack Start SSR). All TYPE annotations below use this.
+import type * as Phaser from "phaser";
+// The RUNTIME value is injected client-only by PhaserBattle via setPhaser(),
+// before this module is dynamically imported. Use `P.*` for any runtime
+// constant/class (P.Scene, P.BlendModes, P.TintModes, P.Loader.Events, ...).
+let P!: typeof import("phaser");
+export function setPhaser(phaser: typeof import("phaser")) { P = phaser; }
+
 import type { Actor, FloatingNumber, RaidState } from "@/lib/game/raidTypes";
 import { previewQueue } from "@/lib/game/raidEngine";
 
@@ -37,7 +47,7 @@ const ELEMENT_COLOR: Record<string, number> = {
   shock: 0xffe14a, stink: 0xc7ff5b,
 };
 
-export class RaidScene extends Phaser.Scene {
+export class RaidScene extends P.Scene {
   static KEY = "RaidScene";
 
   private init_!: RaidSceneInit;
@@ -93,7 +103,7 @@ export class RaidScene extends Phaser.Scene {
     this.overdriveCard = this.add.container(width / 2, height / 2).setDepth(60).setVisible(false);
 
     this.scale.on("resize", this.handleResize, this);
-    this.events.on(Phaser.Scenes.Events.SHUTDOWN, () => {
+    this.events.on(P.Scenes.Events.SHUTDOWN, () => {
       this.scale.off("resize", this.handleResize, this);
     });
   }
@@ -137,7 +147,7 @@ export class RaidScene extends Phaser.Scene {
     this.vignette.fillStyle(0x000000, 0.7);
     this.vignette.fillRect(0, 0, width, 64);
     this.vignette.fillRect(0, height - this.bottomPad, width, this.bottomPad);
-    this.vignette.setBlendMode(Phaser.BlendModes.MULTIPLY);
+    this.vignette.setBlendMode(P.BlendModes.MULTIPLY);
   }
 
   /** Called by the React wrapper whenever zustand raid state changes. */
@@ -283,7 +293,7 @@ export class RaidScene extends Phaser.Scene {
     if (url && !this.loadingSprites.has(rawKey)) {
       this.loadingSprites.add(rawKey);
       this.load.image(phaserKey, url);
-      this.load.once(Phaser.Loader.Events.COMPLETE, () => {
+      this.load.once(P.Loader.Events.COMPLETE, () => {
         this.loadingSprites.delete(rawKey);
         for (const v of this.actors.values()) {
           const actor = (v as any)._actor as Actor | undefined;
@@ -476,8 +486,8 @@ export class RaidScene extends Phaser.Scene {
     e.explode(18);
     this.time.delayedCall(700, () => e.destroy());
     // Flash sprite white
-    v.sprite.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
-    this.time.delayedCall(80, () => v.sprite.clearTint().setTintMode(Phaser.TintModes.MULTIPLY));
+    v.sprite.setTint(0xffffff).setTintMode(P.TintModes.FILL);
+    this.time.delayedCall(80, () => v.sprite.clearTint().setTintMode(P.TintModes.MULTIPLY));
     // Quick recoil
     this.tweens.add({
       targets: v.sprite, x: v.baseX + (v.side === "party" ? -8 : 8),
@@ -519,8 +529,8 @@ export class RaidScene extends Phaser.Scene {
       if (this.lastFlash[uid] === key) continue;
       this.lastFlash[uid] = key;
       const v = this.actors.get(uid); if (!v) continue;
-      v.sprite.setTint(0xff5050).setTintMode(Phaser.TintModes.FILL);
-      this.time.delayedCall(110, () => v.sprite.clearTint().setTintMode(Phaser.TintModes.MULTIPLY));
+      v.sprite.setTint(0xff5050).setTintMode(P.TintModes.FILL);
+      this.time.delayedCall(110, () => v.sprite.clearTint().setTintMode(P.TintModes.MULTIPLY));
     }
   }
 
