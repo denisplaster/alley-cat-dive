@@ -36,7 +36,8 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
     if (gameRef.current || !containerRef.current) return;
     let cancelled = false;
     let game: any = null;
-    if (!import.meta.env.SSR) (async () => {
+    if (typeof window === "undefined") return;
+    (async () => {
       console.log("[PhaserBattle] importing phaser…");
       const [{ default: Phaser }, { RaidScene }] = await Promise.all([
         import("phaser"),
