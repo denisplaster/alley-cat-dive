@@ -692,7 +692,7 @@ function createRaidSceneClass() {
       : f.kind === "heal" ? `+${f.amount}`
       : `${f.amount}${f.kind === "weak" ? " WEAK!" : ""}${crit ? "" : ""}`;
     const size = crit ? 40 : f.kind === "weak" ? 28 : f.amount >= 40 ? 30 : 22;
-    const startX = v.baseX + Phaser.Math.Between(-10, 10);
+    const startX = v.baseX + P.Math.Between(-10, 10);
     const t = this.add.text(startX, v.baseY - 70, text, {
       fontFamily: "Impact, monospace, sans-serif",
       fontSize: `${size}px`, color: colorMap[f.kind],
