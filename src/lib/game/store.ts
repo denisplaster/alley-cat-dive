@@ -665,33 +665,28 @@ export const useGame = create<GameState>((set, get) => ({
     setTimeout(() => {
       const cur = get().dive;
       if (!cur || cur.ended) return;
-      finishGoDeeper(set, get, dump);
+      const nextRoom = cur.room + 1;
+      const nextIdx = nextRoom - 1;
+      const nextKind = cur.rooms[nextIdx].kind;
+      const rooms = cur.rooms.map((r, i) => i === nextIdx ? { ...r, revealed: true }
+        : i === nextIdx + 1 ? { ...r, revealed: true } : r);
+      const wave = (nextKind === "enemy" || nextKind === "swarm" || nextKind === "elite" || nextKind === "miniboss" || nextKind === "boss")
+        ? spawnEnemies(dump, nextKind, nextIdx) : [];
+      const enemy = wave[0] ?? null;
+      const rest = wave.slice(1);
+      const log2 = [...cur.log,
+        mklog(`Crawl deeper… Room ${nextRoom}/${cur.totalRooms} — ${roomLabel(nextKind)}`, "info"),
+        enemy ? mklog(wave.length > 1
+                ? `${wave.length} foes appear — ${enemy.name} steps up first!`
+                : `A ${enemy.name} appears!`, "warn")
+              : mklog(roomDescriptor(nextKind), "info"),
+      ];
+      set({ dive: { ...cur, room: nextRoom, rooms, currentKind: nextKind, enemy, enemies: rest,
+        roomCleared: false, roomEvent: null, log: log2,
+        catPose: "idle", enemyPose: enemy ? "idle" : "ko", mangaFx: null, mangaWord: null, mangaFocus: null, bubble: null,
+        transitioning: false, transitionMessage: null, roomRevealKey: cur.roomRevealKey + 1,
+      } });
     }, 1100);
-  },
-
-  toggleAuto: () => {
-    const s = get();
-    if (!s.dive) return;
-    set({ dive: { ...s.dive, autoDive: !s.dive.autoDive } });
-  },
-    const nextIdx = nextRoom - 1;
-    const nextKind = d.rooms[nextIdx].kind;
-    const rooms = d.rooms.map((r, i) => i === nextIdx ? { ...r, revealed: true }
-      : i === nextIdx + 1 ? { ...r, revealed: true } : r);
-    const wave = (nextKind === "enemy" || nextKind === "swarm" || nextKind === "elite" || nextKind === "miniboss" || nextKind === "boss")
-      ? spawnEnemies(dump, nextKind, nextIdx) : [];
-    const enemy = wave[0] ?? null;
-    const rest = wave.slice(1);
-    const log2 = [...d.log,
-      mklog(`Crawl deeper… Room ${nextRoom}/${d.totalRooms} — ${roomLabel(nextKind)}`, "info"),
-      enemy ? mklog(wave.length > 1
-              ? `${wave.length} foes appear — ${enemy.name} steps up first!`
-              : `A ${enemy.name} appears!`, "warn")
-            : mklog(roomDescriptor(nextKind), "info"),
-    ];
-    set({ dive: { ...d, room: nextRoom, rooms, currentKind: nextKind, enemy, enemies: rest,
-      roomCleared: false, roomEvent: null, log: log2,
-      catPose: "idle", enemyPose: enemy ? "idle" : "ko", mangaFx: null, mangaWord: null, mangaFocus: null, bubble: null } });
   },
 
   toggleAuto: () => {
