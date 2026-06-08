@@ -97,8 +97,7 @@ function createRaidSceneClass() {
   private loadingSprites = new Set<string>();
   // Bottom 90px reserved for the React action bar.
   private bottomPad = 96;
-  private _dbg!: Phaser.GameObjects.Text;
-  private _frames = 0;
+  private _animTimer?: Phaser.Time.TimerEvent;
 
   constructor() { super({ key: "RaidScene" }); }
 
@@ -135,28 +134,33 @@ function createRaidSceneClass() {
     this.banner = this.add.container(width / 2, height * 0.42).setDepth(50).setVisible(false);
     this.overdriveCard = this.add.container(width / 2, height / 2).setDepth(60).setVisible(false);
 
-    this._dbg = this.add.text(8, 8, "dbg", { fontFamily: "monospace", fontSize: "12px", color: "#0f0", backgroundColor: "rgba(0,0,0,0.7)" }).setDepth(999).setScrollFactor(0);
     this.scale.on("resize", this.handleResize, this);
+    // Phaser's per-frame Scene.update() is not reliably bound for this scene
+    // (it is registered through a Proxy class), so drive all per-frame motion
+    // from a repeating timer that runs off the global game clock instead.
+    this._animTimer = this.time.addEvent({
+      delay: 16, loop: true, callback: () => this.tick(),
+    });
     this.events.on(P.Scenes.Events.SHUTDOWN, () => {
       this.scale.off("resize", this.handleResize, this);
+      this._animTimer?.remove();
     });
   }
 
-  update(time: number) {
+  /** Per-frame motion, driven by the repeating timer started in create(). */
+  private tick() {
+    const time = this.time.now;
     const nextTargetMode = this.init_?.getTargetMode?.() ?? false;
     if (nextTargetMode !== this.targetMode) {
       this.targetMode = nextTargetMode;
       this.updateTargetRings();
     }
-    this._frames++;
-    if (this._dbg) {
-      let alive = 0, busy = 0;
-      for (const v of this.actors.values()) { if (v.alive) alive++; if ((v as any)._busy) busy++; }
-      this._dbg.setText(`update ✓ frame=${this._frames} actors=${this.actors.size} alive=${alive} busy=${busy} t=${Math.round(time)}`);
-    }
     this.animateIdle(time);
     this.driftCamera(time);
   }
+
+  // (Phaser may also call this if the hook is bound; harmless either way.)
+  update() { /* motion runs from tick() via timer — see create() */ }
 
   /** Procedural "living" idle: breathing scale, vertical bob, gentle sway.
    *  Skipped for an actor while it is mid-strike (busy flag) so tweens win. */
