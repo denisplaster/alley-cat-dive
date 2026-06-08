@@ -52,6 +52,8 @@ interface ActorView {
   idlePhase: number;   // per-actor phase offset so motion isn't synchronized
   side: "party" | "enemy";
   alive: boolean;
+  baseScaleX: number;  // raw sprite scale from last setDisplaySize (idle multiplies this)
+  baseScaleY: number;
   idleTween?: Phaser.Tweens.Tween;
   targetRing?: Phaser.GameObjects.Graphics;
   targetTween?: Phaser.Tweens.Tween;
