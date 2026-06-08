@@ -3,15 +3,8 @@ import { useGame } from "@/lib/game/store";
 import type { Cat, Enemy, Fx, RoomKind } from "@/lib/game/types";
 import { NextRoomPreview } from "./NextRoomPreview";
 import arenaBg from "@/assets/anime/bg-arena.jpg";
-import bgEnemy from "@/assets/anime/bg-room-enemy.jpg";
-import bgSwarm from "@/assets/anime/bg-room-swarm.jpg";
-import bgElite from "@/assets/anime/bg-room-elite.jpg";
-import bgLoot from "@/assets/anime/bg-room-loot.jpg";
-import bgHazard from "@/assets/anime/bg-room-hazard.jpg";
-import bgRest from "@/assets/anime/bg-room-rest.jpg";
-import bgMiniboss from "@/assets/anime/bg-room-miniboss.jpg";
-import bgBoss from "@/assets/anime/bg-room-boss.jpg";
 import { DUMPSTERS } from "@/lib/game/data";
+import { getRoomBackground } from "@/lib/game/roomBackgrounds";
 import catIdle from "@/assets/anime/cat-idle.png";
 import catScratch from "@/assets/anime/cat-scratch.png";
 import catPounce from "@/assets/anime/cat-pounce.png";
@@ -66,24 +59,13 @@ const KIND_TINT: Record<RoomKind, string> = {
 
 const BG_PROPS = ["🍕","🦴","🥫","📦","🍌","🥡","🍣","🧃","🍔","🧻"];
 
-const ROOM_BG: Record<RoomKind, string> = {
-  enemy: bgEnemy,
-  swarm: bgSwarm,
-  elite: bgElite,
-  loot: bgLoot,
-  hazard: bgHazard,
-  rest: bgRest,
-  miniboss: bgMiniboss,
-  boss: bgBoss,
-};
-
 export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) {
   const dive = useGame(s => s.dive)!;
   const hideoutStage = useGame(s => s.hideoutStage);
   const stage = lifeStageFromHideout(hideoutStage);
   const dumpImage = (DUMPSTERS.find(d => d.id === dive.dumpsterId)?.image) ?? arenaBg;
-  const currentBg = ROOM_BG[dive.currentKind] ?? dumpImage;
-  const nextBg = dive.nextKind ? (ROOM_BG[dive.nextKind] ?? dumpImage) : null;
+  const currentBg = getRoomBackground(dive.dumpsterId, dive.currentKind) ?? dumpImage;
+  const nextBg = dive.nextKind ? getRoomBackground(dive.dumpsterId, dive.nextKind) : null;
   // Cat sprite shown running through the transition — matches life stage.
   const runSprite = stage === "kitten"
     ? (KITTEN_POSES.scratch ?? KITTEN_POSES.idle ?? catScratch)
