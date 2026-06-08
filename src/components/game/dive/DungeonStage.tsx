@@ -138,8 +138,14 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
         <div className="absolute inset-x-0 bottom-9 h-[3px] bg-toxic/80 shadow-[0_0_18px_4px_rgba(74,222,128,0.6)]" />
       </div>
 
+      {/* Side-scrolling parallax overlay — visible during room transitions */}
+      <TransitionOverlay kind={dive.currentKind} active={dive.transitioning} />
+
+      {/* Room title card — pops briefly after a new room loads */}
+      <RoomTitleCard k={dive.roomRevealKey} room={dive.room} totalRooms={dive.totalRooms} kind={dive.currentKind} />
+
       {/* Stage with shake */}
-      <div key={shakeId} className={`relative z-10 flex-1 min-h-0 ${dive.shakeKey > 0 ? (dive.shakeHard ? "animate-shake-hard" : "animate-shake") : ""}`}>
+      <div key={shakeId} className={`relative z-10 flex-1 min-h-0 transition-opacity duration-200 ${dive.transitioning ? "opacity-0" : ""} ${dive.shakeKey > 0 ? (dive.shakeHard ? "animate-shake-hard" : "animate-shake") : ""}`}>
         <div className="relative grid h-full grid-cols-2 gap-3 p-3 md:p-6 min-h-[320px]">
           <CombatantSprite
             name={cat.name}
