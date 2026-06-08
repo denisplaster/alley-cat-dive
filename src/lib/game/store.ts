@@ -232,7 +232,7 @@ export const useGame = create<GameState>((set, get) => ({
   storyChoices: {},
   hideoutStage: "tin_can",
   placedItems: {},
-  activeCutscene: { chapterId: STORY_CHAPTERS[0].id, phase: "intro", panel: 0 },
+  activeCutscene: null,
   pendingReward: null,
   roomsCleared: 0,
   bossesBeaten: 0,
