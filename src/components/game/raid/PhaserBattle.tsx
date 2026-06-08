@@ -12,6 +12,7 @@ import type { RaidState } from "@/lib/game/raidTypes";
  * shake, OD overlay, banners).
  */
 export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
+  console.log("[PhaserBattle] render", { bgUrl });
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<any | null>(null);
   const sceneRef = useRef<{ syncState: (s: RaidState) => void; scene: { isActive: () => boolean } } | null>(null);
