@@ -12,7 +12,6 @@ import type { RaidState } from "@/lib/game/raidTypes";
  * shake, OD overlay, banners).
  */
 export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
-  console.log("[PhaserBattle] render", { bgUrl });
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<any | null>(null);
   const sceneRef = useRef<{ syncState: (s: RaidState) => void; scene: { isActive: () => boolean } } | null>(null);
@@ -32,20 +31,17 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
 
   // Boot phaser once
   useEffect(() => {
-    console.log("[PhaserBattle] boot effect", { mounted, hasContainer: !!containerRef.current, hasGame: !!gameRef.current, SSR: import.meta.env.SSR });
     if (!mounted) return;
     if (gameRef.current || !containerRef.current) return;
     let cancelled = false;
     let game: any = null;
     if (typeof window === "undefined") return;
     (async () => {
-      console.log("[PhaserBattle] importing phaser…");
       const [{ default: Phaser }, { RaidScene }] = await Promise.all([
         import("phaser"),
         import("@/game/phaser/RaidScene"),
       ]);
       if (cancelled || !containerRef.current) return;
-      console.log("[PhaserBattle] container size", containerRef.current.clientWidth, containerRef.current.clientHeight);
       const sprites: Record<string, string> = {};
       Object.entries(portraits).forEach(([id, url]) => { sprites[`cat:${id}`] = url as string; });
       Object.entries(ENEMY_SPRITES).forEach(([id, url]) => { sprites[`enemy:${id}`] = url; });
