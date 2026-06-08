@@ -310,6 +310,7 @@ export const useGame = create<GameState>((set, get) => ({
   spheres: 0,
   catGrid: {},
   raidTeam: ["scrapper", "sneakpaw", "moldmancer"],
+  skipStoryline: false,
 
   selectDumpster: (id) => set({ selectedDumpsterId: id }),
   setActiveCat: (id) => {
