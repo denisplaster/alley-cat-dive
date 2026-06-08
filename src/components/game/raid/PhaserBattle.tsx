@@ -15,6 +15,7 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<any | null>(null);
   const sceneRef = useRef<{ syncState: (s: RaidState) => void; scene: { isActive: () => boolean } } | null>(null);
+  const sceneReadyRef = useRef(false);
   const targetRef = useRef<{ mode: "basic"|"skill"|"od"; skillId?: string } | null>(null);
   const [, force] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -61,14 +62,30 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
         onActorClick: (uid: string) => handleTargetClick(uid),
         getTargetMode: () => !!targetRef.current,
       });
-      // Trigger a state push as soon as the scene is up.
-      force(x => x + 1);
+      // Wait until the scene has run create() (sys.settings.status === RUNNING),
+      // then push the current raid state in directly — we cannot rely on the
+      // [raid] effect re-firing because raid may not have changed since boot.
+      const pushWhenReady = () => {
+        if (cancelled) return;
+        const s: any = scene as any;
+        const ready = s.sys && s.sys.settings && s.sys.settings.status >= 5; // RUNNING
+        if (ready) {
+          sceneReadyRef.current = true;
+          const latest = useGame.getState().raid;
+          if (latest) scene.syncState(latest);
+          force(x => x + 1);
+          return;
+        }
+        setTimeout(pushWhenReady, 50);
+      };
+      pushWhenReady();
     })();
     return () => {
       cancelled = true;
       if (game) { try { game.destroy(true); } catch { /* ignore */ } }
       gameRef.current = null;
       sceneRef.current = null;
+      sceneReadyRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -77,11 +94,7 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
   useEffect(() => {
     if (!raid) return;
     const scene = sceneRef.current;
-    if (!scene || !scene.scene.isActive()) {
-      // Scene not yet booted — wait one tick
-      const id = setTimeout(() => force(x => x + 1), 60);
-      return () => clearTimeout(id);
-    }
+    if (!scene || !sceneReadyRef.current) return; // boot loop will push initial state
     scene.syncState(raid);
   }, [raid]);
 
