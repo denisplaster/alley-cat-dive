@@ -672,3 +672,5 @@ function createRaidSceneClass() {
     }
   }
 }
+  return RaidScene;
+}
