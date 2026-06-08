@@ -97,6 +97,8 @@ function createRaidSceneClass() {
   private loadingSprites = new Set<string>();
   // Bottom 90px reserved for the React action bar.
   private bottomPad = 96;
+  private _dbg!: Phaser.GameObjects.Text;
+  private _frames = 0;
 
   constructor() { super({ key: "RaidScene" }); }
 
@@ -133,6 +135,7 @@ function createRaidSceneClass() {
     this.banner = this.add.container(width / 2, height * 0.42).setDepth(50).setVisible(false);
     this.overdriveCard = this.add.container(width / 2, height / 2).setDepth(60).setVisible(false);
 
+    this._dbg = this.add.text(8, 8, "dbg", { fontFamily: "monospace", fontSize: "12px", color: "#0f0", backgroundColor: "rgba(0,0,0,0.7)" }).setDepth(999).setScrollFactor(0);
     this.scale.on("resize", this.handleResize, this);
     this.events.on(P.Scenes.Events.SHUTDOWN, () => {
       this.scale.off("resize", this.handleResize, this);
@@ -144,6 +147,12 @@ function createRaidSceneClass() {
     if (nextTargetMode !== this.targetMode) {
       this.targetMode = nextTargetMode;
       this.updateTargetRings();
+    }
+    this._frames++;
+    if (this._dbg) {
+      let alive = 0, busy = 0;
+      for (const v of this.actors.values()) { if (v.alive) alive++; if ((v as any)._busy) busy++; }
+      this._dbg.setText(`update ✓ frame=${this._frames} actors=${this.actors.size} alive=${alive} busy=${busy} t=${Math.round(time)}`);
     }
     this.animateIdle(time);
     this.driftCamera(time);
