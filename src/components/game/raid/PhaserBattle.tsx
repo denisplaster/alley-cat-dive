@@ -43,8 +43,6 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
       const sprites: Record<string, string> = {};
       Object.entries(portraits).forEach(([id, url]) => { sprites[`cat:${id}`] = url as string; });
       Object.entries(ENEMY_SPRITES).forEach(([id, url]) => { sprites[`enemy:${id}`] = url; });
-      const scene = new RaidScene();
-      sceneRef.current = scene as unknown as typeof sceneRef.current;
       game = new Phaser.Game({
         type: Phaser.AUTO,
         parent: containerRef.current,
@@ -53,15 +51,20 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
         height: containerRef.current.clientHeight,
         scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
         render: { pixelArt: false, antialias: true },
-        scene: [scene],
+        scene: [],
       });
       gameRef.current = game;
-      game.scene.start(RaidScene.KEY, {
+      // Register the scene class and start it WITH data so init() receives bgUrl
+      // and preload() can actually load the images. Adding the instance to
+      // scene config would auto-start with no data and crash preload.
+      const sceneInstance = game.scene.add(RaidScene.KEY, RaidScene, true, {
         bgUrl,
         sprites,
         onActorClick: (uid: string) => handleTargetClick(uid),
         getTargetMode: () => !!targetRef.current,
-      });
+      }) as unknown as RaidScene;
+      sceneRef.current = sceneInstance as unknown as typeof sceneRef.current;
+      const scene = sceneInstance;
       // Wait until the scene has run create() (sys.settings.status === RUNNING),
       // then push the current raid state in directly — we cannot rely on the
       // [raid] effect re-firing because raid may not have changed since boot.
