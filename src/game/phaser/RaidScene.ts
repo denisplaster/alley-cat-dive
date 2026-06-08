@@ -392,10 +392,8 @@ export class RaidScene extends Phaser.Scene {
     e.explode(18);
     this.time.delayedCall(700, () => e.destroy());
     // Flash sprite white
-    const orig = v.sprite.tintFill;
-    v.sprite.setTintFill(0xffffff);
-    this.time.delayedCall(80, () => v.sprite.clearTint());
-    void orig;
+    v.sprite.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
+    this.time.delayedCall(80, () => v.sprite.clearTint().setTintMode(Phaser.TintModes.MULTIPLY));
     // Quick recoil
     this.tweens.add({
       targets: v.sprite, x: v.baseX + (v.side === "party" ? -8 : 8),
@@ -437,8 +435,8 @@ export class RaidScene extends Phaser.Scene {
       if (this.lastFlash[uid] === key) continue;
       this.lastFlash[uid] = key;
       const v = this.actors.get(uid); if (!v) continue;
-      v.sprite.setTintFill(0xff5050);
-      this.time.delayedCall(110, () => v.sprite.clearTint());
+      v.sprite.setTint(0xff5050).setTintMode(Phaser.TintModes.FILL);
+      this.time.delayedCall(110, () => v.sprite.clearTint().setTintMode(Phaser.TintModes.MULTIPLY));
     }
   }
 
