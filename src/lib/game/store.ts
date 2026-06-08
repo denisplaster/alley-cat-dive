@@ -660,7 +660,8 @@ export const useGame = create<GameState>((set, get) => ({
       "A new pile shifts in the dark…",
     ];
     const flavor = flavorPool[Math.floor(Math.random() * flavorPool.length)];
-    set({ dive: { ...d, transitioning: true, transitionMessage: flavor,
+    const peekedNextKind = d.rooms[d.room]?.kind ?? d.currentKind;
+    set({ dive: { ...d, transitioning: true, transitionMessage: flavor, nextKind: peekedNextKind,
       roomCleared: false, roomEvent: null,
       catPose: "idle", enemyPose: "idle", mangaFx: null, mangaWord: null, mangaFocus: null, bubble: null,
       // hide previous enemy immediately so the arena reads as empty during the run
@@ -688,7 +689,7 @@ export const useGame = create<GameState>((set, get) => ({
       set({ dive: { ...cur, room: nextRoom, rooms, currentKind: nextKind, enemy, enemies: rest,
         roomCleared: false, roomEvent: null, log: log2,
         catPose: "idle", enemyPose: enemy ? "idle" : "ko", mangaFx: null, mangaWord: null, mangaFocus: null, bubble: null,
-        transitioning: false, transitionMessage: null, roomRevealKey: cur.roomRevealKey + 1,
+        transitioning: false, transitionMessage: null, nextKind: null, roomRevealKey: cur.roomRevealKey + 1,
       } });
     }, 1100);
   },
