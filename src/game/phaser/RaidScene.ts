@@ -341,11 +341,12 @@ export class RaidScene extends Phaser.Scene {
         const y = stageH * (0.30 + yFrac * 0.62);
         v.baseX = x + (i % 2 === 0 ? -38 : 38);
         v.baseY = y;
-        // Scale by source image size to fit ~140px tall
-        const tex = v.sprite.texture.getSourceImage() as HTMLImageElement;
+        // Scale by frame size to fit a fixed target height
         const target = arr === party ? 140 : 150;
-        const s = Math.min(1.0, target / Math.max(tex.height, 1));
+        const frameH = v.sprite.frame?.height ?? 0;
+        const s = frameH > 2 ? target / frameH : 1;
         v.sprite.setScale(s);
+        const tex = { width: v.sprite.frame?.width ?? 80, height: frameH || 80 };
         v.sprite.setPosition(v.baseX, v.baseY);
         const hitW = Math.max(140, tex.width * s * 0.7);
         const hitH = Math.max(170, tex.height * s * 0.78);
