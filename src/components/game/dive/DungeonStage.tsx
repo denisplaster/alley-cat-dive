@@ -521,7 +521,7 @@ const ROOM_THEME: Record<RoomKind, { tag: string; back: string[]; mid: string[];
   boss:     { tag: "Boss Throne",      back: ["⚠️","🩻"], mid: ["👑","🗑️"],       front: ["🦴","🟢","🚨"], tint: "from-rose-900/50" },
 };
 
-function TransitionOverlay({ kind, active }: { kind: RoomKind; active: boolean }) {
+function TransitionOverlay({ kind, active, catSprite }: { kind: RoomKind; active: boolean; catSprite: string }) {
   const theme = ROOM_THEME[kind] ?? ROOM_THEME.enemy;
   return (
     <div className={`pointer-events-none absolute inset-0 z-30 overflow-hidden transition-opacity duration-200 ${active ? "opacity-100" : "opacity-0"}`}>
@@ -559,7 +559,7 @@ function TransitionOverlay({ kind, active }: { kind: RoomKind; active: boolean }
       </div>
       {/* running cat sprite */}
       <div className={`cat-sprite ${active ? "is-running" : ""} absolute bottom-8 left-[10%] w-32 h-32 md:w-40 md:h-40`}>
-        <img src={catScratch} alt="" aria-hidden="true" className="size-full object-contain drop-shadow-[4px_4px_0_rgba(0,0,0,0.6)]" />
+        <img src={catSprite} alt="" aria-hidden="true" className="size-full object-contain drop-shadow-[4px_4px_0_rgba(0,0,0,0.6)]" />
       </div>
       {/* flavor text */}
       <TransitionFlavorText />
