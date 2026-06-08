@@ -3,6 +3,14 @@ import { useGame } from "@/lib/game/store";
 import type { Cat, Enemy, Fx, RoomKind } from "@/lib/game/types";
 import { NextRoomPreview } from "./NextRoomPreview";
 import arenaBg from "@/assets/anime/bg-arena.jpg";
+import bgEnemy from "@/assets/anime/bg-room-enemy.jpg";
+import bgSwarm from "@/assets/anime/bg-room-swarm.jpg";
+import bgElite from "@/assets/anime/bg-room-elite.jpg";
+import bgLoot from "@/assets/anime/bg-room-loot.jpg";
+import bgHazard from "@/assets/anime/bg-room-hazard.jpg";
+import bgRest from "@/assets/anime/bg-room-rest.jpg";
+import bgMiniboss from "@/assets/anime/bg-room-miniboss.jpg";
+import bgBoss from "@/assets/anime/bg-room-boss.jpg";
 import { DUMPSTERS } from "@/lib/game/data";
 import catIdle from "@/assets/anime/cat-idle.png";
 import catScratch from "@/assets/anime/cat-scratch.png";
@@ -58,11 +66,30 @@ const KIND_TINT: Record<RoomKind, string> = {
 
 const BG_PROPS = ["🍕","🦴","🥫","📦","🍌","🥡","🍣","🧃","🍔","🧻"];
 
+const ROOM_BG: Record<RoomKind, string> = {
+  enemy: bgEnemy,
+  swarm: bgSwarm,
+  elite: bgElite,
+  loot: bgLoot,
+  hazard: bgHazard,
+  rest: bgRest,
+  miniboss: bgMiniboss,
+  boss: bgBoss,
+};
+
 export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) {
   const dive = useGame(s => s.dive)!;
   const hideoutStage = useGame(s => s.hideoutStage);
   const stage = lifeStageFromHideout(hideoutStage);
   const dumpImage = (DUMPSTERS.find(d => d.id === dive.dumpsterId)?.image) ?? arenaBg;
+  const currentBg = ROOM_BG[dive.currentKind] ?? dumpImage;
+  const nextBg = dive.nextKind ? (ROOM_BG[dive.nextKind] ?? dumpImage) : null;
+  // Cat sprite shown running through the transition — matches life stage.
+  const runSprite = stage === "kitten"
+    ? (KITTEN_POSES.scratch ?? KITTEN_POSES.idle ?? catScratch)
+    : stage === "juvenile"
+      ? (JUVENILE_POSES.scratch ?? JUVENILE_POSES.idle ?? catScratch)
+      : catScratch;
   const catArt = stage === "kitten"
     ? { ...CAT_ART, ...KITTEN_POSES }
     : stage === "juvenile"
@@ -82,7 +109,23 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
     <div className={`relative overflow-hidden chunky-panel bg-gradient-to-b ${tint} ${danger ? "animate-danger-border" : ""} flex flex-1 min-h-0 flex-col`}>
       {/* Backdrop layers */}
       <div className="absolute inset-0 pointer-events-none">
-        <img src={dumpImage} alt="Dumpster dungeon arena" className="absolute inset-0 size-full object-cover opacity-55" />
+        {/* Outgoing background — slides off to the left during a transition. */}
+        <img
+          key={`bg-out-${dive.currentKind}-${dive.roomRevealKey}`}
+          src={currentBg}
+          alt="Dumpster dungeon arena"
+          className={`absolute inset-0 size-full object-cover opacity-70 ${dive.transitioning ? "bg-slide-out" : ""}`}
+        />
+        {/* Incoming background — slides in from the right during a transition. */}
+        {nextBg && (
+          <img
+            key={`bg-in-${dive.nextKind}-${dive.roomRevealKey}`}
+            src={nextBg}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 size-full object-cover opacity-70 bg-slide-in"
+          />
+        )}
         <div className="absolute inset-0 bg-black/35" />
         <img src={fxSpeedlines} alt="" aria-hidden="true" className={`absolute inset-0 size-full object-cover opacity-0 ${dive.mangaFocus ? "manga-speedlines-active" : ""}`} />
         {/* radial top light */}
@@ -139,7 +182,7 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
       </div>
 
       {/* Side-scrolling parallax overlay — visible during room transitions */}
-      <TransitionOverlay kind={dive.currentKind} active={dive.transitioning} />
+      <TransitionOverlay kind={dive.nextKind ?? dive.currentKind} active={dive.transitioning} catSprite={runSprite} />
 
       {/* Room title card — pops briefly after a new room loads */}
       <RoomTitleCard k={dive.roomRevealKey} room={dive.room} totalRooms={dive.totalRooms} kind={dive.currentKind} />
