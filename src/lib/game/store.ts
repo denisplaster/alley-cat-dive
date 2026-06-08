@@ -1530,7 +1530,7 @@ function cloneRaid(raid: RaidState): RaidState {
     party: raid.party.map(p => ({ ...p, statuses: [...p.statuses], skills: [...p.skills], knownTypes: [...p.knownTypes] })),
     enemies: raid.enemies.map(e => ({ ...e, statuses: [...e.statuses], skills: [...e.skills], knownTypes: [...e.knownTypes] })),
     log: [...raid.log],
-    floats: [...raid.floats],
+    floats: raid.floats.slice(-40),
     flash: { ...raid.flash },
   };
 }
