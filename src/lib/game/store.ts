@@ -334,6 +334,9 @@ export const useGame = create<GameState>((set, get) => ({
         catKnockbackKey: 0,
         bubble: null,
         inAction: false,
+        transitioning: false,
+        transitionMessage: null,
+        roomRevealKey: 0,
       },
       lastRewards: null,
     });
