@@ -195,7 +195,7 @@ export class RaidScene extends Phaser.Scene {
         g.destroy();
       }
       const sprite = this.add.image(0, 0, useKey)
-        .setOrigin(0.5, 1);
+        .setOrigin(0.5, 0.5);
       if (side === "enemy") sprite.setFlipX(true);
       // Click handler for target selection
       const onTap = () => {
@@ -336,26 +336,35 @@ export class RaidScene extends Phaser.Scene {
       arr.forEach((a, i) => {
         const v = this.actors.get(a.uid);
         if (!v) return;
-        const yFrac = arr.length === 1 ? 0.6 : SLOTS[i] ?? 0.5;
-        const y = stageH * (0.45 + yFrac * 0.45);
-        v.baseX = x + (i % 2 === 0 ? -10 : 10);
+        const n = arr.length;
+        const yFrac = n === 1 ? 0.5 : i / (n - 1);
+        const y = stageH * (0.30 + yFrac * 0.62);
+        v.baseX = x + (i % 2 === 0 ? -38 : 38);
         v.baseY = y;
-        // Scale by source image size to fit ~180px tall
-        const tex = v.sprite.texture.getSourceImage() as HTMLImageElement;
-        const target = arr === party ? 200 : 220;
-        const s = Math.min(1.4, target / Math.max(tex.height, 1));
-        v.sprite.setScale(s);
+        // Scale by frame size to fit a fixed target height
+        const target = arr === party ? 130 : 140;
+        const frameH = v.sprite.frame?.height ?? 0;
+        const frameW = v.sprite.frame?.width ?? 0;
+        if (frameH > 2 && frameW > 2) {
+          const s = target / frameH;
+          v.sprite.setDisplaySize(frameW * s, frameH * s);
+        } else {
+          v.sprite.setDisplaySize(target, target);
+        }
+        const dispH = v.sprite.displayHeight || target;
+        const dispW = v.sprite.displayWidth || target;
         v.sprite.setPosition(v.baseX, v.baseY);
-        const hitW = Math.max(140, tex.width * s * 0.7);
-        const hitH = Math.max(170, tex.height * s * 0.78);
-        v.hitZone.setPosition(v.baseX, v.baseY - (arr === party ? 100 : 110));
+        const hitW = Math.max(110, dispW * 0.8);
+        const hitH = Math.max(120, dispH * 0.85);
+        v.hitZone.setPosition(v.baseX, v.baseY);
         v.hitZone.setSize(hitW, hitH);
         if (v.hitZone.input?.hitArea) {
           (v.hitZone.input.hitArea as Phaser.Geom.Rectangle).setTo(0, 0, hitW, hitH);
         }
-        v.shadow.setPosition(v.baseX, v.baseY + 4);
-        v.nameText.setPosition(v.baseX, v.baseY + 10);
-        v.hpText.setPosition(v.baseX, v.baseY + 10);
+        v.shadow.setPosition(v.baseX, v.baseY + dispH / 2 + 2);
+        v.nameText.setPosition(v.baseX, v.baseY + dispH / 2 + 6);
+        v.hpText.setPosition(v.baseX, v.baseY + dispH / 2 + 6);
+        v.hpBar.setPosition(v.baseX, v.baseY + dispH / 2 + 6);
         this.drawHpBar(v, (v as any)._actor as Actor);
       });
     };
