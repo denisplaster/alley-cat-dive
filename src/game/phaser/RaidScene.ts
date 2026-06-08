@@ -669,11 +669,11 @@ function createRaidSceneClass() {
     if (big) {
       (this as any)._camBusy = true;
       const z = f.kind === "crit" ? 1.12 : 1.06;
-      cam.zoomTo(z, 110, "Quad.Out");
+      cam.zoomTo(z, 110, "Quad.easeOut");
       // nudge the focal point toward the target via the zoom origin
       cam.pan(tgt.baseX, tgt.baseY - 20, 110, "Quad.easeOut");
       this.time.delayedCall(260, () => {
-        cam.zoomTo(1, 260, "Quad.InOut");
+        cam.zoomTo(1, 260, "Quad.easeInOut");
         cam.pan(this.scale.width / 2, this.scale.height / 2, 260, "Quad.easeInOut");
         this.time.delayedCall(280, () => { (this as any)._camBusy = false; });
       });
