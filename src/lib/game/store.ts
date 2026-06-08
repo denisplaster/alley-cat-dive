@@ -147,6 +147,20 @@ const ENEMY_LINES = {
 };
 const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
 
+const pickEnemyIntent = (kind?: RoomKind): "attack" | "heavy" | "block" => {
+  // Bosses and elites are more aggressive and use heavy/block more often.
+  const r = Math.random();
+  const tough = kind === "boss" || kind === "miniboss" || kind === "elite";
+  if (tough) {
+    if (r < 0.25) return "block";
+    if (r < 0.55) return "heavy";
+    return "attack";
+  }
+  if (r < 0.2) return "block";
+  if (r < 0.4) return "heavy";
+  return "attack";
+};
+
 const generateRooms = (totalRooms: number, _bossRunsAway = false): Room[] => {
   const arr: RoomKind[] = Array.from({ length: totalRooms }, () => "enemy" as RoomKind);
   // The chapter boss only shows up for the final fight of the dumpster.
