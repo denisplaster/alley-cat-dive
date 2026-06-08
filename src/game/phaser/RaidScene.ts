@@ -70,6 +70,10 @@ export class RaidScene extends Phaser.Scene {
     }
   }
 
+  private textureKey(raw: string) {
+    return raw === "__fallback" ? raw : `raid_${raw.replace(/[^a-z0-9_-]/gi, "_")}`;
+  }
+
   create() {
     const { width, height } = this.scale;
     // Background
@@ -183,7 +187,7 @@ export class RaidScene extends Phaser.Scene {
     let view = this.actors.get(a.uid);
     if (!view) {
       const key = this.spriteKey(a);
-      const useKey = this.textures.exists(key) ? key : "__fallback";
+      const useKey = this.ensureActorTexture(key, side);
       if (useKey === "__fallback" && !this.textures.exists("__fallback")) {
         const g = this.make.graphics({ x: 0, y: 0 });
         g.fillStyle(side === "party" ? 0x4fc3ff : 0xff5050, 1).fillCircle(40, 40, 40);
@@ -191,14 +195,17 @@ export class RaidScene extends Phaser.Scene {
         g.destroy();
       }
       const sprite = this.add.image(0, 0, useKey)
-        .setOrigin(0.5, 1)
-        .setInteractive({ useHandCursor: true });
+        .setOrigin(0.5, 1);
       if (side === "enemy") sprite.setFlipX(true);
       // Click handler for target selection
       const onTap = () => {
-        if (this.init_.getTargetMode()) this.init_.onActorClick(a.uid);
+        if (side === "enemy" && a.alive && this.init_.getTargetMode()) this.init_.onActorClick(a.uid);
       };
-      sprite.on("pointerdown", onTap);
+      const hitZone = this.add.zone(0, 0, 180, 240)
+        .setOrigin(0.5, 0.5)
+        .setDepth(6)
+        .setInteractive({ useHandCursor: true });
+      hitZone.on("pointerdown", onTap);
 
       const shadow = this.add.ellipse(0, 0, 90, 18, 0x000000, 0.55);
       shadow.setDepth(0);
@@ -220,13 +227,13 @@ export class RaidScene extends Phaser.Scene {
       }).setOrigin(0.5, 0).setDepth(4);
 
       view = {
-        uid: a.uid, sprite, shadow, nameText, hpBar, hpText,
+        uid: a.uid, sprite, hitZone, shadow, nameText, hpBar, hpText,
         baseX: 0, baseY: 0, side, alive: a.alive, hitListener: onTap,
       };
       this.actors.set(a.uid, view);
       // Idle bob
       view.idleTween = this.tweens.add({
-        targets: sprite, y: { from: 0, to: -4 }, duration: 1400 + index * 120,
+        targets: sprite, angle: { from: -1.2, to: 1.2 }, duration: 1400 + index * 120,
         ease: "Sine.InOut", yoyo: true, repeat: -1,
       });
     }
