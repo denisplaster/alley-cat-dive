@@ -341,6 +341,8 @@ export const useGame = create<GameState>((set, get) => ({
         catKnockbackKey: 0,
         bubble: null,
         inAction: false,
+        enemyIntent: enemy ? pickEnemyIntent() : null,
+        pounceCd: 0,
         transitioning: false,
         transitionMessage: null,
         roomRevealKey: 0,
