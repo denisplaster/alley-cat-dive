@@ -35,11 +35,13 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
     let cancelled = false;
     let game: any = null;
     if (!import.meta.env.SSR) (async () => {
+      console.log("[PhaserBattle] importing phaser…");
       const [{ default: Phaser }, { RaidScene }] = await Promise.all([
         import("phaser"),
         import("@/game/phaser/RaidScene"),
       ]);
       if (cancelled || !containerRef.current) return;
+      console.log("[PhaserBattle] container size", containerRef.current.clientWidth, containerRef.current.clientHeight);
       const sprites: Record<string, string> = {};
       Object.entries(portraits).forEach(([id, url]) => { sprites[`cat:${id}`] = url as string; });
       Object.entries(ENEMY_SPRITES).forEach(([id, url]) => { sprites[`enemy:${id}`] = url; });
@@ -65,6 +67,7 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
       }) as unknown as InstanceType<typeof RaidScene>;
       sceneRef.current = sceneInstance as unknown as typeof sceneRef.current;
       const scene = sceneInstance;
+      console.log("[PhaserBattle] scene added", scene);
       // Wait until the scene has run create() (sys.settings.status === RUNNING),
       // then push the current raid state in directly — we cannot rely on the
       // [raid] effect re-firing because raid may not have changed since boot.
@@ -72,9 +75,11 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
         if (cancelled) return;
         const s: any = scene as any;
         const ready = s.sys && s.sys.settings && s.sys.settings.status >= 5; // RUNNING
+        console.log("[PhaserBattle] poll status", s?.sys?.settings?.status);
         if (ready) {
           sceneReadyRef.current = true;
           const latest = useGame.getState().raid;
+          console.log("[PhaserBattle] scene ready party=", latest?.party.length, "enemies=", latest?.enemies.length);
           if (latest) scene.syncState(latest);
           force(x => x + 1);
           return;
