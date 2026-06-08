@@ -335,6 +335,7 @@ function createRaidSceneClass() {
         baseX: 0, baseY: 0, homeX: 0, homeY: 0, depthScale: 1, stepped: false,
         idlePhase: Math.random() * Math.PI * 2,
         side, alive: a.alive, hitListener: onTap,
+        baseScaleX: 1, baseScaleY: 1,
       };
       this.actors.set(a.uid, view);
       // Idle motion is driven procedurally in update() (see animateIdle()).
