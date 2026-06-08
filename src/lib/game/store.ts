@@ -1366,7 +1366,7 @@ function applyDamage(raid: RaidState, attacker: Actor, target: Actor, hit: Retur
     pushLog(raid, `${target.name} is KO'd!`, "warn");
   }
   // OD gains
-  attacker.od = Math.min(attacker.odMax, attacker.od + Math.round(hit.damage * 0.12));
+  attacker.od = Math.min(attacker.odMax, attacker.od + Math.round(hit.damage * 0.16));
   target.od   = Math.min(target.odMax,   target.od   + Math.round((hit.damage / Math.max(1,target.maxHp)) * 25));
 }
 
@@ -1391,7 +1391,7 @@ function actAsActive(
   raid.activeUid = null;
   raid.resolving = true;
   set({ raid });
-  setTimeout(() => finishTurnAndAdvance(get, set), 450);
+  setTimeout(() => finishTurnAndAdvance(get, set), 620);
 }
 
 function finishTurnAndAdvance(
@@ -1456,7 +1456,7 @@ function advanceTurn(
   if (next.side === "enemy") {
     raid.resolving = true;
     set({ raid });
-    setTimeout(() => runEnemyTurn(get, set, next.uid), 700);
+    setTimeout(() => runEnemyTurn(get, set, next.uid), 380);
   }
 }
 
@@ -1521,7 +1521,7 @@ function runEnemyTurn(
   raid.activeUid = null;
   raid.resolving = true;
   set({ raid });
-  setTimeout(() => finishTurnAndAdvance(get, set), 550);
+  setTimeout(() => finishTurnAndAdvance(get, set), 620);
 }
 
 function cloneRaid(raid: RaidState): RaidState {
