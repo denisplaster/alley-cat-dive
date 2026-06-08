@@ -274,6 +274,37 @@ export class RaidScene extends Phaser.Scene {
     return m ? `enemy:${m[1]}` : "__fallback";
   }
 
+  private ensureActorTexture(rawKey: string, side: "party" | "enemy") {
+    const phaserKey = this.textureKey(rawKey);
+    if (this.textures.exists(phaserKey)) return phaserKey;
+
+    const url = this.init_.sprites[rawKey];
+    if (url && !this.loadingSprites.has(rawKey)) {
+      this.loadingSprites.add(rawKey);
+      this.load.image(phaserKey, url);
+      this.load.once(Phaser.Loader.Events.COMPLETE, () => {
+        this.loadingSprites.delete(rawKey);
+        for (const v of this.actors.values()) {
+          const actor = (v as any)._actor as Actor | undefined;
+          if (actor && this.spriteKey(actor) === rawKey && this.textures.exists(phaserKey)) {
+            v.sprite.setTexture(phaserKey).setAlpha(v.alive ? 1 : 0.35);
+            if (v.side === "enemy") v.sprite.setFlipX(true);
+          }
+        }
+        this.layoutActors();
+      });
+      if (!this.load.isLoading()) this.load.start();
+    }
+
+    if (!this.textures.exists("__fallback")) {
+      const g = this.make.graphics({ x: 0, y: 0 });
+      g.fillStyle(side === "party" ? 0x4fc3ff : 0xff5050, 1).fillCircle(40, 40, 40);
+      g.generateTexture("__fallback", 80, 80);
+      g.destroy();
+    }
+    return "__fallback";
+  }
+
   private drawHpBar(v: ActorView, a: Actor) {
     const W = 110, H = 6, gap = 2;
     v.hpBar.clear();
@@ -314,6 +345,8 @@ export class RaidScene extends Phaser.Scene {
         const s = Math.min(1.4, target / Math.max(tex.height, 1));
         v.sprite.setScale(s);
         v.sprite.setPosition(v.baseX, v.baseY);
+        v.hitZone.setPosition(v.baseX, v.baseY - (arr === party ? 100 : 110));
+        v.hitZone.setSize(Math.max(140, tex.width * s * 0.7), Math.max(170, tex.height * s * 0.78));
         v.shadow.setPosition(v.baseX, v.baseY + 4);
         v.nameText.setPosition(v.baseX, v.baseY + 10);
         v.hpText.setPosition(v.baseX, v.baseY + 10);
