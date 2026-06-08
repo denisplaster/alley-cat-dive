@@ -62,7 +62,7 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
         sprites,
         onActorClick: (uid: string) => handleTargetClick(uid),
         getTargetMode: () => !!targetRef.current,
-      }) as unknown as RaidScene;
+      }) as unknown as InstanceType<typeof RaidScene>;
       sceneRef.current = sceneInstance as unknown as typeof sceneRef.current;
       const scene = sceneInstance;
       // Wait until the scene has run create() (sys.settings.status === RUNNING),
