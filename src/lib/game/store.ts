@@ -759,6 +759,7 @@ export const useGame = create<GameState>((set, get) => ({
         roomCleared: false, roomEvent: null, log: log2,
         catPose: "idle", enemyPose: enemy ? "idle" : "ko", mangaFx: null, mangaWord: null, mangaFocus: null, bubble: null,
         transitioning: false, transitionMessage: null, nextKind: null, roomRevealKey: cur.roomRevealKey + 1,
+        enemyIntent: enemy ? pickEnemyIntent(nextKind) : null, pounceCd: 0,
       } });
     }, 1100);
   },
