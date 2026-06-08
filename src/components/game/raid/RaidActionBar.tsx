@@ -3,8 +3,8 @@ import type { Actor } from "@/lib/game/raidTypes";
 import { useGame } from "@/lib/game/store";
 import { ElementIcon } from "./ElementIcon";
 
-export function RaidActionBar({ active, enemies, onPickTarget, foodCount, onTargetMode }:
-  { active: Actor | null; enemies: Actor[]; onPickTarget: (mode: "basic"|"skill"|"od"|null, skillId?: string) => void; foodCount: number; onTargetMode: boolean })
+export function RaidActionBar({ active, enemies, onPickTarget, onSelectTarget, foodCount, onTargetMode }:
+  { active: Actor | null; enemies: Actor[]; onPickTarget: (mode: "basic"|"skill"|"od"|null, skillId?: string) => void; onSelectTarget: (uid: string) => void; foodCount: number; onTargetMode: boolean })
 {
   const raidDefend = useGame(s => s.raidDefend);
   const raidUseItem = useGame(s => s.raidUseItem);
@@ -21,9 +21,15 @@ export function RaidActionBar({ active, enemies, onPickTarget, foodCount, onTarg
   }
 
   if (onTargetMode) {
+    const liveEnemies = enemies.filter(e => e.alive);
     return (
-      <div className="chunky-panel flex h-14 items-center justify-center gap-3 bg-amber-500 px-3 font-display text-sm uppercase text-black">
-        Pick a target
+      <div className="chunky-panel flex min-h-14 flex-wrap items-center justify-center gap-2 bg-amber-500 px-3 py-2 font-display text-sm uppercase text-black">
+        <span>Pick a target</span>
+        {liveEnemies.map(e => (
+          <button key={e.uid} onClick={() => onSelectTarget(e.uid)} className="chunky-button bg-black/70 px-3 py-1 text-[10px] uppercase text-white">
+            {e.name} · {Math.max(0, Math.round(e.hp))}/{e.maxHp}
+          </button>
+        ))}
         <button onClick={() => onPickTarget(null)} className="chunky-button bg-black/40 px-2 py-1 text-[10px] uppercase">Cancel</button>
       </div>
     );

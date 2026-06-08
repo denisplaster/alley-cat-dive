@@ -17,6 +17,7 @@ const SLOTS = [0.25, 0.50, 0.75]; // vertical fractions within battle area
 interface ActorView {
   uid: string;
   sprite: Phaser.GameObjects.Image;
+  hitZone: Phaser.GameObjects.Zone;
   shadow: Phaser.GameObjects.Ellipse;
   nameText: Phaser.GameObjects.Text;
   hpBar: Phaser.GameObjects.Graphics;
@@ -27,6 +28,7 @@ interface ActorView {
   alive: boolean;
   idleTween?: Phaser.Tweens.Tween;
   targetRing?: Phaser.GameObjects.Graphics;
+  targetTween?: Phaser.Tweens.Tween;
   hitListener?: () => void;
 }
 
@@ -51,6 +53,7 @@ export class RaidScene extends Phaser.Scene {
   private lastODKey = 0;
   private targetMode = false;
   private state: RaidState | null = null;
+  private loadingSprites = new Set<string>();
   // Bottom 90px reserved for the React action bar.
   private bottomPad = 96;
 
@@ -63,8 +66,12 @@ export class RaidScene extends Phaser.Scene {
   preload() {
     this.load.image("bg", this.init_.bgUrl);
     for (const [k, url] of Object.entries(this.init_.sprites)) {
-      this.load.image(k, url);
+      this.load.image(this.textureKey(k), url);
     }
+  }
+
+  private textureKey(raw: string) {
+    return raw === "__fallback" ? raw : `raid_${raw.replace(/[^a-z0-9_-]/gi, "_")}`;
   }
 
   create() {
@@ -91,10 +98,19 @@ export class RaidScene extends Phaser.Scene {
     });
   }
 
+  update() {
+    const nextTargetMode = this.init_?.getTargetMode?.() ?? false;
+    if (nextTargetMode !== this.targetMode) {
+      this.targetMode = nextTargetMode;
+      this.updateTargetRings();
+    }
+  }
+
   private handleResize = () => {
     this.fitBackground();
     this.drawVignette();
     this.layoutActors();
+    this.updateTargetRings();
     this.layoutQueue();
     if (this.banner.visible) this.banner.setPosition(this.scale.width / 2, this.scale.height * 0.42);
     this.overdriveCard.setPosition(this.scale.width / 2, this.scale.height / 2);
@@ -150,8 +166,9 @@ export class RaidScene extends Phaser.Scene {
     for (const uid of [...this.actors.keys()]) {
       if (!seen.has(uid)) {
         const v = this.actors.get(uid)!;
-        v.sprite.destroy(); v.shadow.destroy(); v.nameText.destroy();
+        v.sprite.destroy(); v.hitZone.destroy(); v.shadow.destroy(); v.nameText.destroy();
         v.hpBar.destroy(); v.hpText.destroy(); v.targetRing?.destroy();
+        v.targetTween?.stop();
         v.idleTween?.stop();
         this.actors.delete(uid);
       }
@@ -170,7 +187,7 @@ export class RaidScene extends Phaser.Scene {
     let view = this.actors.get(a.uid);
     if (!view) {
       const key = this.spriteKey(a);
-      const useKey = this.textures.exists(key) ? key : "__fallback";
+      const useKey = this.ensureActorTexture(key, side);
       if (useKey === "__fallback" && !this.textures.exists("__fallback")) {
         const g = this.make.graphics({ x: 0, y: 0 });
         g.fillStyle(side === "party" ? 0x4fc3ff : 0xff5050, 1).fillCircle(40, 40, 40);
@@ -178,14 +195,18 @@ export class RaidScene extends Phaser.Scene {
         g.destroy();
       }
       const sprite = this.add.image(0, 0, useKey)
-        .setOrigin(0.5, 1)
-        .setInteractive({ useHandCursor: true });
+        .setOrigin(0.5, 1);
       if (side === "enemy") sprite.setFlipX(true);
       // Click handler for target selection
       const onTap = () => {
-        if (this.init_.getTargetMode()) this.init_.onActorClick(a.uid);
+        const current = this.actors.get(a.uid);
+        if (side === "enemy" && current?.alive && this.init_.getTargetMode()) this.init_.onActorClick(a.uid);
       };
-      sprite.on("pointerdown", onTap);
+      const hitZone = this.add.zone(0, 0, 180, 240)
+        .setOrigin(0.5, 0.5)
+        .setDepth(6)
+        .setInteractive({ useHandCursor: true });
+      hitZone.on("pointerdown", onTap);
 
       const shadow = this.add.ellipse(0, 0, 90, 18, 0x000000, 0.55);
       shadow.setDepth(0);
@@ -207,13 +228,13 @@ export class RaidScene extends Phaser.Scene {
       }).setOrigin(0.5, 0).setDepth(4);
 
       view = {
-        uid: a.uid, sprite, shadow, nameText, hpBar, hpText,
+        uid: a.uid, sprite, hitZone, shadow, nameText, hpBar, hpText,
         baseX: 0, baseY: 0, side, alive: a.alive, hitListener: onTap,
       };
       this.actors.set(a.uid, view);
       // Idle bob
       view.idleTween = this.tweens.add({
-        targets: sprite, y: { from: 0, to: -4 }, duration: 1400 + index * 120,
+        targets: sprite, angle: { from: -1.2, to: 1.2 }, duration: 1400 + index * 120,
         ease: "Sine.InOut", yoyo: true, repeat: -1,
       });
     }
@@ -252,6 +273,37 @@ export class RaidScene extends Phaser.Scene {
     }
     const m = /^e\d+-\d+-(.+)$/.exec(a.uid);
     return m ? `enemy:${m[1]}` : "__fallback";
+  }
+
+  private ensureActorTexture(rawKey: string, side: "party" | "enemy") {
+    const phaserKey = this.textureKey(rawKey);
+    if (this.textures.exists(phaserKey)) return phaserKey;
+
+    const url = this.init_.sprites[rawKey];
+    if (url && !this.loadingSprites.has(rawKey)) {
+      this.loadingSprites.add(rawKey);
+      this.load.image(phaserKey, url);
+      this.load.once(Phaser.Loader.Events.COMPLETE, () => {
+        this.loadingSprites.delete(rawKey);
+        for (const v of this.actors.values()) {
+          const actor = (v as any)._actor as Actor | undefined;
+          if (actor && this.spriteKey(actor) === rawKey && this.textures.exists(phaserKey)) {
+            v.sprite.setTexture(phaserKey).setAlpha(v.alive ? 1 : 0.35);
+            if (v.side === "enemy") v.sprite.setFlipX(true);
+          }
+        }
+        this.layoutActors();
+      });
+      if (!this.load.isLoading()) this.load.start();
+    }
+
+    if (!this.textures.exists("__fallback")) {
+      const g = this.make.graphics({ x: 0, y: 0 });
+      g.fillStyle(side === "party" ? 0x4fc3ff : 0xff5050, 1).fillCircle(40, 40, 40);
+      g.generateTexture("__fallback", 80, 80);
+      g.destroy();
+    }
+    return "__fallback";
   }
 
   private drawHpBar(v: ActorView, a: Actor) {
@@ -294,6 +346,13 @@ export class RaidScene extends Phaser.Scene {
         const s = Math.min(1.4, target / Math.max(tex.height, 1));
         v.sprite.setScale(s);
         v.sprite.setPosition(v.baseX, v.baseY);
+        const hitW = Math.max(140, tex.width * s * 0.7);
+        const hitH = Math.max(170, tex.height * s * 0.78);
+        v.hitZone.setPosition(v.baseX, v.baseY - (arr === party ? 100 : 110));
+        v.hitZone.setSize(hitW, hitH);
+        if (v.hitZone.input?.hitArea) {
+          (v.hitZone.input.hitArea as Phaser.Geom.Rectangle).setTo(0, 0, hitW, hitH);
+        }
         v.shadow.setPosition(v.baseX, v.baseY + 4);
         v.nameText.setPosition(v.baseX, v.baseY + 10);
         v.hpText.setPosition(v.baseX, v.baseY + 10);
@@ -551,12 +610,16 @@ export class RaidScene extends Phaser.Scene {
         v.targetRing.clear();
         if (eligible) {
           v.targetRing.lineStyle(3, 0xffd54a, 1);
-          v.targetRing.strokeCircle(0, 0, 26);
-          v.targetRing.setPosition(v.baseX, v.baseY + 4);
+          v.targetRing.strokeCircle(0, 0, 48);
+          v.targetRing.setPosition(v.baseX, v.baseY - 70);
           // Pulse
           v.targetRing.setAlpha(0.9);
-          this.tweens.add({ targets: v.targetRing, alpha: 0.4, duration: 380, yoyo: true, repeat: -1 });
+          if (!v.targetTween) {
+            v.targetTween = this.tweens.add({ targets: v.targetRing, alpha: 0.4, duration: 380, yoyo: true, repeat: -1 });
+          }
         } else {
+          v.targetTween?.stop();
+          v.targetTween = undefined;
           v.targetRing.destroy();
           v.targetRing = undefined;
         }
