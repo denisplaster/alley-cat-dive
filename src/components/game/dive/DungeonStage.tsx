@@ -138,8 +138,14 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
         <div className="absolute inset-x-0 bottom-9 h-[3px] bg-toxic/80 shadow-[0_0_18px_4px_rgba(74,222,128,0.6)]" />
       </div>
 
+      {/* Side-scrolling parallax overlay — visible during room transitions */}
+      <TransitionOverlay kind={dive.currentKind} active={dive.transitioning} />
+
+      {/* Room title card — pops briefly after a new room loads */}
+      <RoomTitleCard k={dive.roomRevealKey} room={dive.room} totalRooms={dive.totalRooms} kind={dive.currentKind} />
+
       {/* Stage with shake */}
-      <div key={shakeId} className={`relative z-10 flex-1 min-h-0 ${dive.shakeKey > 0 ? (dive.shakeHard ? "animate-shake-hard" : "animate-shake") : ""}`}>
+      <div key={shakeId} className={`relative z-10 flex-1 min-h-0 transition-opacity duration-200 ${dive.transitioning ? "opacity-0" : ""} ${dive.shakeKey > 0 ? (dive.shakeHard ? "animate-shake-hard" : "animate-shake") : ""}`}>
         <div className="relative grid h-full grid-cols-2 gap-3 p-3 md:p-6 min-h-[320px]">
           <CombatantSprite
             name={cat.name}
@@ -454,6 +460,93 @@ function NonCombatPanel({ kind, cleared }: { kind: RoomKind; cleared: boolean })
       <div className="w-full max-w-[260px] text-right">
         <div className="font-display text-lg uppercase leading-none">{meta.title}</div>
         <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{meta.desc}</div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------- Side-scrolling room transition ----------------
+
+const ROOM_THEME: Record<RoomKind, { tag: string; back: string[]; mid: string[]; front: string[]; tint: string }> = {
+  enemy:    { tag: "Trash Tunnel",     back: ["🧱","🕸️"], mid: ["📦","🗑️","🛢️"], front: ["🦴","🍕","🪰"], tint: "from-emerald-900/40" },
+  swarm:    { tag: "Rat Nest",         back: ["🧱","🕳️"], mid: ["🛍️","📦","🍕"], front: ["🦴","🍞","🪰","🪰"], tint: "from-red-900/40" },
+  elite:    { tag: "Brute's Lair",     back: ["🧱","🚧"], mid: ["🛢️","📦"],      front: ["🦴","🥫","🔩"], tint: "from-orange-900/40" },
+  loot:     { tag: "Glowing Junk Pile", back: ["📦","🌟"], mid: ["🥫","🍾","💰"], front: ["✨","🪙","🍴"], tint: "from-yellow-900/40" },
+  hazard:   { tag: "Mold Cloud",       back: ["☣️","🚧"], mid: ["🛢️","🧪"],      front: ["💧","🟢","🪰"], tint: "from-lime-900/40" },
+  rest:     { tag: "Safe Nest",        back: ["🧺","🌙"], mid: ["🧻","📦"],       front: ["🐾","💤"], tint: "from-cyan-900/40" },
+  miniboss: { tag: "Lieutenant's Den", back: ["🚧","⚠️"], mid: ["🗑️","📦"],       front: ["🦴","🩸"], tint: "from-fuchsia-900/40" },
+  boss:     { tag: "Boss Throne",      back: ["⚠️","🩻"], mid: ["👑","🗑️"],       front: ["🦴","🟢","🚨"], tint: "from-rose-900/50" },
+};
+
+function TransitionOverlay({ kind, active }: { kind: RoomKind; active: boolean }) {
+  const theme = ROOM_THEME[kind] ?? ROOM_THEME.enemy;
+  return (
+    <div className={`pointer-events-none absolute inset-0 z-30 overflow-hidden transition-opacity duration-200 ${active ? "opacity-100" : "opacity-0"}`}>
+      {/* tint wash */}
+      <div className={`absolute inset-0 bg-gradient-to-r ${theme.tint} to-black/70`} />
+      {/* back layer */}
+      <div className={`parallax-layer parallax-layer-back ${active ? "is-moving" : ""}`}>
+        <div className="absolute inset-0 flex w-[200%] items-center">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <span key={i} className="mx-[4vw] text-3xl opacity-30 select-none">
+              {theme.back[i % theme.back.length]}
+            </span>
+          ))}
+        </div>
+      </div>
+      {/* mid layer */}
+      <div className={`parallax-layer parallax-layer-mid ${active ? "is-moving" : ""}`}>
+        <div className="absolute inset-0 flex w-[200%] items-end pb-10">
+          {Array.from({ length: 14 }).map((_, i) => (
+            <span key={i} className="mx-[3vw] text-4xl opacity-60 select-none" style={{ transform: `translateY(${(i % 3) * -8}px)` }}>
+              {theme.mid[i % theme.mid.length]}
+            </span>
+          ))}
+        </div>
+      </div>
+      {/* front layer */}
+      <div className={`parallax-layer parallax-layer-front ${active ? "is-moving" : ""}`}>
+        <div className="absolute inset-0 flex w-[220%] items-end pb-2">
+          {Array.from({ length: 20 }).map((_, i) => (
+            <span key={i} className="mx-[2vw] text-2xl opacity-90 select-none" style={{ transform: `translateY(${(i % 4) * -4}px)` }}>
+              {theme.front[i % theme.front.length]}
+            </span>
+          ))}
+        </div>
+      </div>
+      {/* running cat sprite */}
+      <div className={`cat-sprite ${active ? "is-running" : ""} absolute bottom-8 left-[10%] w-32 h-32 md:w-40 md:h-40`}>
+        <img src={catScratch} alt="" aria-hidden="true" className="size-full object-contain drop-shadow-[4px_4px_0_rgba(0,0,0,0.6)]" />
+      </div>
+      {/* flavor text */}
+      <TransitionFlavorText />
+    </div>
+  );
+}
+
+function TransitionFlavorText() {
+  const msg = useGame(s => s.dive?.transitionMessage ?? null);
+  if (!msg) return null;
+  return (
+    <div className="absolute top-6 left-1/2 -translate-x-1/2 chunky-panel bg-black/85 px-4 py-1.5 text-center">
+      <div className="font-display text-sm md:text-base uppercase tracking-widest text-primary animate-pulse">{msg}</div>
+    </div>
+  );
+}
+
+function RoomTitleCard({ k, room, totalRooms, kind }: { k: number; room: number; totalRooms: number; kind: RoomKind }) {
+  const [id, setId] = useState(0);
+  useEffect(() => { if (k > 0) setId(n => n + 1); }, [k]);
+  if (id === 0) return null;
+  const theme = ROOM_THEME[kind] ?? ROOM_THEME.enemy;
+  const isFinal = room >= totalRooms;
+  return (
+    <div key={id} className="pointer-events-none absolute top-10 left-1/2 z-40 room-title-card">
+      <div className="chunky-panel bg-primary text-primary-foreground px-5 py-2 text-center">
+        <div className="text-[10px] font-bold uppercase tracking-widest opacity-80">
+          {isFinal ? "Final Room" : `Room ${room}`}
+        </div>
+        <div className="font-display text-xl md:text-2xl uppercase leading-none">{theme.tag}</div>
       </div>
     </div>
   );

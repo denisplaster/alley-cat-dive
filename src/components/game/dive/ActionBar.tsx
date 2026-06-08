@@ -43,6 +43,18 @@ export function ActionBar({ footerActions }: { footerActions?: React.ReactNode }
   // `dive.inAction = true` and rejects further actions until its counter resolves.
   const locked = dive.inAction;
 
+  // 0) Mid-transition between rooms — disable all input.
+  if (dive.transitioning) {
+    return (
+      <>
+        <Bar>
+          <Btn label="Diving deeper…" onClick={() => {}} primary big disabled />
+        </Bar>
+        {footerActions}
+      </>
+    );
+  }
+
   // 1) Room cleared → Go Deeper / Claim
   if (dive.roomCleared) {
     return (

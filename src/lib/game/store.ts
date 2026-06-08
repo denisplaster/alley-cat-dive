@@ -51,6 +51,12 @@ interface DiveState {
   catKnockbackKey: number;   // bumps to trigger cat knockback animation
   bubble: { side: "cat" | "enemy"; text: string; key: number } | null;
   inAction: boolean;          // true while enemy is mid-counter-attack — locks player input
+  /** True while the cat is animating between rooms (side-scrolling transition). */
+  transitioning: boolean;
+  /** Short flavor text shown during a room transition. */
+  transitionMessage: string | null;
+  /** Bumps when a new room is revealed so the title card can re-mount. */
+  roomRevealKey: number;
 }
 
 interface GameState {
@@ -328,6 +334,9 @@ export const useGame = create<GameState>((set, get) => ({
         catKnockbackKey: 0,
         bubble: null,
         inAction: false,
+        transitioning: false,
+        transitionMessage: null,
+        roomRevealKey: 0,
       },
       lastRewards: null,
     });
@@ -627,6 +636,7 @@ export const useGame = create<GameState>((set, get) => ({
   goDeeper: () => {
     const s = get();
     if (!s.dive || s.dive.ended || !s.dive.roomCleared) return;
+    if (s.dive.transitioning) return;
     const d = s.dive;
     const dump = s.dumpsters.find(x => x.id === d.dumpsterId)!;
     if (d.room >= d.totalRooms) {
@@ -636,25 +646,47 @@ export const useGame = create<GameState>((set, get) => ({
       get().endDive(true);
       return;
     }
-    const nextRoom = d.room + 1;
-    const nextIdx = nextRoom - 1;
-    const nextKind = d.rooms[nextIdx].kind;
-    const rooms = d.rooms.map((r, i) => i === nextIdx ? { ...r, revealed: true }
-      : i === nextIdx + 1 ? { ...r, revealed: true } : r);
-    const wave = (nextKind === "enemy" || nextKind === "swarm" || nextKind === "elite" || nextKind === "miniboss" || nextKind === "boss")
-      ? spawnEnemies(dump, nextKind, nextIdx) : [];
-    const enemy = wave[0] ?? null;
-    const rest = wave.slice(1);
-    const log2 = [...d.log,
-      mklog(`Crawl deeper… Room ${nextRoom}/${d.totalRooms} — ${roomLabel(nextKind)}`, "info"),
-      enemy ? mklog(wave.length > 1
-              ? `${wave.length} foes appear — ${enemy.name} steps up first!`
-              : `A ${enemy.name} appears!`, "warn")
-            : mklog(roomDescriptor(nextKind), "info"),
+    // Kick off a short side-scrolling transition: cat runs right, bg scrolls
+    // right-to-left, then the next room loads.
+    const flavorPool = [
+      "Diving deeper…",
+      "Scrapper squeezes through the trash wall…",
+      "Something rustles ahead…",
+      "The dumpster groans around you…",
+      "A new pile shifts in the dark…",
     ];
-    set({ dive: { ...d, room: nextRoom, rooms, currentKind: nextKind, enemy, enemies: rest,
-      roomCleared: false, roomEvent: null, log: log2,
-      catPose: "idle", enemyPose: enemy ? "idle" : "ko", mangaFx: null, mangaWord: null, mangaFocus: null, bubble: null } });
+    const flavor = flavorPool[Math.floor(Math.random() * flavorPool.length)];
+    set({ dive: { ...d, transitioning: true, transitionMessage: flavor,
+      roomCleared: false, roomEvent: null,
+      catPose: "idle", enemyPose: "idle", mangaFx: null, mangaWord: null, mangaFocus: null, bubble: null,
+      // hide previous enemy immediately so the arena reads as empty during the run
+      enemy: null, enemies: [],
+    } });
+    setTimeout(() => {
+      const cur = get().dive;
+      if (!cur || cur.ended) return;
+      const nextRoom = cur.room + 1;
+      const nextIdx = nextRoom - 1;
+      const nextKind = cur.rooms[nextIdx].kind;
+      const rooms = cur.rooms.map((r, i) => i === nextIdx ? { ...r, revealed: true }
+        : i === nextIdx + 1 ? { ...r, revealed: true } : r);
+      const wave = (nextKind === "enemy" || nextKind === "swarm" || nextKind === "elite" || nextKind === "miniboss" || nextKind === "boss")
+        ? spawnEnemies(dump, nextKind, nextIdx) : [];
+      const enemy = wave[0] ?? null;
+      const rest = wave.slice(1);
+      const log2 = [...cur.log,
+        mklog(`Crawl deeper… Room ${nextRoom}/${cur.totalRooms} — ${roomLabel(nextKind)}`, "info"),
+        enemy ? mklog(wave.length > 1
+                ? `${wave.length} foes appear — ${enemy.name} steps up first!`
+                : `A ${enemy.name} appears!`, "warn")
+              : mklog(roomDescriptor(nextKind), "info"),
+      ];
+      set({ dive: { ...cur, room: nextRoom, rooms, currentKind: nextKind, enemy, enemies: rest,
+        roomCleared: false, roomEvent: null, log: log2,
+        catPose: "idle", enemyPose: enemy ? "idle" : "ko", mangaFx: null, mangaWord: null, mangaFocus: null, bubble: null,
+        transitioning: false, transitionMessage: null, roomRevealKey: cur.roomRevealKey + 1,
+      } });
+    }, 1100);
   },
 
   toggleAuto: () => {
