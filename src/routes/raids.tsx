@@ -21,7 +21,9 @@ function RaidsScreen() {
   const team = useGame(s => s.raidTeam);
   const setTeam = useGame(s => s.setRaidTeam);
   const spheres = useGame(s => s.spheres);
-  const storyDone = completed.length >= STORY_CHAPTERS.length;
+  const skipStoryline = useGame(s => s.skipStoryline);
+  const toggleSkip = useGame(s => s.toggleSkipStoryline);
+  const storyDone = completed.length >= STORY_CHAPTERS.length || skipStoryline;
 
   if (!storyDone) {
     return (
@@ -32,6 +34,12 @@ function RaidsScreen() {
           Finish the campaign to unlock team raids. ({completed.length}/{STORY_CHAPTERS.length} chapters complete)
         </p>
         <Link to="/story" className="chunky-button mt-6 inline-block bg-primary px-4 py-2 text-xs font-bold uppercase text-black">Go to Story</Link>
+        <button
+          onClick={toggleSkip}
+          className="chunky-button mt-4 block mx-auto border-2 border-dashed border-destructive/60 bg-transparent px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-destructive hover:bg-destructive/10"
+        >
+          [Dev] Skip Storyline → Unlock Raids
+        </button>
       </div>
     );
   }
