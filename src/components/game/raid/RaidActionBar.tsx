@@ -4,7 +4,7 @@ import { useGame } from "@/lib/game/store";
 import { ElementIcon } from "./ElementIcon";
 
 export function RaidActionBar({ active, enemies, onPickTarget, foodCount, onTargetMode }:
-  { active: Actor | null; enemies: Actor[]; onPickTarget: (mode: "basic"|"skill"|"od"|null, skillId?: string) => void; foodCount: number; onTargetMode: boolean })
+  { active: Actor | null; enemies: Actor[]; onPickTarget: (mode: "basic"|"skill"|"od"|null, skillId?: string) => void; onSelectTarget: (uid: string) => void; foodCount: number; onTargetMode: boolean })
 {
   const raidDefend = useGame(s => s.raidDefend);
   const raidUseItem = useGame(s => s.raidUseItem);
