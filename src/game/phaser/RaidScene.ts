@@ -17,6 +17,7 @@ const SLOTS = [0.25, 0.50, 0.75]; // vertical fractions within battle area
 interface ActorView {
   uid: string;
   sprite: Phaser.GameObjects.Image;
+  hitZone: Phaser.GameObjects.Zone;
   shadow: Phaser.GameObjects.Ellipse;
   nameText: Phaser.GameObjects.Text;
   hpBar: Phaser.GameObjects.Graphics;
@@ -52,6 +53,7 @@ export class RaidScene extends Phaser.Scene {
   private lastODKey = 0;
   private targetMode = false;
   private state: RaidState | null = null;
+  private loadingSprites = new Set<string>();
   // Bottom 90px reserved for the React action bar.
   private bottomPad = 96;
 
@@ -64,7 +66,7 @@ export class RaidScene extends Phaser.Scene {
   preload() {
     this.load.image("bg", this.init_.bgUrl);
     for (const [k, url] of Object.entries(this.init_.sprites)) {
-      this.load.image(k, url);
+      this.load.image(this.textureKey(k), url);
     }
   }
 
@@ -160,8 +162,9 @@ export class RaidScene extends Phaser.Scene {
     for (const uid of [...this.actors.keys()]) {
       if (!seen.has(uid)) {
         const v = this.actors.get(uid)!;
-        v.sprite.destroy(); v.shadow.destroy(); v.nameText.destroy();
+        v.sprite.destroy(); v.hitZone.destroy(); v.shadow.destroy(); v.nameText.destroy();
         v.hpBar.destroy(); v.hpText.destroy(); v.targetRing?.destroy();
+        v.targetTween?.stop();
         v.idleTween?.stop();
         this.actors.delete(uid);
       }
