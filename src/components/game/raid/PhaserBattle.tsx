@@ -17,6 +17,8 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
   const sceneRef = useRef<{ syncState: (s: RaidState) => void; scene: { isActive: () => boolean } } | null>(null);
   const targetRef = useRef<{ mode: "basic"|"skill"|"od"; skillId?: string } | null>(null);
   const [, force] = useState(0);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   const raid = useGame(s => s.raid);
   const inv = useGame(s => s.inventory);
@@ -98,7 +100,7 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
     force(x => x + 1);
   };
 
-  if (!raid) return null;
+  if (!raid || !mounted) return <div className="flex h-full items-center justify-center text-xs uppercase tracking-widest text-muted-foreground">Booting battle…</div>;
   const active = [...raid.party, ...raid.enemies].find(a => a.uid === raid.activeUid) ?? null;
   const foodCount = inv.filter(i => i.kind === "food").length;
   const roomCleared = raid.enemies.every(e => !e.alive) && !raid.ended;
