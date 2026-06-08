@@ -610,12 +610,16 @@ export class RaidScene extends Phaser.Scene {
         v.targetRing.clear();
         if (eligible) {
           v.targetRing.lineStyle(3, 0xffd54a, 1);
-          v.targetRing.strokeCircle(0, 0, 26);
-          v.targetRing.setPosition(v.baseX, v.baseY + 4);
+          v.targetRing.strokeCircle(0, 0, 48);
+          v.targetRing.setPosition(v.baseX, v.baseY - 70);
           // Pulse
           v.targetRing.setAlpha(0.9);
-          this.tweens.add({ targets: v.targetRing, alpha: 0.4, duration: 380, yoyo: true, repeat: -1 });
+          if (!v.targetTween) {
+            v.targetTween = this.tweens.add({ targets: v.targetRing, alpha: 0.4, duration: 380, yoyo: true, repeat: -1 });
+          }
         } else {
+          v.targetTween?.stop();
+          v.targetTween = undefined;
           v.targetRing.destroy();
           v.targetRing = undefined;
         }
