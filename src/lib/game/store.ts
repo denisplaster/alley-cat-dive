@@ -51,6 +51,12 @@ interface DiveState {
   catKnockbackKey: number;   // bumps to trigger cat knockback animation
   bubble: { side: "cat" | "enemy"; text: string; key: number } | null;
   inAction: boolean;          // true while enemy is mid-counter-attack — locks player input
+  /** True while the cat is animating between rooms (side-scrolling transition). */
+  transitioning: boolean;
+  /** Short flavor text shown during a room transition. */
+  transitionMessage: string | null;
+  /** Bumps when a new room is revealed so the title card can re-mount. */
+  roomRevealKey: number;
 }
 
 interface GameState {
