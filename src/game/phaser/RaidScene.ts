@@ -27,6 +27,7 @@ interface ActorView {
   alive: boolean;
   idleTween?: Phaser.Tweens.Tween;
   targetRing?: Phaser.GameObjects.Graphics;
+  targetTween?: Phaser.Tweens.Tween;
   hitListener?: () => void;
 }
 
@@ -91,10 +92,19 @@ export class RaidScene extends Phaser.Scene {
     });
   }
 
+  update() {
+    const nextTargetMode = this.init_?.getTargetMode?.() ?? false;
+    if (nextTargetMode !== this.targetMode) {
+      this.targetMode = nextTargetMode;
+      this.updateTargetRings();
+    }
+  }
+
   private handleResize = () => {
     this.fitBackground();
     this.drawVignette();
     this.layoutActors();
+    this.updateTargetRings();
     this.layoutQueue();
     if (this.banner.visible) this.banner.setPosition(this.scale.width / 2, this.scale.height * 0.42);
     this.overdriveCard.setPosition(this.scale.width / 2, this.scale.height / 2);
