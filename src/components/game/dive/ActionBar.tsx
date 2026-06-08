@@ -4,20 +4,23 @@ import { lifeStageFromHideout, type LifeStage } from "@/lib/game/lifestage";
 
 // Move sets unlock as the cat grows up. Action ids stay the same so combat
 // logic doesn't care which stage we're in — only the labels change.
-const MOVES: Record<LifeStage, { id: "scratch" | "pounce" | "item"; label: string; tone?: "secondary" | "accent" }[]> = {
+const MOVES: Record<LifeStage, { id: "scratch" | "pounce" | "block" | "item"; label: string; tone?: "secondary" | "accent" }[]> = {
   kitten: [
     { id: "scratch", label: "Swat" },
     { id: "pounce",  label: "Bite",  tone: "secondary" },
+    { id: "block",   label: "Guard" },
     { id: "item",    label: "Snack",   tone: "accent" },
   ],
   juvenile: [
     { id: "scratch", label: "Claw" },
     { id: "pounce",  label: "Pounce", tone: "secondary" },
+    { id: "block",   label: "Block" },
     { id: "item",    label: "Snack",  tone: "accent" },
   ],
   adult: [
     { id: "scratch", label: "Slash" },
     { id: "pounce",  label: "Pounce", tone: "secondary" },
+    { id: "block",   label: "Block" },
     { id: "item",    label: "Snack",  tone: "accent" },
   ],
 };
@@ -42,6 +45,15 @@ export function ActionBar({ footerActions }: { footerActions?: React.ReactNode }
   // Turn-based lock: while the enemy is mid-counter-attack the store flips
   // `dive.inAction = true` and rejects further actions until its counter resolves.
   const locked = dive.inAction;
+  const pounceCd = dive.pounceCd ?? 0;
+  const intent = dive.enemyIntent;
+  const intentLabel = intent === "heavy" ? "💥 Charging Heavy"
+    : intent === "block" ? "🛡️ Bracing"
+    : intent === "attack" ? "⚔️ Attacking"
+    : null;
+  const intentTone = intent === "heavy" ? "bg-destructive text-destructive-foreground"
+    : intent === "block" ? "bg-secondary text-black"
+    : "bg-slate-900 text-foreground";
 
   // 0) Mid-transition between rooms — disable all input.
   if (dive.transitioning) {
@@ -97,12 +109,22 @@ export function ActionBar({ footerActions }: { footerActions?: React.ReactNode }
   const moves = MOVES[stage];
   return (
     <>
+    {intentLabel && (
+      <div className={`mb-1.5 inline-flex w-full items-center justify-center gap-2 rounded px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${intentTone}`}>
+        Next: {intentLabel}
+      </div>
+    )}
     <Bar>
       {moves.map((m, i) => {
         const isHeal = m.id === "item";
+        const isPounce = m.id === "pounce";
+        const isBlock = m.id === "block";
         const noSnacks = isHeal && snackCount === 0;
+        const onCd = isPounce && pounceCd > 0;
         const label = isHeal
           ? (snackCount === 0 ? "No Snacks" : (lowHp ? `Heal (${snackCount})` : `Snack (${snackCount})`))
+          : isPounce && onCd ? `${m.label} (${pounceCd})`
+          : isBlock && intent === "block" ? `${m.label} ⚠`
           : m.label;
         return (
           <Btn
@@ -112,7 +134,7 @@ export function ActionBar({ footerActions }: { footerActions?: React.ReactNode }
             primary={i === 0}
             tone={m.tone}
             highlight={isHeal && lowHp && !noSnacks}
-            disabled={locked || noSnacks}
+            disabled={locked || noSnacks || onCd}
           />
         );
       })}

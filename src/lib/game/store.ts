@@ -51,6 +51,10 @@ interface DiveState {
   catKnockbackKey: number;   // bumps to trigger cat knockback animation
   bubble: { side: "cat" | "enemy"; text: string; key: number } | null;
   inAction: boolean;          // true while enemy is mid-counter-attack — locks player input
+  /** Telegraphed enemy intent for the upcoming exchange. */
+  enemyIntent: "attack" | "heavy" | "block" | null;
+  /** Turns until Pounce is ready again (0 = ready). */
+  pounceCd: number;
   /** True while the cat is animating between rooms (side-scrolling transition). */
   transitioning: boolean;
   /** Short flavor text shown during a room transition. */
@@ -94,7 +98,7 @@ interface GameState {
   selectDumpster: (id: string) => void;
   setActiveCat: (id: string) => void;
   startDive: () => void;
-  doAction: (action: "scratch" | "pounce" | "item" | "flee") => void;
+  doAction: (action: "scratch" | "pounce" | "block" | "item" | "flee") => void;
   goDeeper: () => void;
   resolveNonCombat: () => void;
   toggleAuto: () => void;
@@ -142,6 +146,20 @@ const ENEMY_LINES = {
   miniboss: ["You're outmatched!", "I've been waiting."],
 };
 const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+
+const pickEnemyIntent = (kind?: RoomKind): "attack" | "heavy" | "block" => {
+  // Bosses and elites are more aggressive and use heavy/block more often.
+  const r = Math.random();
+  const tough = kind === "boss" || kind === "miniboss" || kind === "elite";
+  if (tough) {
+    if (r < 0.25) return "block";
+    if (r < 0.55) return "heavy";
+    return "attack";
+  }
+  if (r < 0.2) return "block";
+  if (r < 0.4) return "heavy";
+  return "attack";
+};
 
 const generateRooms = (totalRooms: number, _bossRunsAway = false): Room[] => {
   const arr: RoomKind[] = Array.from({ length: totalRooms }, () => "enemy" as RoomKind);
@@ -337,6 +355,8 @@ export const useGame = create<GameState>((set, get) => ({
         catKnockbackKey: 0,
         bubble: null,
         inAction: false,
+        enemyIntent: enemy ? pickEnemyIntent() : null,
+        pounceCd: 0,
         transitioning: false,
         transitionMessage: null,
         roomRevealKey: 0,
@@ -364,7 +384,13 @@ export const useGame = create<GameState>((set, get) => ({
     }
     set({ dive: { ...s.dive, timerSec: newTimer } });
     if (s.dive.autoDive && s.dive.enemy && !s.dive.roomCleared) {
-      setTimeout(() => get().doAction("scratch"), 50);
+      // Auto-play picks a sensible move: block big swings, pounce when off cd, else scratch.
+      const d = s.dive;
+      const auto: "scratch" | "pounce" | "block" =
+        d.enemyIntent === "heavy" ? "block"
+        : d.pounceCd === 0 && d.enemyIntent !== "block" ? "pounce"
+        : "scratch";
+      setTimeout(() => get().doAction(auto), 50);
     }
   },
 
@@ -384,10 +410,24 @@ export const useGame = create<GameState>((set, get) => ({
     if (d.roomCleared || !d.enemy) return;
     if (d.inAction) return;   // turn-based lock: wait for enemy counter to resolve
 
+    // Pounce has a 2-turn cooldown — refuse if not ready yet.
+    if (action === "pounce" && d.pounceCd > 0) {
+      const warnLog = [...d.log, mklog(`Pounce recharging — ${d.pounceCd} turn${d.pounceCd>1?"s":""}.`, "warn")];
+      set({ dive: { ...d, log: warnLog } });
+      return;
+    }
+
     let { catHp, enemy, collected, log: clog, bonesFound, capsFound, fx,
       shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey,
       combo, comboLastAction, panelSplitKey, knockbackKey, catKnockbackKey } = d;
     enemy = { ...enemy! };
+
+    // Telegraphed enemy intent for this exchange (set when the foe spawned or last turn ended).
+    const intent = d.enemyIntent ?? "attack";
+    const enemyWillBlock = intent === "block";
+    const heavyIntent = intent === "heavy";
+    // Cat-side block toggle (no damage dealt, big damage reduction taken).
+    const catBlocking = action === "block";
 
     if (action === "item") {
       // Healing now consumes a food item from inventory.
@@ -407,16 +447,23 @@ export const useGame = create<GameState>((set, get) => ({
       // item breaks combo
       combo = 0;
       comboLastAction = null;
+    } else if (catBlocking) {
+      // Defensive stance — no attack output, but incoming damage is heavily reduced.
+      clog = [...clog, mklog(`${cat.name} braces to block!`, "info")];
+      combo = 0;
+      comboLastAction = null;
     } else {
       const isCrit = Math.random() < (action === "pounce" ? 0.28 : 0.14);
       // Momentum: alternating actions and reaching combo 3+ ramps damage
       const isFinisher = combo >= 2 && comboLastAction !== null && comboLastAction !== action;
       const comboMult = 1 + Math.min(combo, 4) * 0.12 + (isFinisher ? 0.5 : 0);
       const base = action === "pounce" ? cat.attack * 1.6 : cat.attack;
-      const dmg = Math.round(base * (isCrit ? 2 : 1) * comboMult * (0.85 + Math.random() * 0.3));
+      // If the enemy telegraphed a block, our hit barely lands.
+      const blockMult = enemyWillBlock ? 0.25 : 1;
+      const dmg = Math.max(1, Math.round(base * (isCrit ? 2 : 1) * comboMult * (0.85 + Math.random() * 0.3) * blockMult));
       enemy.hp = Math.max(0, enemy.hp - dmg);
       const verb = action === "pounce" ? "pounces" : "scratches";
-      const suffix = isFinisher ? " — COMBO FINISHER!" : isCrit ? " (CRIT!)" : "";
+      const suffix = enemyWillBlock ? " — BLOCKED!" : isFinisher ? " — COMBO FINISHER!" : isCrit ? " (CRIT!)" : "";
       clog = [...clog, mklog(`${cat.name} ${verb} for ${dmg}${suffix}`, isFinisher || isCrit ? "crit" : "hit")];
       fx = [...fx, { id: nextFxId(), target: "enemy", kind: isCrit ? "crit" : "dmg", amount: dmg }];
       enemyFlashKey += 1;
@@ -424,12 +471,17 @@ export const useGame = create<GameState>((set, get) => ({
       shakeHard = isCrit || action === "pounce" || isFinisher;
       // momentum bookkeeping
       combo = combo + 1;
-      comboLastAction = action;
+      comboLastAction = action === "pounce" ? "pounce" : "scratch";
       // big hits knock the enemy back
       if (isCrit || isFinisher || action === "pounce") knockbackKey += 1;
       // combo finisher triggers split-screen panel
       if (isFinisher) { panelSplitKey += 1; }
     }
+
+    // Cooldown bookkeeping: pounce sets cd, anything else (incl. block) ticks it down.
+    let pounceCd = d.pounceCd;
+    if (action === "pounce") pounceCd = 2;
+    else pounceCd = Math.max(0, pounceCd - 1);
 
     // ---- Panel 1: the CAT's action ----
     let catPose: DiveState["catPose"];
@@ -442,6 +494,12 @@ export const useGame = create<GameState>((set, get) => ({
       catPose = "item";
       enemyPose = enemy.hp <= 0 ? "ko" : "idle";
       mangaFx = "heal";
+      mangaWord = null;
+      mangaFocus = "cat";
+    } else if (catBlocking) {
+      catPose = "block";
+      enemyPose = "idle";
+      mangaFx = "block";
       mangaWord = null;
       mangaFocus = "cat";
     } else {
@@ -462,6 +520,8 @@ export const useGame = create<GameState>((set, get) => ({
     let bubble: DiveState["bubble"] = null;
     if (action === "item") {
       bubble = { side: "cat", text: pick(CAT_LINES.item), key: nextBubbleKey() };
+    } else if (catBlocking) {
+      bubble = { side: "cat", text: pick(["Bring it!", "Try me!", "Guard up!", "Nyah, blocked!"]), key: nextBubbleKey() };
     } else {
       const wasFinisher = combo >= 3 && comboLastAction !== d.comboLastAction;
       const pool = wasFinisher ? CAT_LINES.combo : action === "pounce" ? CAT_LINES.pounce : CAT_LINES.scratch;
@@ -482,11 +542,16 @@ export const useGame = create<GameState>((set, get) => ({
       catKnockbackKey: number;
     } = null;
 
-    if (enemy.hp > 0 && action !== "item") {
-      // Enemies hit harder: bigger base swing, lower defense scaling.
-      const incoming = Math.max(2, Math.round(enemy.attack * (0.95 + Math.random() * 0.45) - cat.defense * 0.28));
-      const blocked = incoming <= Math.max(3, Math.round(cat.defense * 0.35));
-      const heavy = incoming >= 18;
+    // Enemy only swings if its intent was attack/heavy AND it's still alive.
+    // Healing doesn't provoke a counter (legacy behavior preserved).
+    if (enemy.hp > 0 && action !== "item" && !enemyWillBlock) {
+      const heavyMult = heavyIntent ? 1.55 : 1;
+      const rawIncoming = enemy.attack * (0.95 + Math.random() * 0.45) * heavyMult - cat.defense * 0.28;
+      // Cat's block soaks 75% of the incoming damage.
+      const damageMult = catBlocking ? 0.25 : 1;
+      const incoming = Math.max(catBlocking ? 1 : 2, Math.round(rawIncoming * damageMult));
+      const blocked = catBlocking || incoming <= Math.max(3, Math.round(cat.defense * 0.35));
+      const heavy = !catBlocking && incoming >= 18;
       const nextCatFlash = catFlashKey + 1;
       const nextCatKb = heavy ? catKnockbackKey + 1 : catKnockbackKey;
       if (heavy) { combo = 0; comboLastAction = null; }
@@ -496,14 +561,20 @@ export const useGame = create<GameState>((set, get) => ({
         blocked,
         enemyName: enemy.name,
         catPose: blocked ? "block" : heavy ? "knockback" : "hurt",
-        enemyPose: "attack",
+        enemyPose: heavyIntent ? "attack" : "attack",
         mangaFx: blocked ? "block" : "impact",
         mangaWord: blocked ? null : incoming >= 12 ? "bam" : "pow",
         mangaFocus: "cat",
         catFlashKey: nextCatFlash,
         catKnockbackKey: nextCatKb,
       };
+    } else if (enemy.hp > 0 && enemyWillBlock && action !== "item") {
+      // Telegraphed enemy block — no counter damage, brief log entry.
+      clog = [...clog, mklog(`${enemy.name} braces — no counter.`, "info")];
     }
+
+    // Pick the NEXT telegraphed intent for the upcoming player turn.
+    const nextIntent = pickEnemyIntent(d.currentKind);
 
     // Enemy dead from the cat's hit — show victory panel, no counter to schedule.
     if (enemy.hp <= 0) {
@@ -516,7 +587,8 @@ export const useGame = create<GameState>((set, get) => ({
           enemyDefeatKey: enemyDefeatKey + 1, lastLootKey,
           catPose: "idle", enemyPose: "idle", mangaFx: null, mangaWord: null, mangaFocus: null,
           combo: 0, comboLastAction: null, knockbackKey, catKnockbackKey, panelSplitKey,
-          bubble: null, inAction: false } });
+          bubble: null, inAction: false,
+          enemyIntent: pickEnemyIntent(d.currentKind), pounceCd } });
         return;
       }
       const isBoss = d.currentKind === "boss";
@@ -546,7 +618,7 @@ export const useGame = create<GameState>((set, get) => ({
         shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey,
         catPose: "victory", enemyPose: "ko", mangaFx, mangaWord, mangaFocus,
         combo: 0, comboLastAction: null, knockbackKey, catKnockbackKey, panelSplitKey,
-        inAction: false } });
+        inAction: false, enemyIntent: null, pounceCd: 0 } });
       return;
     }
 
@@ -555,7 +627,9 @@ export const useGame = create<GameState>((set, get) => ({
       shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey,
       catPose, enemyPose, mangaFx, mangaWord, mangaFocus,
       combo, comboLastAction, knockbackKey, catKnockbackKey, panelSplitKey, bubble,
-      inAction: counter !== null } });
+      inAction: counter !== null,
+      enemyIntent: counter !== null ? d.enemyIntent : nextIntent,
+      pounceCd } });
 
     // Panel 2: enemy counter-attack — apply HP loss and swap to counter visuals after a beat.
     if (counter) {
@@ -591,6 +665,7 @@ export const useGame = create<GameState>((set, get) => ({
           ended: willKo ? true : cur.ended,
           fled: willKo ? true : cur.fled,
           inAction: false,
+          enemyIntent: nextIntent,
         } });
         if (willKo) get().endDive(false);
       }, 1800);
@@ -690,6 +765,7 @@ export const useGame = create<GameState>((set, get) => ({
         roomCleared: false, roomEvent: null, log: log2,
         catPose: "idle", enemyPose: enemy ? "idle" : "ko", mangaFx: null, mangaWord: null, mangaFocus: null, bubble: null,
         transitioning: false, transitionMessage: null, nextKind: null, roomRevealKey: cur.roomRevealKey + 1,
+        enemyIntent: enemy ? pickEnemyIntent(nextKind) : null, pounceCd: 0,
       } });
     }, 1100);
   },
