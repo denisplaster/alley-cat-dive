@@ -37,10 +37,14 @@ export function PhaserBattle({ bgUrl }: { bgUrl: string }) {
     let game: any = null;
     if (typeof window === "undefined") return;
     (async () => {
-      const [{ default: Phaser }, { RaidScene }] = await Promise.all([
+      const [PhaserMod, RaidSceneMod] = await Promise.all([
         import("phaser"),
         import("@/game/phaser/RaidScene"),
       ]);
+      const Phaser = PhaserMod.default;
+      const { RaidScene, setPhaser } = RaidSceneMod;
+      // Inject the runtime Phaser into the (SSR-safe) scene module before use.
+      setPhaser(Phaser);
       if (cancelled || !containerRef.current) return;
       const sprites: Record<string, string> = {};
       Object.entries(portraits).forEach(([id, url]) => { sprites[`cat:${id}`] = url as string; });
