@@ -27,12 +27,12 @@ export interface HitResult {
 
 /** Compute damage for a damage skill (or basic attack). */
 export function rollDamage(attacker: Actor, target: Actor, power: number, element: Element): HitResult {
-  const base = Math.max(1, attacker.atk * power - target.def * 0.5);
-  const crit = Math.random() < 0.12;
+  const base = Math.max(1, attacker.atk * power - target.def * 0.7);
+  const crit = Math.random() < 0.10;
   const variance = 0.9 + Math.random() * 0.2;
   const em = elementMult(target, element);
   const defending = target.statuses.some(s => s.id === "defend");
-  const guard = defending ? 0.4 : 1;
+  const guard = defending ? 0.35 : 1;
   const raw = base * (crit ? 1.6 : 1) * variance * em.mult * guard;
   return {
     damage: em.mult === 0 ? 0 : Math.max(1, Math.round(raw)),
@@ -103,7 +103,7 @@ export function chooseEnemyAction(self: Actor, party: Actor[]):
 
   // Use a skill ~35% of the time if available and MP is there.
   const usable = self.skills.filter(s => self.mp >= s.mpCost);
-  if (usable.length && Math.random() < 0.35) {
+  if (usable.length && Math.random() < 0.45) {
     const skill = usable[Math.floor(Math.random() * usable.length)];
     const targets = skill.target === "allEnemies" ? alive
       : skill.target === "allAllies" ? [self]
