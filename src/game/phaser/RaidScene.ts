@@ -344,8 +344,13 @@ export class RaidScene extends Phaser.Scene {
         // Scale by frame size to fit a fixed target height
         const target = arr === party ? 130 : 140;
         const frameH = v.sprite.frame?.height ?? 0;
-        const s = frameH > 2 ? target / frameH : 1;
-        v.sprite.setScale(s);
+        const frameW = v.sprite.frame?.width ?? 0;
+        if (frameH > 2 && frameW > 2) {
+          const s = target / frameH;
+          v.sprite.setDisplaySize(frameW * s, frameH * s);
+        } else {
+          v.sprite.setDisplaySize(target, target);
+        }
         const dispH = v.sprite.displayHeight || target;
         const dispW = v.sprite.displayWidth || target;
         v.sprite.setPosition(v.baseX, v.baseY);
