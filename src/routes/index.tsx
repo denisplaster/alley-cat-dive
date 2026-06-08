@@ -132,6 +132,13 @@ function AlleyHub() {
         <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">
           {latest ? `Last find: ${latest.name}` : "Your stash is empty. Time to dive."}
         </p>
+        <button
+          onClick={toggleSkip}
+          className={`mt-1 border-2 border-dashed px-2 py-1 text-[9px] font-bold uppercase tracking-wider ${skipStoryline ? "border-primary/60 text-primary" : "border-muted-foreground/30 text-muted-foreground hover:border-destructive/60 hover:text-destructive"}`}
+          title="Dev flag: bypass story requirements"
+        >
+          {skipStoryline ? "✓ Storyline Skipped" : "[Dev] Skip Storyline"}
+        </button>
       </div>
     </div>
   );
