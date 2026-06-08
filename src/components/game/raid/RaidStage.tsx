@@ -93,6 +93,7 @@ export function RaidStage({ bgImage }: { bgImage?: string }) {
           active={active}
           enemies={raid.enemies}
           onPickTarget={onPickTarget}
+          onSelectTarget={handleTargetClick}
           foodCount={foodCount}
           onTargetMode={!!target}
         />
