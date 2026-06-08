@@ -7,7 +7,18 @@ import type * as Phaser from "phaser";
 // before this module is dynamically imported. Use `P.*` for any runtime
 // constant/class (P.Scene, P.BlendModes, P.TintModes, P.Loader.Events, ...).
 let P!: typeof import("phaser");
-export function setPhaser(phaser: typeof import("phaser")) { P = phaser; }
+export function setPhaser(phaser: typeof import("phaser")) {
+  P = phaser;
+  if (!RaidSceneClass) RaidSceneClass = createRaidSceneClass();
+}
+
+// Lazily-built scene class. Built after setPhaser() is called so that
+// `extends P.Scene` doesn't evaluate before Phaser is available.
+let RaidSceneClass: any = null;
+export function getRaidSceneClass(): any {
+  if (!RaidSceneClass) RaidSceneClass = createRaidSceneClass();
+  return RaidSceneClass;
+}
 
 import type { Actor, FloatingNumber, RaidState } from "@/lib/game/raidTypes";
 import { previewQueue } from "@/lib/game/raidEngine";
@@ -47,7 +58,22 @@ const ELEMENT_COLOR: Record<string, number> = {
   shock: 0xffe14a, stink: 0xc7ff5b,
 };
 
-export class RaidScene extends P.Scene {
+// Public handle used by callers: `RaidScene.KEY` for the scene key, and
+// `new RaidScene()` / passing as a class is proxied to the real lazy class.
+export const RaidScene: any = new Proxy(function RaidSceneStub() {} as any, {
+  construct(_t, args) {
+    const C = getRaidSceneClass();
+    return Reflect.construct(C, args);
+  },
+  get(_t, prop) {
+    if (prop === "KEY") return "RaidScene";
+    const C = RaidSceneClass;
+    return C ? (C as any)[prop] : undefined;
+  },
+});
+
+function createRaidSceneClass() {
+  class RaidScene extends P.Scene {
   static KEY = "RaidScene";
 
   private init_!: RaidSceneInit;
@@ -67,7 +93,7 @@ export class RaidScene extends P.Scene {
   // Bottom 90px reserved for the React action bar.
   private bottomPad = 96;
 
-  constructor() { super({ key: RaidScene.KEY }); }
+  constructor() { super({ key: "RaidScene" }); }
 
   init(data: RaidSceneInit) {
     this.init_ = data;
@@ -645,4 +671,6 @@ export class RaidScene extends P.Scene {
       }
     }
   }
+}
+  return RaidScene;
 }
