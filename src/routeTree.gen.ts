@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StoryRouteImport } from './routes/story'
 import { Route as ShopRouteImport } from './routes/shop'
+import { Route as RaidsRouteImport } from './routes/raids'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as LootRouteImport } from './routes/loot'
 import { Route as InventoryRouteImport } from './routes/inventory'
@@ -18,6 +19,8 @@ import { Route as HideoutRouteImport } from './routes/hideout'
 import { Route as DiveRouteImport } from './routes/dive'
 import { Route as CrewRouteImport } from './routes/crew'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RaidDungeonIdRouteImport } from './routes/raid.$dungeonId'
+import { Route as GridCatIdRouteImport } from './routes/grid.$catId'
 
 const StoryRoute = StoryRouteImport.update({
   id: '/story',
@@ -27,6 +30,11 @@ const StoryRoute = StoryRouteImport.update({
 const ShopRoute = ShopRouteImport.update({
   id: '/shop',
   path: '/shop',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RaidsRoute = RaidsRouteImport.update({
+  id: '/raids',
+  path: '/raids',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MapRoute = MapRouteImport.update({
@@ -64,6 +72,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RaidDungeonIdRoute = RaidDungeonIdRouteImport.update({
+  id: '/raid/$dungeonId',
+  path: '/raid/$dungeonId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GridCatIdRoute = GridCatIdRouteImport.update({
+  id: '/grid/$catId',
+  path: '/grid/$catId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -73,8 +91,11 @@ export interface FileRoutesByFullPath {
   '/inventory': typeof InventoryRoute
   '/loot': typeof LootRoute
   '/map': typeof MapRoute
+  '/raids': typeof RaidsRoute
   '/shop': typeof ShopRoute
   '/story': typeof StoryRoute
+  '/grid/$catId': typeof GridCatIdRoute
+  '/raid/$dungeonId': typeof RaidDungeonIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -84,8 +105,11 @@ export interface FileRoutesByTo {
   '/inventory': typeof InventoryRoute
   '/loot': typeof LootRoute
   '/map': typeof MapRoute
+  '/raids': typeof RaidsRoute
   '/shop': typeof ShopRoute
   '/story': typeof StoryRoute
+  '/grid/$catId': typeof GridCatIdRoute
+  '/raid/$dungeonId': typeof RaidDungeonIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -96,8 +120,11 @@ export interface FileRoutesById {
   '/inventory': typeof InventoryRoute
   '/loot': typeof LootRoute
   '/map': typeof MapRoute
+  '/raids': typeof RaidsRoute
   '/shop': typeof ShopRoute
   '/story': typeof StoryRoute
+  '/grid/$catId': typeof GridCatIdRoute
+  '/raid/$dungeonId': typeof RaidDungeonIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -109,8 +136,11 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/loot'
     | '/map'
+    | '/raids'
     | '/shop'
     | '/story'
+    | '/grid/$catId'
+    | '/raid/$dungeonId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -120,8 +150,11 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/loot'
     | '/map'
+    | '/raids'
     | '/shop'
     | '/story'
+    | '/grid/$catId'
+    | '/raid/$dungeonId'
   id:
     | '__root__'
     | '/'
@@ -131,8 +164,11 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/loot'
     | '/map'
+    | '/raids'
     | '/shop'
     | '/story'
+    | '/grid/$catId'
+    | '/raid/$dungeonId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -143,8 +179,11 @@ export interface RootRouteChildren {
   InventoryRoute: typeof InventoryRoute
   LootRoute: typeof LootRoute
   MapRoute: typeof MapRoute
+  RaidsRoute: typeof RaidsRoute
   ShopRoute: typeof ShopRoute
   StoryRoute: typeof StoryRoute
+  GridCatIdRoute: typeof GridCatIdRoute
+  RaidDungeonIdRoute: typeof RaidDungeonIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -161,6 +200,13 @@ declare module '@tanstack/react-router' {
       path: '/shop'
       fullPath: '/shop'
       preLoaderRoute: typeof ShopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/raids': {
+      id: '/raids'
+      path: '/raids'
+      fullPath: '/raids'
+      preLoaderRoute: typeof RaidsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/map': {
@@ -212,6 +258,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/raid/$dungeonId': {
+      id: '/raid/$dungeonId'
+      path: '/raid/$dungeonId'
+      fullPath: '/raid/$dungeonId'
+      preLoaderRoute: typeof RaidDungeonIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/grid/$catId': {
+      id: '/grid/$catId'
+      path: '/grid/$catId'
+      fullPath: '/grid/$catId'
+      preLoaderRoute: typeof GridCatIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -223,9 +283,22 @@ const rootRouteChildren: RootRouteChildren = {
   InventoryRoute: InventoryRoute,
   LootRoute: LootRoute,
   MapRoute: MapRoute,
+  RaidsRoute: RaidsRoute,
   ShopRoute: ShopRoute,
   StoryRoute: StoryRoute,
+  GridCatIdRoute: GridCatIdRoute,
+  RaidDungeonIdRoute: RaidDungeonIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
