@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useGame, rarityClass, rarityGlow } from "@/lib/game/store";
-import type { ItemKind } from "@/lib/game/types";
+import type { Cat, Item, ItemKind } from "@/lib/game/types";
 
 export const Route = createFileRoute("/inventory")({
   head: () => ({
@@ -60,6 +60,8 @@ function InventoryScreen() {
           </button>
         ))}
       </div>
+
+      <CharacterPanel cat={activeCat} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <div className="lg:col-span-8">
@@ -123,6 +125,75 @@ function InventoryScreen() {
           )}
         </aside>
       </div>
+    </div>
+  );
+}
+
+function CharacterPanel({ cat }: { cat: Cat }) {
+  const atkBonus = sumBonus(cat, "attack");
+  const defBonus = sumBonus(cat, "defense");
+  const spdBonus = sumBonus(cat, "speed");
+  const hpBonus = sumBonus(cat, "health");
+  return (
+    <div className="chunky-panel mb-4 grid grid-cols-1 gap-4 bg-black/80 p-4 md:grid-cols-[auto_1fr_1fr]">
+      <div className="flex items-center gap-3">
+        <img
+          src={cat.portrait}
+          alt={cat.name}
+          width={112}
+          height={112}
+          className="size-28 border-4 border-black bg-slate-800 object-cover"
+        />
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-secondary">Equipping</div>
+          <h2 className="font-display text-2xl uppercase leading-none">{cat.name}</h2>
+          <p className="text-[11px] uppercase text-muted-foreground">{cat.catClass} · Lvl {cat.level}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 self-center md:grid-cols-4">
+        <StatBox label="HP" value={cat.maxHp} bonus={hpBonus} />
+        <StatBox label="ATK" value={cat.attack} bonus={atkBonus} />
+        <StatBox label="DEF" value={cat.defense} bonus={defBonus} />
+        <StatBox label="SPD" value={cat.speed} bonus={spdBonus} />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 self-center">
+        <Slot label="Weapon" item={cat.equipment.weapon} />
+        <Slot label="Armor" item={cat.equipment.armor} />
+        <Slot label="Relic" item={cat.equipment.relic} />
+      </div>
+    </div>
+  );
+}
+
+function sumBonus(cat: Cat, key: "attack" | "defense" | "speed" | "health"): number {
+  return (Object.values(cat.equipment) as (Item | undefined)[])
+    .reduce((sum, it) => sum + (it?.[key] ?? 0), 0);
+}
+
+function StatBox({ label, value, bonus }: { label: string; value: number; bonus: number }) {
+  return (
+    <div className="border-2 border-black bg-slate-900 p-2 text-center">
+      <div className="text-[9px] font-bold uppercase text-muted-foreground">{label}</div>
+      <div className="font-display text-xl leading-none text-primary">{value}</div>
+      {bonus > 0 && <div className="mt-0.5 text-[9px] font-bold uppercase text-accent">+{bonus} gear</div>}
+    </div>
+  );
+}
+
+function Slot({ label, item }: { label: string; item?: Item }) {
+  return (
+    <div className={`border-2 border-black p-2 text-center ${item ? `bg-slate-900 ${rarityGlow(item.rarity)}` : "bg-slate-950"}`}>
+      <div className="text-[9px] font-bold uppercase text-muted-foreground">{label}</div>
+      {item ? (
+        <>
+          <div className={`mx-auto mt-1 inline-block border px-1 text-[8px] font-bold uppercase ${rarityClass(item.rarity)}`}>{item.rarity[0]}</div>
+          <div className="mt-1 font-display text-[11px] uppercase leading-tight">{item.name}</div>
+        </>
+      ) : (
+        <div className="mt-2 text-[10px] uppercase text-muted-foreground">Empty</div>
+      )}
     </div>
   );
 }
