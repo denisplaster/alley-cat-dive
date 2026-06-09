@@ -22,7 +22,19 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/shop", changefreq: "weekly", priority: "0.6" },
           { path: "/story", changefreq: "weekly", priority: "0.8" },
           { path: "/raids", changefreq: "weekly", priority: "0.7" },
+          { path: "/dive", changefreq: "weekly", priority: "0.6" },
+          { path: "/loot", changefreq: "weekly", priority: "0.5" },
         ];
+
+        const { RAIDS } = await import("@/lib/game/raidData");
+        for (const r of RAIDS) {
+          entries.push({ path: `/raid/${r.id}`, changefreq: "weekly", priority: "0.6" });
+        }
+
+        const { GRID_LAYOUTS } = await import("@/lib/game/gridData");
+        for (const catId of Object.keys(GRID_LAYOUTS)) {
+          entries.push({ path: `/grid/${catId}`, changefreq: "weekly", priority: "0.5" });
+        }
 
         const urls = entries.map((e) =>
           [
