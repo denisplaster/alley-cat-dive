@@ -7,9 +7,13 @@ export const Route = createFileRoute("/story")({
   head: () => ({
     meta: [
       { title: "Story — Alley Cat Dumpster Divers" },
-      { name: "description", content: "From abandoned kitten to alley legend. Play the chapters." },
+      { name: "description", content: "Play through the story of Alley Cat Dumpster Divers — from abandoned kitten to alley legend, one chapter and one evolution at a time." },
       { property: "og:title", content: "Story" },
-      { property: "og:description", content: "From abandoned kitten to alley legend." },
+      { property: "og:description", content: "Play through the chapters of Alley Cat Dumpster Divers — from abandoned kitten to alley legend." },
+      { property: "og:url", content: "https://alleycatdive.com/story" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://alleycatdive.com/story" },
     ],
   }),
   component: StoryScreen,
