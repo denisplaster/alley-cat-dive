@@ -959,7 +959,11 @@ export const useGame = create<GameState>((set, get) => ({
   },
 
   openCutscene: (chapterId, phase) => {
-    set({ activeCutscene: { chapterId, phase, panel: 0 } });
+    const s = get();
+    const seenIntros = phase === "intro" && !s.seenIntros.includes(chapterId)
+      ? [...s.seenIntros, chapterId]
+      : s.seenIntros;
+    set({ activeCutscene: { chapterId, phase, panel: 0 }, seenIntros });
   },
   advanceCutscene: () => {
     const s = get();
