@@ -1,0 +1,16 @@
+# Alley Cat Dumpster Divers
+
+> A chunky pixel-art roguelite where back-alley cats raid dumpster dungeons for loot, fight mutants, and escape before the trash truck arrives. Includes a story mode, a hideout to upgrade, and post-story team raids with CTB combat and an FFX-style sphere grid.
+
+## Pages
+
+- [Alley Hub](/): Home base — pick a cat, pick a dumpster, start a run.
+- [Dumpster Map](/map): Browse the neighborhood and pick your next dumpster dungeon.
+- [Dumpster Dive](/dive): Active run — fight enemies and grab loot before the truck.
+- [Loot Reveal](/loot): Post-run summary of everything you hauled out.
+- [Stash](/inventory): Sort, equip, sell, or hoard your trash treasures.
+- [Cat Crew](/crew): Manage your roster of alley cats and their evolutions.
+- [Hideout](/hideout): Spend resources to upgrade rooms and perks.
+- [Raccoon Shop](/shop): Trade fishbones and bottlecaps with a shifty merchant.
+- [Story](/story): Play through the chapters of the cat's rise to alley legend.
+- [Raids](/raids): Post-story team raids with CTB turn combat and sphere grids.

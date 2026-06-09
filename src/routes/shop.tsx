@@ -9,9 +9,13 @@ export const Route = createFileRoute("/shop")({
   head: () => ({
     meta: [
       { title: "Raccoon Shop — Alley Cat Dumpster Divers" },
-      { name: "description", content: "A shifty raccoon will sell you almost anything. Cash up front." },
+      { name: "description", content: "Trade fishbones and bottlecaps with a shifty raccoon merchant for weapons, armor, snacks, and the occasional cursed relic." },
       { property: "og:title", content: "Raccoon Shop" },
-      { property: "og:description", content: "A shifty raccoon merchant." },
+      { property: "og:description", content: "Trade fishbones and bottlecaps with a shifty raccoon merchant for gear, snacks, and cursed relics." },
+      { property: "og:url", content: "https://alleycatdive.com/shop" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://alleycatdive.com/shop" },
     ],
   }),
   component: ShopScreen,

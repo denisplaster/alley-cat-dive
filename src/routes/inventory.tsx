@@ -7,9 +7,13 @@ export const Route = createFileRoute("/inventory")({
   head: () => ({
     meta: [
       { title: "Stash — Alley Cat Dumpster Divers" },
-      { name: "description", content: "Sort your trash treasures. Equip, sell, or hoard." },
+      { name: "description", content: "Sort the trash treasures you dragged out of the dumpster — equip weapons, armor, and relics, eat food, or hoard junk for crafting." },
       { property: "og:title", content: "Stash" },
-      { property: "og:description", content: "Sort your trash treasures." },
+      { property: "og:description", content: "Sort, equip, sell, or hoard the trash treasures your cats dragged out of the dumpster dungeons." },
+      { property: "og:url", content: "https://alleycatdive.com/inventory" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://alleycatdive.com/inventory" },
     ],
   }),
   component: InventoryScreen,

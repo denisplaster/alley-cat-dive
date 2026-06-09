@@ -7,9 +7,13 @@ export const Route = createFileRoute("/hideout")({
   head: () => ({
     meta: [
       { title: "Hideout — Alley Cat Dumpster Divers" },
-      { name: "description", content: "Upgrade the alley hideout. Make your cats stronger." },
+      { name: "description", content: "Spend fishbones and bottlecaps to upgrade the alley hideout — unlock new rooms, perks, and stat boosts for your cat crew." },
       { property: "og:title", content: "Hideout" },
-      { property: "og:description", content: "Upgrade your alley base." },
+      { property: "og:description", content: "Spend fishbones and bottlecaps to upgrade the back-alley hideout and buff your cat crew between runs." },
+      { property: "og:url", content: "https://alleycatdive.com/hideout" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://alleycatdive.com/hideout" },
     ],
   }),
   component: HideoutScreen,

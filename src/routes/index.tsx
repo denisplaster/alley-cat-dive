@@ -7,10 +7,46 @@ import { EVOLUTIONS, computeEvolution } from "@/lib/game/evolution";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Alley Cat Dumpster Divers — Hub" },
-      { name: "description", content: "Your alley hideout. Pick a dumpster, dive deep, escape with the loot." },
-      { property: "og:title", content: "Alley Cat Dumpster Divers" },
-      { property: "og:description", content: "Every dumpster is a dungeon." },
+      { title: "Alley Cat Dumpster Divers — Alley Hub" },
+      { name: "description", content: "Your alley hideout HQ. Pick a dumpster, choose a cat diver, and start a run before the trash truck rolls in to crush your loot." },
+      { property: "og:title", content: "Alley Cat Dumpster Divers — Alley Hub" },
+      { property: "og:description", content: "Pick a dumpster, choose your cat diver, and start a run from the back-alley hub of Alley Cat Dumpster Divers." },
+      { property: "og:url", content: "https://alleycatdive.com/" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://alleycatdive.com/" },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Alley Cat Dumpster Divers",
+          url: "https://alleycatdive.com/",
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "Alley Cat Dumpster Divers",
+          url: "https://alleycatdive.com/",
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "VideoGame",
+          name: "Alley Cat Dumpster Divers",
+          url: "https://alleycatdive.com/",
+          genre: ["Roguelite", "Dungeon Crawler", "RPG"],
+          gamePlatform: "Web Browser",
+          applicationCategory: "Game",
+        }),
+      },
     ],
   }),
   component: AlleyHub,
@@ -55,7 +91,7 @@ function AlleyHub() {
               <span className="bg-primary px-2 py-0.5 text-[10px] font-bold uppercase text-black">Active Diver</span>
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Lvl {activeCat.level}</span>
             </div>
-            <h3 className="font-display text-lg uppercase leading-tight md:text-xl">{activeCat.name}</h3>
+            <h2 className="font-display text-lg uppercase leading-tight md:text-xl">{activeCat.name}</h2>
             <p className="mb-2 text-[10px] text-muted-foreground">{activeCat.catClass}</p>
             <div className="mb-2 border-2 border-black bg-primary/20 px-2 py-1">
               <div className="text-[9px] font-bold uppercase tracking-wider text-primary">Evolution</div>
@@ -99,7 +135,7 @@ function AlleyHub() {
                 <span className="text-[10px] font-bold uppercase text-muted-foreground">Locked</span>
               )}
             </div>
-            <h3 className="mb-0.5 font-display text-base uppercase leading-tight md:text-lg">{selected.name}</h3>
+            <h2 className="mb-0.5 font-display text-base uppercase leading-tight md:text-lg">{selected.name}</h2>
             <p className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
               Diff {"★".repeat(selected.difficulty)}{"☆".repeat(6 - selected.difficulty)}
             </p>

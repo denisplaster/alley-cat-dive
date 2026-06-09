@@ -7,9 +7,13 @@ export const Route = createFileRoute("/crew")({
   head: () => ({
     meta: [
       { title: "Cat Crew — Alley Cat Dumpster Divers" },
-      { name: "description", content: "Your scrappy crew of alley cats. Pick your diver." },
+      { name: "description", content: "Manage your scrappy crew of alley cats — compare classes, stats, and evolutions, then pick the diver you trust with the next dumpster run." },
       { property: "og:title", content: "Cat Crew" },
-      { property: "og:description", content: "Pick your alley cat diver." },
+      { property: "og:description", content: "Compare classes, stats, and evolutions for your crew of alley cats, then pick the right diver for the next run." },
+      { property: "og:url", content: "https://alleycatdive.com/crew" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://alleycatdive.com/crew" },
     ],
   }),
   component: CrewScreen,

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StoryRouteImport } from './routes/story'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as RaidsRouteImport } from './routes/raids'
 import { Route as MapRouteImport } from './routes/map'
@@ -25,6 +26,11 @@ import { Route as GridCatIdRouteImport } from './routes/grid.$catId'
 const StoryRoute = StoryRouteImport.update({
   id: '/story',
   path: '/story',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShopRoute = ShopRouteImport.update({
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/map': typeof MapRoute
   '/raids': typeof RaidsRoute
   '/shop': typeof ShopRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/story': typeof StoryRoute
   '/grid/$catId': typeof GridCatIdRoute
   '/raid/$dungeonId': typeof RaidDungeonIdRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/map': typeof MapRoute
   '/raids': typeof RaidsRoute
   '/shop': typeof ShopRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/story': typeof StoryRoute
   '/grid/$catId': typeof GridCatIdRoute
   '/raid/$dungeonId': typeof RaidDungeonIdRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/map': typeof MapRoute
   '/raids': typeof RaidsRoute
   '/shop': typeof ShopRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/story': typeof StoryRoute
   '/grid/$catId': typeof GridCatIdRoute
   '/raid/$dungeonId': typeof RaidDungeonIdRoute
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
     | '/map'
     | '/raids'
     | '/shop'
+    | '/sitemap.xml'
     | '/story'
     | '/grid/$catId'
     | '/raid/$dungeonId'
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
     | '/map'
     | '/raids'
     | '/shop'
+    | '/sitemap.xml'
     | '/story'
     | '/grid/$catId'
     | '/raid/$dungeonId'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/map'
     | '/raids'
     | '/shop'
+    | '/sitemap.xml'
     | '/story'
     | '/grid/$catId'
     | '/raid/$dungeonId'
@@ -181,6 +193,7 @@ export interface RootRouteChildren {
   MapRoute: typeof MapRoute
   RaidsRoute: typeof RaidsRoute
   ShopRoute: typeof ShopRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StoryRoute: typeof StoryRoute
   GridCatIdRoute: typeof GridCatIdRoute
   RaidDungeonIdRoute: typeof RaidDungeonIdRoute
@@ -193,6 +206,13 @@ declare module '@tanstack/react-router' {
       path: '/story'
       fullPath: '/story'
       preLoaderRoute: typeof StoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/shop': {
@@ -285,6 +305,7 @@ const rootRouteChildren: RootRouteChildren = {
   MapRoute: MapRoute,
   RaidsRoute: RaidsRoute,
   ShopRoute: ShopRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   StoryRoute: StoryRoute,
   GridCatIdRoute: GridCatIdRoute,
   RaidDungeonIdRoute: RaidDungeonIdRoute,
