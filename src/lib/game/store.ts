@@ -992,7 +992,46 @@ export const useGame = create<GameState>((set, get) => ({
       },
     });
   },
-  closeCutscene: () => set({ activeCutscene: null }),
+  closeCutscene: () => {
+    const s = get();
+    const c = s.activeCutscene;
+    // Skipping an outro must still complete the chapter, otherwise the
+    // next dive replays the same chapter forever.
+    if (c?.phase === "outro") {
+      const chapter = chapterById(c.chapterId);
+      if (chapter) {
+        const stage = chapter.unlocksStage ?? s.hideoutStage;
+        const stageIdx = STAGE_ORDER.indexOf(stage);
+        const curIdx = STAGE_ORDER.indexOf(s.hideoutStage);
+        const nextStage = stageIdx > curIdx ? stage : s.hideoutStage;
+        const completed = s.completedChapters.includes(chapter.id)
+          ? s.completedChapters : [...s.completedChapters, chapter.id];
+        const nextIdx = Math.min(STORY_CHAPTERS.length, s.storyChapterIdx + 1);
+        const prevEvo = computeEvolution({
+          completedChapters: s.completedChapters,
+          roomsCleared: s.roomsCleared,
+          bossesBeaten: s.bossesBeaten,
+        });
+        const nextEvo = computeEvolution({
+          completedChapters: completed,
+          roomsCleared: s.roomsCleared,
+          bossesBeaten: s.bossesBeaten,
+        });
+        set({
+          activeCutscene: null,
+          hideoutStage: nextStage,
+          completedChapters: completed,
+          storyChapterIdx: nextIdx,
+          pendingReward: {
+            chapterId: chapter.id,
+            newEvolution: nextEvo !== prevEvo ? nextEvo : undefined,
+          },
+        });
+        return;
+      }
+    }
+    set({ activeCutscene: null });
+  },
   makeChoice: (chapterId, optionId) => {
     const s = get();
     set({ storyChoices: { ...s.storyChoices, [chapterId]: optionId } });
