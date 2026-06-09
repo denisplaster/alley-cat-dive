@@ -96,9 +96,8 @@ interface GameState {
   // story
   storyChapterIdx: number;             // 0-based pointer to next chapter to play
   completedChapters: string[];
-  storyChoices: Record<string, string>;
-  /** Chapter ids whose intro cutscene has been shown at least once. */
   seenIntros: string[];
+  storyChoices: Record<string, string>;
   hideoutStage: HideoutStage;
   placedItems: Record<string, string>; // slotId -> itemId
   activeCutscene: { chapterId: string; phase: "intro" | "outro"; panel: number } | null;
@@ -330,26 +329,16 @@ export const useGame = create<GameState>((set, get) => ({
     // art and a different enemy pool. Free-roam picks (post-campaign or via
     // the map) still honor selectedDumpsterId.
     const currentChapter = STORY_CHAPTERS[s.storyChapterIdx];
-    // If the current chapter still has an unseen intro, play it before the
-    // dive begins so the player isn't silently dropped into the next chapter.
-    if (
-      currentChapter &&
-      !s.completedChapters.includes(currentChapter.id) &&
-      !s.seenIntros.includes(currentChapter.id) &&
-      !s.activeCutscene
-    ) {
+    const hasUnfinishedChapter = currentChapter && !s.completedChapters.includes(currentChapter.id);
+    if (hasUnfinishedChapter && s.activeCutscene?.phase === "intro") return;
+    if (hasUnfinishedChapter && !s.seenIntros.includes(currentChapter.id)) {
       set({
         activeCutscene: { chapterId: currentChapter.id, phase: "intro", panel: 0 },
         seenIntros: [...s.seenIntros, currentChapter.id],
       });
       return;
     }
-    // If an intro cutscene is still open (e.g. user closed and immediately
-    // hit Start Dive again), close it so we don't show it on top of the dive.
-    if (s.activeCutscene?.phase === "intro") {
-      set({ activeCutscene: null });
-    }
-    const chapterDumpsterId = currentChapter && !s.completedChapters.includes(currentChapter.id)
+    const chapterDumpsterId = hasUnfinishedChapter
       ? CHAPTER_DUMPSTER[currentChapter.id]
       : null;
     const dumpId = chapterDumpsterId ?? s.selectedDumpsterId;
@@ -960,10 +949,12 @@ export const useGame = create<GameState>((set, get) => ({
 
   openCutscene: (chapterId, phase) => {
     const s = get();
-    const seenIntros = phase === "intro" && !s.seenIntros.includes(chapterId)
-      ? [...s.seenIntros, chapterId]
-      : s.seenIntros;
-    set({ activeCutscene: { chapterId, phase, panel: 0 }, seenIntros });
+    set({
+      activeCutscene: { chapterId, phase, panel: 0 },
+      seenIntros: phase === "intro" && !s.seenIntros.includes(chapterId)
+        ? [...s.seenIntros, chapterId]
+        : s.seenIntros,
+    });
   },
   advanceCutscene: () => {
     const s = get();

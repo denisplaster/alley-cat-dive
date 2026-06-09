@@ -87,10 +87,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "Alley Cat Dumpster Divers" },
-      { name: "twitter:description", content: "Every dumpster is a dungeon. Dive, loot, escape." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/f5597a8b-100f-423e-ac1e-e79cd7b36976" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/f5597a8b-100f-423e-ac1e-e79cd7b36976" },
     ],
     links: [
       {

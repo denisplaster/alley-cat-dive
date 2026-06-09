@@ -24,6 +24,7 @@ export const Route = createFileRoute("/dive")({
 
 function DiveScreen() {
   const dive = useGame(s => s.dive);
+  const activeCutscene = useGame(s => s.activeCutscene);
   const startDive = useGame(s => s.startDive);
   const tickDive = useGame(s => s.tickDive);
   const cats = useGame(s => s.cats);
@@ -33,8 +34,8 @@ function DiveScreen() {
   const [drawer, setDrawer] = useState<null | "log" | "pile">(null);
 
   useEffect(() => {
-    if (!dive && !lastRewards) startDive();
-  }, [dive, lastRewards, startDive]);
+    if (!dive && !lastRewards && !activeCutscene) startDive();
+  }, [dive, lastRewards, activeCutscene, startDive]);
 
   useEffect(() => {
     if (lastRewards) navigate({ to: "/loot" });
