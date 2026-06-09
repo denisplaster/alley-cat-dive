@@ -416,15 +416,16 @@ function createRaidSceneClass() {
       v.hpBar.fillStyle(color, 1); v.hpBar.fillRect(-W/2 + 1, yOff + 1, (W - 2) * Math.max(0, Math.min(1, frac)), H - 2);
       v.hpBar.lineStyle(1, 0x000000, 1); v.hpBar.strokeRect(-W/2, yOff, W, H);
     };
-    // hp/mp/od bars stacked under the name
-    let yOff = 14;
+    // hp/mp/od bars stacked under the name (hpBar's y is already set to start
+    // BELOW the name text in positionLabels — so offsets are relative to that)
+    let yOff = 0;
     drawBar(yOff, a.hp / a.maxHp, 0x3ddc84); yOff += H + gap;
     if (a.side === "party") {
       drawBar(yOff, a.mp / a.maxMp, 0x4fc3ff); yOff += H + gap;
     }
-    drawBar(yOff, a.od / a.odMax, 0xffc14a);
+    drawBar(yOff, a.od / a.odMax, 0xffc14a); yOff += H + gap;
     v.hpText.setText(`${Math.round(a.hp)}/${a.maxHp}`);
-    v.hpText.setPosition(v.nameText.x, v.nameText.y + 4 + H);
+    v.hpText.setPosition(v.hpBar.x, v.hpBar.y + yOff);
   }
 
   private layoutActors() {
@@ -497,8 +498,11 @@ function createRaidSceneClass() {
     const h = dispH ?? v.sprite.displayHeight ?? 120;
     const yo = v.baseY + h / 2 + 6;
     v.nameText.setPosition(v.baseX, yo);
-    v.hpText.setPosition(v.baseX, yo);
-    v.hpBar.setPosition(v.baseX, yo);
+    // Stack bars below the name plate (~16px tall), then hp text under bars.
+    const barsY = yo + 16;
+    v.hpBar.setPosition(v.baseX, barsY);
+    // hpText position is finalized inside drawHpBar once bar count is known.
+    v.hpText.setPosition(v.baseX, barsY);
     v.shadow.setPosition(v.baseX, v.baseY + h / 2 + 2);
   }
 
