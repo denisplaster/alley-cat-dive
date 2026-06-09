@@ -61,6 +61,8 @@ function InventoryScreen() {
         ))}
       </div>
 
+      <CharacterPanel cat={activeCat} />
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <div className="lg:col-span-8">
           {items.length === 0 ? (
