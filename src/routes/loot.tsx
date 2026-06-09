@@ -6,9 +6,13 @@ export const Route = createFileRoute("/loot")({
   head: () => ({
     meta: [
       { title: "Loot — Alley Cat Dumpster Divers" },
-      { name: "description", content: "Survey what you dragged out of the dumpster." },
+      { name: "description", content: "Survey the loot you dragged out of the dumpster — rare relics, weapons, and snacks ready to be collected into your stash." },
       { property: "og:title", content: "Loot Reveal" },
-      { property: "og:description", content: "Survey what you dragged out of the dumpster." },
+      { property: "og:description", content: "The post-dive loot reveal — see every relic, weapon, and snack you hauled out of the dumpster." },
+      { property: "og:url", content: "https://alleycatdive.com/loot" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://alleycatdive.com/loot" },
     ],
   }),
   component: LootScreen,
