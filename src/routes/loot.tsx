@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useGame, rarityClass, rarityGlow } from "@/lib/game/store";
 
 export const Route = createFileRoute("/loot")({
@@ -21,13 +21,38 @@ export const Route = createFileRoute("/loot")({
 function LootScreen() {
   const lastRewards = useGame(s => s.lastRewards);
   const collect = useGame(s => s.collectRewards);
+  const dive = useGame(s => s.dive);
+  const cats = useGame(s => s.cats);
   const navigate = useNavigate();
+  const wasDefeated = !!dive?.fled && dive?.catPose === "ko";
+  const [showDefeat, setShowDefeat] = useState(wasDefeated);
+  const cat = cats.find(c => c.id === dive?.catId);
 
   useEffect(() => {
     if (!lastRewards) navigate({ to: "/" });
   }, [lastRewards, navigate]);
 
   if (!lastRewards) return null;
+
+  if (showDefeat) {
+    return (
+      <div className="mt-20 flex flex-col items-center text-center">
+        <h1 className="font-display text-6xl uppercase text-destructive drop-shadow-[0_0_24px_rgba(244,63,94,0.7)] md:text-7xl animate-floaty">
+          Defeated
+        </h1>
+        <p className="mt-4 max-w-md text-sm uppercase tracking-[0.25em] text-muted-foreground">
+          💀 {cat?.name ?? "Your cat"} went down in the bin. The crew dragged them out before the truck rolled in — but half the haul was lost in the scramble.
+        </p>
+        <div className="mt-10 text-6xl">🪦</div>
+        <button
+          onClick={() => setShowDefeat(false)}
+          className="chunky-button mt-10 bg-destructive px-10 py-4 font-display text-2xl uppercase text-white"
+        >
+          See What's Left
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-6">
