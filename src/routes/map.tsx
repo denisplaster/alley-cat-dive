@@ -6,9 +6,13 @@ export const Route = createFileRoute("/map")({
   head: () => ({
     meta: [
       { title: "Dumpster Map — Alley Cat Dumpster Divers" },
-      { name: "description", content: "Choose your dumpster. Each one is a different dungeon." },
+      { name: "description", content: "Browse the neighborhood map and pick your next dumpster dungeon — each bin has unique loot, enemies, and a different trash-truck timer." },
       { property: "og:title", content: "Dumpster Map" },
-      { property: "og:description", content: "Choose your dumpster. Each one is a different dungeon." },
+      { property: "og:description", content: "Browse the neighborhood map and pick your next dumpster dungeon in Alley Cat Dumpster Divers." },
+      { property: "og:url", content: "https://alleycatdive.com/map" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://alleycatdive.com/map" },
     ],
   }),
   component: MapScreen,
@@ -66,7 +70,7 @@ function DumpsterCard({ d, selected, onSelect }: { d: Dumpster; selected: boolea
         )}
       </div>
       <div className="mb-2 flex items-start justify-between gap-2">
-        <h3 className="font-display text-lg uppercase leading-tight">{d.name}</h3>
+        <h2 className="font-display text-lg uppercase leading-tight">{d.name}</h2>
         <span className="shrink-0 text-[10px] font-bold uppercase text-accent">
           {"★".repeat(d.difficulty)}{"☆".repeat(6 - d.difficulty)}
         </span>
