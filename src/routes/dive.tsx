@@ -14,9 +14,13 @@ export const Route = createFileRoute("/dive")({
   head: () => ({
     meta: [
       { title: "Dumpster Dive — Alley Cat Dumpster Divers" },
-      { name: "description", content: "Active dive in progress. Fight, loot, escape before the trash truck." },
+      { name: "description", content: "Active dive in progress — fight enemies, scoop loot, and escape the dumpster dungeon before the trash truck arrives." },
       { property: "og:title", content: "Dumpster Dive" },
-      { property: "og:description", content: "Active dive in progress." },
+      { property: "og:description", content: "Active dive in progress — fight, loot, and escape the dumpster before the trash truck rolls in." },
+      { property: "og:url", content: "https://alleycatdive.com/dive" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://alleycatdive.com/dive" },
     ],
   }),
   component: DiveScreen,
@@ -56,6 +60,7 @@ function DiveScreen() {
 
   return (
     <div className="mt-1 flex h-[calc(100dvh-8rem)] min-h-0 flex-col gap-1 md:h-[calc(100dvh-5.25rem)]">
+      <h1 className="sr-only">Dive: {dump.name}</h1>
       {/* Ultra-compact top strip */}
       <div className="grid grid-cols-1 gap-1 md:grid-cols-[auto_1fr_auto]">
         <RunHeader dump={dump} room={dive.room} totalRooms={dive.totalRooms} />
