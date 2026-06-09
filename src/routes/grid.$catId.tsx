@@ -3,10 +3,16 @@ import { useGame } from "@/lib/game/store";
 import { GRID_LAYOUTS, NODE_META, isUnlockable, aggregateGrid } from "@/lib/game/gridData";
 
 export const Route = createFileRoute("/grid/$catId")({
-  head: () => ({
+  head: ({ params }) => ({
     meta: [
-      { title: "Sphere Grid — Alley Cat Dumpster Divers" },
-      { name: "description", content: "Spend spheres earned in raids to grow your cat's stats." },
+      { title: `Sphere Grid: ${params.catId} — Alley Cat Dumpster Divers` },
+      { name: "description", content: "Spend spheres earned in raids to grow your cat's stats — unlock nodes across the FFX-style sphere grid to shape their build." },
+      { property: "og:title", content: `Sphere Grid: ${params.catId}` },
+      { property: "og:description", content: "Spend raid spheres to unlock nodes on the FFX-style sphere grid and shape your cat's stat build." },
+      { property: "og:url", content: `https://alleycatdive.com/grid/${params.catId}` },
+    ],
+    links: [
+      { rel: "canonical", href: `https://alleycatdive.com/grid/${params.catId}` },
     ],
   }),
   component: GridScreen,
