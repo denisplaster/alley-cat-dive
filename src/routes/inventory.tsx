@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useGame, rarityClass, rarityGlow } from "@/lib/game/store";
-import type { ItemKind } from "@/lib/game/types";
+import type { Cat, Item, ItemKind } from "@/lib/game/types";
 
 export const Route = createFileRoute("/inventory")({
   head: () => ({
