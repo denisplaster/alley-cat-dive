@@ -97,6 +97,8 @@ interface GameState {
   storyChapterIdx: number;             // 0-based pointer to next chapter to play
   completedChapters: string[];
   storyChoices: Record<string, string>;
+  /** Chapter ids whose intro cutscene has been shown at least once. */
+  seenIntros: string[];
   hideoutStage: HideoutStage;
   placedItems: Record<string, string>; // slotId -> itemId
   activeCutscene: { chapterId: string; phase: "intro" | "outro"; panel: number } | null;
