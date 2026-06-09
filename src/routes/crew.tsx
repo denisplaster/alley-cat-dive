@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useGame } from "@/lib/game/store";
 import type { Cat } from "@/lib/game/types";
 import { EVOLUTIONS, computeEvolution } from "@/lib/game/evolution";
+import { STORY_CHAPTERS } from "@/lib/game/story";
 
 export const Route = createFileRoute("/crew")({
   head: () => ({
@@ -27,6 +28,9 @@ function CrewScreen() {
   const roomsCleared = useGame(s => s.roomsCleared);
   const bossesBeaten = useGame(s => s.bossesBeaten);
   const evo = EVOLUTIONS[computeEvolution({ completedChapters: completed, roomsCleared, bossesBeaten })];
+  const storyComplete = STORY_CHAPTERS.every(ch => completed.includes(ch.id));
+  const devMode = import.meta.env.DEV;
+  const crewUnlocked = storyComplete || devMode;
 
   return (
     <div className="mt-6">
@@ -34,6 +38,19 @@ function CrewScreen() {
         <h1 className="font-display text-4xl uppercase md:text-5xl">Cat Crew</h1>
         <p className="text-xs uppercase tracking-widest text-muted-foreground">Five strays. One alley. Infinite problems.</p>
       </header>
+      {!crewUnlocked && (
+        <div className="chunky-panel mb-4 flex flex-wrap items-center gap-3 border-destructive bg-destructive/15 p-3">
+          <span className="border-2 border-black bg-destructive px-2 py-0.5 text-[10px] font-bold uppercase text-foreground">
+            🔒 Crew Locked
+          </span>
+          <span className="text-[11px] uppercase tracking-wider">
+            Only Scrapper is playable. Finish the story to unlock the full crew.
+          </span>
+          <span className="ml-auto text-[10px] uppercase text-muted-foreground">
+            {completed.length} / {STORY_CHAPTERS.length} chapters
+          </span>
+        </div>
+      )}
       <div className="chunky-panel mb-4 flex flex-wrap items-center gap-3 bg-black/80 p-3">
         <span className="border-2 border-black bg-primary px-2 py-0.5 text-[10px] font-bold uppercase text-black">
           Main Cat Evolution
@@ -45,7 +62,18 @@ function CrewScreen() {
         </span>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {cats.map(c => <CatCard key={c.id} c={c} active={c.id === activeId} onSelect={() => setActive(c.id)} />)}
+        {cats.map(c => {
+          const locked = !crewUnlocked && c.id !== "scrapper";
+          return (
+            <CatCard
+              key={c.id}
+              c={c}
+              active={c.id === activeId}
+              locked={locked}
+              onSelect={() => { if (!locked) setActive(c.id); }}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -58,11 +86,16 @@ const statusTone: Record<Cat["status"], string> = {
   resting: "bg-accent text-black",
 };
 
-function CatCard({ c, active, onSelect }: { c: Cat; active: boolean; onSelect: () => void }) {
+function CatCard({ c, active, locked, onSelect }: { c: Cat; active: boolean; locked: boolean; onSelect: () => void }) {
   const recoverMin = Math.floor(c.recoverySecondsLeft / 60);
   const recoverSec = c.recoverySecondsLeft % 60;
   return (
-    <div className={`chunky-panel bg-black/80 p-4 ${active ? "ring-4 ring-primary" : ""}`}>
+    <div className={`chunky-panel relative bg-black/80 p-4 ${active ? "ring-4 ring-primary" : ""} ${locked ? "opacity-60" : ""}`}>
+      {locked && (
+        <span className="absolute right-2 top-2 z-10 border-2 border-black bg-destructive px-2 py-0.5 text-[10px] font-bold uppercase text-foreground">
+          🔒 Locked
+        </span>
+      )}
       <div className="mb-3 flex items-start gap-3">
         <img src={c.portrait} alt={c.name} width={96} height={96} className="size-20 border-4 border-black bg-slate-800 object-cover" />
         <div className="flex-1">
@@ -101,11 +134,11 @@ function CatCard({ c, active, onSelect }: { c: Cat; active: boolean; onSelect: (
       </div>
 
       <button
-        disabled={c.status !== "ready" || active}
+        disabled={locked || c.status !== "ready" || active}
         onClick={onSelect}
         className={`chunky-button mt-4 w-full py-2 text-xs font-bold uppercase ${active ? "bg-primary text-black" : "bg-slate-800"}`}
       >
-        {active ? "Active Diver" : c.status === "ready" ? "Set Active" : "Unavailable"}
+        {locked ? "Locked — Finish Story" : active ? "Active Diver" : c.status === "ready" ? "Set Active" : "Unavailable"}
       </button>
     </div>
   );
