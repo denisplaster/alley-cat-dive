@@ -5,10 +5,16 @@ import { RAIDS } from "@/lib/game/raidData";
 import { PhaserBattle } from "@/components/game/raid/PhaserBattle";
 
 export const Route = createFileRoute("/raid/$dungeonId")({
-  head: () => ({
+  head: ({ params }) => ({
     meta: [
-      { title: "Raid — Alley Cat Dumpster Divers" },
-      { name: "description", content: "Active team raid. CTB combat in progress." },
+      { title: `Raid: ${params.dungeonId} — Alley Cat Dumpster Divers` },
+      { name: "description", content: "Active team raid in progress — CTB turn combat with your three-cat crew against bosses for spheres, loot, and bragging rights." },
+      { property: "og:title", content: `Raid: ${params.dungeonId}` },
+      { property: "og:description", content: "Active team raid in progress — CTB turn combat with your three-cat crew against bosses for spheres and loot." },
+      { property: "og:url", content: `https://alleycatdive.com/raid/${params.dungeonId}` },
+    ],
+    links: [
+      { rel: "canonical", href: `https://alleycatdive.com/raid/${params.dungeonId}` },
     ],
   }),
   component: RaidScreen,
