@@ -300,6 +300,7 @@ export const useGame = create<GameState>((set, get) => ({
 
   storyChapterIdx: 0,
   completedChapters: [],
+  seenIntros: [],
   storyChoices: {},
   hideoutStage: "tin_can",
   placedItems: {},
