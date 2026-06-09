@@ -97,6 +97,8 @@ interface GameState {
   storyChapterIdx: number;             // 0-based pointer to next chapter to play
   completedChapters: string[];
   storyChoices: Record<string, string>;
+  /** Chapter ids whose intro cutscene has been shown at least once. */
+  seenIntros: string[];
   hideoutStage: HideoutStage;
   placedItems: Record<string, string>; // slotId -> itemId
   activeCutscene: { chapterId: string; phase: "intro" | "outro"; panel: number } | null;
@@ -298,6 +300,7 @@ export const useGame = create<GameState>((set, get) => ({
 
   storyChapterIdx: 0,
   completedChapters: [],
+  seenIntros: [],
   storyChoices: {},
   hideoutStage: "tin_can",
   placedItems: {},
@@ -322,17 +325,30 @@ export const useGame = create<GameState>((set, get) => ({
 
   startDive: () => {
     const s = get();
-    // If an intro cutscene is still open (e.g. user clicked the home page
-    // "Start Dive" button while the overlay was up), close it so we don't
-    // re-show it on top of the dive.
-    if (s.activeCutscene?.phase === "intro") {
-      set({ activeCutscene: null });
-    }
     // While the player still has an unfinished story chapter, force the dive
     // into that chapter's themed dumpster so every chapter shows different
     // art and a different enemy pool. Free-roam picks (post-campaign or via
     // the map) still honor selectedDumpsterId.
     const currentChapter = STORY_CHAPTERS[s.storyChapterIdx];
+    // If the current chapter still has an unseen intro, play it before the
+    // dive begins so the player isn't silently dropped into the next chapter.
+    if (
+      currentChapter &&
+      !s.completedChapters.includes(currentChapter.id) &&
+      !s.seenIntros.includes(currentChapter.id) &&
+      !s.activeCutscene
+    ) {
+      set({
+        activeCutscene: { chapterId: currentChapter.id, phase: "intro", panel: 0 },
+        seenIntros: [...s.seenIntros, currentChapter.id],
+      });
+      return;
+    }
+    // If an intro cutscene is still open (e.g. user closed and immediately
+    // hit Start Dive again), close it so we don't show it on top of the dive.
+    if (s.activeCutscene?.phase === "intro") {
+      set({ activeCutscene: null });
+    }
     const chapterDumpsterId = currentChapter && !s.completedChapters.includes(currentChapter.id)
       ? CHAPTER_DUMPSTER[currentChapter.id]
       : null;
@@ -943,7 +959,11 @@ export const useGame = create<GameState>((set, get) => ({
   },
 
   openCutscene: (chapterId, phase) => {
-    set({ activeCutscene: { chapterId, phase, panel: 0 } });
+    const s = get();
+    const seenIntros = phase === "intro" && !s.seenIntros.includes(chapterId)
+      ? [...s.seenIntros, chapterId]
+      : s.seenIntros;
+    set({ activeCutscene: { chapterId, phase, panel: 0 }, seenIntros });
   },
   advanceCutscene: () => {
     const s = get();
