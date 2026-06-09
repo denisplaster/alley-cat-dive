@@ -7,9 +7,13 @@ export const Route = createFileRoute("/raids")({
   head: () => ({
     meta: [
       { title: "Raids — Alley Cat Dumpster Divers" },
-      { name: "description", content: "Post-story team raids. FFX-style turn combat, sphere grids, overdrives." },
+      { name: "description", content: "Take a crew of three cats into post-story team raids with CTB turn combat, sphere-grid growth, and overdrive finishers." },
       { property: "og:title", content: "Raids" },
-      { property: "og:description", content: "Take a crew of 3 cats into a dungeon for spheres and glory." },
+      { property: "og:description", content: "Post-story team raids with CTB turn combat, sphere grids, and overdrives. Bring three cats home with spheres and glory." },
+      { property: "og:url", content: "https://alleycatdive.com/raids" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://alleycatdive.com/raids" },
     ],
   }),
   component: RaidsScreen,
