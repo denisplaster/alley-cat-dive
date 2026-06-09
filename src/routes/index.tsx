@@ -120,7 +120,7 @@ function AlleyHub() {
             onClick={() => openCutscene(currentChapter.id, "intro")}
             className="chunky-button rotate-[1deg] bg-secondary px-4 py-2 font-display text-sm uppercase text-black md:text-base"
           >
-            ▶ Continue Story · {currentChapter.title}
+            ▶ {completed.length === 0 ? "Begin Story" : "Continue Story"} · {currentChapter.title}
           </button>
         )}
         <Link
