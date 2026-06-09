@@ -409,7 +409,7 @@ function createRaidSceneClass() {
   }
 
   private drawHpBar(v: ActorView, a: Actor) {
-    const W = 110, H = 6, gap = 2;
+    const W = 110, H = 5, gap = 6, textGap = 3;
     v.hpBar.clear();
     const drawBar = (yOff: number, frac: number, color: number) => {
       v.hpBar.fillStyle(0x000000, 0.7); v.hpBar.fillRect(-W/2, yOff, W, H);
@@ -425,7 +425,14 @@ function createRaidSceneClass() {
     }
     drawBar(yOff, a.od / a.odMax, 0xffc14a); yOff += H + gap;
     v.hpText.setText(`${Math.round(a.hp)}/${a.maxHp}`);
-    v.hpText.setPosition(v.hpBar.x, v.hpBar.y + yOff);
+    v.hpText.setPosition(v.hpBar.x, v.hpBar.y + yOff + textGap);
+  }
+
+  private barStackHeight(a?: Actor) {
+    const H = 5, gap = 6, textGap = 3;
+    if (!a) return 0;
+    const count = a.side === "party" ? 3 : 2;
+    return count * H + count * gap + textGap;
   }
 
   private layoutActors() {
@@ -499,10 +506,10 @@ function createRaidSceneClass() {
     const yo = v.baseY + h / 2 + 6;
     v.nameText.setPosition(v.baseX, yo);
     // Stack bars below the name plate (~16px tall), then hp text under bars.
-    const barsY = yo + 16;
+    const barsY = yo + 24;
     v.hpBar.setPosition(v.baseX, barsY);
-    // hpText position is finalized inside drawHpBar once bar count is known.
-    v.hpText.setPosition(v.baseX, barsY);
+    // Keep the number below the full bar stack during idle movement too.
+    v.hpText.setPosition(v.baseX, barsY + this.barStackHeight((v as any)._actor as Actor | undefined));
     v.shadow.setPosition(v.baseX, v.baseY + h / 2 + 2);
   }
 
