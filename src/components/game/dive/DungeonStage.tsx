@@ -381,7 +381,7 @@ function SpeechBubble({ bubble }: { bubble: { side: "cat" | "enemy"; text: strin
   return (
     <div
       key={bubble.key}
-      className={`pointer-events-none absolute z-40 bottom-[48%] md:bottom-[52%] ${isCat ? "left-3 md:left-8" : "right-3 md:right-8"} max-w-[38%] animate-bubble-pop`}
+      className={`pointer-events-none absolute z-40 bottom-[62%] md:bottom-[52%] ${isCat ? "left-3 md:left-8" : "right-3 md:right-8"} max-w-[38%] animate-bubble-pop`}
     >
       <div className="relative">
         <div className="relative rounded-2xl border-[3px] border-black bg-white px-3 py-2 shadow-[3px_3px_0_0_#000]">
