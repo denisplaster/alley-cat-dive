@@ -88,6 +88,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:site_name", content: "Alley Cat Dumpster Divers" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "google-site-verification", content: "rLNPcMMlujP5kbuczo-CG6_2krjEwJDWDSCloGxkwSc" },
     ],
     links: [
       {
