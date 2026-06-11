@@ -77,7 +77,7 @@ function StoryScreen() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
-                  <h3 className="font-display text-lg uppercase leading-tight">{ch.title}</h3>
+                  <h2 className="font-display text-lg uppercase leading-tight">{ch.title}</h2>
                   <p className="text-[11px] italic text-muted-foreground">{ch.subtitle}</p>
                   {choice && ch.choice && (
                     <p className="mt-2 text-[11px] uppercase tracking-wider text-secondary">
