@@ -80,6 +80,9 @@ function AlleyHub() {
           <span className="text-foreground drop-shadow-[0_0_18px_rgba(217,70,239,0.45)]">Alley Cat </span>
           <span className="animate-flicker text-primary drop-shadow-[0_0_18px_rgba(74,222,128,0.6)]">Dumpster </span>
           <span className="text-foreground drop-shadow-[0_0_18px_rgba(217,70,239,0.45)]">Divers</span>
+          <span className="mt-1 block font-sans text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground md:text-xs">
+            Roguelite Alley Hub
+          </span>
         </h1>
       </div>
 
@@ -118,6 +121,7 @@ function AlleyHub() {
               alt="Hero alley cat"
               width={800}
               height={800}
+              fetchPriority="high"
               className="animate-floaty relative z-10 h-full w-full object-contain drop-shadow-[0_20px_30px_rgba(0,0,0,0.6)]"
             />
           </div>

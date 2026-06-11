@@ -100,7 +100,7 @@ function CatCard({ c, active, locked, onSelect }: { c: Cat; active: boolean; loc
         <img src={c.portrait} alt={c.name} width={96} height={96} className="size-20 border-4 border-black bg-slate-800 object-cover" />
         <div className="flex-1">
           <div className="flex items-center justify-between">
-            <h3 className="font-display text-xl uppercase leading-none">{c.name}</h3>
+            <h2 className="font-display text-xl uppercase leading-none">{c.name}</h2>
             <span className="text-[10px] font-bold uppercase text-muted-foreground">Lvl {c.level}</span>
           </div>
           <p className="text-xs text-muted-foreground">{c.catClass}</p>

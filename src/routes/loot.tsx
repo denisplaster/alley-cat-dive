@@ -74,7 +74,7 @@ function LootScreen() {
               style={{ animationDelay: `${idx * 0.12}s` }}
             >
               <div className={`mb-2 inline-block border-2 px-2 py-0.5 text-[10px] font-bold uppercase ${rarityClass(it.rarity)}`}>{it.rarity}</div>
-              <h3 className="font-display text-lg uppercase leading-tight">{it.name}</h3>
+              <h2 className="font-display text-lg uppercase leading-tight">{it.name}</h2>
               <p className="mt-1 text-[11px] uppercase tracking-wider text-muted-foreground">{it.kind}</p>
               <div className="mt-2 grid grid-cols-3 gap-1 text-center text-[10px]">
                 <Mini label="ATK" v={it.attack} />

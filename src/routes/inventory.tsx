@@ -65,6 +65,7 @@ function InventoryScreen() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <div className="lg:col-span-8">
+          <h2 className="mb-3 font-display text-2xl uppercase">Item Stash</h2>
           {items.length === 0 ? (
             <div className="chunky-panel bg-black/60 p-10 text-center text-sm uppercase tracking-widest text-muted-foreground">
               Nothing here. Go dive a dumpster.
@@ -90,7 +91,7 @@ function InventoryScreen() {
           {selected ? (
             <div className={`chunky-panel bg-black/85 p-4 ${rarityGlow(selected.rarity)}`}>
               <div className={`mb-2 inline-block border-2 px-2 py-0.5 text-[10px] font-bold uppercase ${rarityClass(selected.rarity)}`}>{selected.rarity}</div>
-              <h3 className="font-display text-xl uppercase">{selected.name}</h3>
+              <h2 className="font-display text-xl uppercase">{selected.name}</h2>
               <p className="text-[11px] uppercase text-muted-foreground">{selected.kind}</p>
               <div className="mt-3 grid grid-cols-3 gap-1 text-center text-[10px]">
                 <div className="border-2 border-black bg-slate-900 p-1"><div className="text-muted-foreground">ATK</div><div className="font-display text-lg text-primary">{selected.attack ?? "—"}</div></div>
