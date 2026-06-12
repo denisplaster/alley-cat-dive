@@ -289,76 +289,6 @@ const seedInventory: Item[] = [
 ];
 
 // --- Award room-clear rewards when a SKILL lands the killing blow on the last foe. ---
-function clearDiveRoom(
-  get: () => GameState,
-  set: (partial: Partial<GameState>) => void,
-  ctx: {
-    enemy: Enemy; catHp: number; catMp: number;
-    catStatuses: import("./raidTypes").Status[]; enemyStatuses: import("./raidTypes").Status[];
-    log: CombatEntry[]; fx: Fx[];
-    shakeKey: number; shakeHard: boolean; enemyFlashKey: number; catFlashKey: number; enemyDefeatKey: number;
-    catPose: DiveState["catPose"]; mangaFx: DiveState["mangaFx"]; mangaWord: DiveState["mangaWord"]; mangaFocus: DiveState["mangaFocus"];
-    bubble: DiveState["bubble"]; knockbackKey: number; panelSplitKey: number;
-  },
-) {
-  const s = get();
-  const d = s.dive!;
-  const dump = s.dumpsters.find(x => x.id === d.dumpsterId)!;
-  const isBoss = d.currentKind === "boss";
-  const isMini = d.currentKind === "miniboss";
-  const dropCount = isBoss ? 3 : isMini ? 2 : 1;
-  const newDrops: Item[] = [];
-  for (let i = 0; i < dropCount; i++) newDrops.push(rollLoot(dump.expectedLoot));
-  const bonesGain = Math.round((dump.rewardBones / d.totalRooms) * (isBoss ? 1.8 : isMini ? 1.3 : 1));
-  const capsGain = Math.round((dump.rewardCaps / d.totalRooms) * (isBoss ? 1.8 : isMini ? 1.3 : 1));
-  let log = [...ctx.log];
-  newDrops.forEach(dr => { log = [...log, mklog(`✨ Looted ${dr.name}`, "loot")]; });
-  log = [...log, mklog(`Room cleared. +${bonesGain} 🦴 +${capsGain} 🧴`, "loot")];
-  const rooms = d.rooms.map((r, i) => i === d.room - 1 ? { ...r, cleared: true } : r);
-  set({
-    roomsCleared: s.roomsCleared + 1,
-    bossesBeaten: s.bossesBeaten + (isBoss ? 1 : 0),
-  });
-  set({ dive: { ...d,
-    enemy: { ...ctx.enemy }, catHp: ctx.catHp, catMp: ctx.catMp,
-    catStatuses: ctx.catStatuses, enemyStatuses: ctx.enemyStatuses,
-    collected: [...d.collected, ...newDrops],
-    bonesFound: d.bonesFound + bonesGain, capsFound: d.capsFound + capsGain,
-    log, rooms, roomCleared: true, autoDive: false,
-    roomEvent: `+${bonesGain} 🦴  +${capsGain} 🧴  ·  ${dropCount} item${dropCount > 1 ? "s" : ""}`,
-    shakeKey: ctx.shakeKey, shakeHard: ctx.shakeHard, enemyFlashKey: ctx.enemyFlashKey,
-    catFlashKey: ctx.catFlashKey, enemyDefeatKey: ctx.enemyDefeatKey + 1,
-    catPose: "victory", enemyPose: "ko", mangaFx: ctx.mangaFx, mangaWord: ctx.mangaWord, mangaFocus: ctx.mangaFocus,
-    combo: 0, comboLastAction: null, knockbackKey: ctx.knockbackKey, panelSplitKey: ctx.panelSplitKey,
-    bubble: ctx.bubble, inAction: false, enemyIntent: null, pounceCd: 0,
-  } });
-}
-
-// --- Dive status-effect helpers (shared shape with raid statuses) ---
-function tickDiveStatuses(list: import("./raidTypes").Status[]): { next: import("./raidTypes").Status[]; dot: number } {
-  let dot = 0;
-  for (const st of list) {
-    if (st.dotPower && st.sourceAtk) dot += Math.max(1, Math.round(st.sourceAtk * st.dotPower));
-  }
-  const next = list.map(st => ({ ...st, turnsLeft: st.turnsLeft - 1 })).filter(st => st.turnsLeft > 0);
-  return { next, dot };
-}
-function sumStatusMod(statuses: import("./raidTypes").Status[], key: "atkMod" | "defMod" | "spdMod"): number {
-  let m = 0;
-  for (const st of statuses) m += (st[key] ?? 0);
-  return m;
-}
-function applyStatusList(
-  list: import("./raidTypes").Status[],
-  sp: NonNullable<import("./raidTypes").Skill["applyStatus"]>,
-  sourceAtk: number,
-): import("./raidTypes").Status[] {
-  return [
-    ...list.filter(st => st.id !== sp.id),
-    { id: sp.id, turnsLeft: sp.turns, atkMod: sp.atkMod, defMod: sp.defMod, spdMod: sp.spdMod, dotPower: sp.dotPower, sourceAtk },
-  ];
-}
-
 export const useGame = create<GameState>((set, get) => ({
   playerLevel: 14,
   playerXp: 65,
@@ -819,21 +749,14 @@ export const useGame = create<GameState>((set, get) => ({
       return;
     }
 
-    let enemy = enemy0;
-    let catHp = d.catHp;
-    let catMp = Math.min(d.catMaxMp, (d.catMp - skill.mpCost) + 3);
-    let clog = [...d.log, ...preLog];
-    let fx = [...d.fx, ...preFx];
-    let { shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey,
-          knockbackKey, catKnockbackKey, panelSplitKey } = d;
     let catStatuses = [...(d.catStatuses ?? [])];
     let enemyStatuses = [...(d.enemyStatuses ?? [])];
 
     // Tick existing statuses at the start of this exchange: DoT on the enemy,
-    // duration decrement on both sides.
-    let enemy0 = { ...d.enemy! };
-    let preFx: Fx[] = [];
-    let preLog: CombatEntry[] = [];
+    // duration decrement on both sides. (Declared before use to avoid TDZ.)
+    const enemy0 = { ...d.enemy! };
+    const preFx: Fx[] = [];
+    const preLog: CombatEntry[] = [];
     {
       const tick = tickDiveStatuses(enemyStatuses);
       if (tick.dot > 0) {
@@ -845,6 +768,14 @@ export const useGame = create<GameState>((set, get) => ({
       const ct = tickDiveStatuses(catStatuses);
       catStatuses = ct.next; // (cats currently only receive buffs, no self-DoT)
     }
+
+    let enemy = enemy0;
+    let catHp = d.catHp;
+    let catMp = Math.min(d.catMaxMp, (d.catMp - skill.mpCost) + 3);
+    let clog = [...d.log, ...preLog];
+    let fx = [...d.fx, ...preFx];
+    let { shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey,
+          knockbackKey, catKnockbackKey, panelSplitKey } = d;
 
     const atk = cat.attack + sumStatusMod(catStatuses, "atkMod");
 
@@ -1975,3 +1906,75 @@ export const rarityGlow = (r: Rarity): string => ({
   legendary: "shadow-[0_0_22px_rgba(250,204,21,0.65)]",
   mythic: "shadow-[0_0_26px_rgba(239,68,68,0.7)]",
 })[r];
+
+// ---- Dive combat helpers (placed last so all referenced module consts are initialized) ----
+function clearDiveRoom(
+  get: () => GameState,
+  set: (partial: Partial<GameState>) => void,
+  ctx: {
+    enemy: Enemy; catHp: number; catMp: number;
+    catStatuses: import("./raidTypes").Status[]; enemyStatuses: import("./raidTypes").Status[];
+    log: CombatEntry[]; fx: Fx[];
+    shakeKey: number; shakeHard: boolean; enemyFlashKey: number; catFlashKey: number; enemyDefeatKey: number;
+    catPose: DiveState["catPose"]; mangaFx: DiveState["mangaFx"]; mangaWord: DiveState["mangaWord"]; mangaFocus: DiveState["mangaFocus"];
+    bubble: DiveState["bubble"]; knockbackKey: number; panelSplitKey: number;
+  },
+) {
+  const s = get();
+  const d = s.dive!;
+  const dump = s.dumpsters.find(x => x.id === d.dumpsterId)!;
+  const isBoss = d.currentKind === "boss";
+  const isMini = d.currentKind === "miniboss";
+  const dropCount = isBoss ? 3 : isMini ? 2 : 1;
+  const newDrops: Item[] = [];
+  for (let i = 0; i < dropCount; i++) newDrops.push(rollLoot(dump.expectedLoot));
+  const bonesGain = Math.round((dump.rewardBones / d.totalRooms) * (isBoss ? 1.8 : isMini ? 1.3 : 1));
+  const capsGain = Math.round((dump.rewardCaps / d.totalRooms) * (isBoss ? 1.8 : isMini ? 1.3 : 1));
+  let log = [...ctx.log];
+  newDrops.forEach(dr => { log = [...log, mklog(`✨ Looted ${dr.name}`, "loot")]; });
+  log = [...log, mklog(`Room cleared. +${bonesGain} 🦴 +${capsGain} 🧴`, "loot")];
+  const rooms = d.rooms.map((r, i) => i === d.room - 1 ? { ...r, cleared: true } : r);
+  set({
+    roomsCleared: s.roomsCleared + 1,
+    bossesBeaten: s.bossesBeaten + (isBoss ? 1 : 0),
+  });
+  set({ dive: { ...d,
+    enemy: { ...ctx.enemy }, catHp: ctx.catHp, catMp: ctx.catMp,
+    catStatuses: ctx.catStatuses, enemyStatuses: ctx.enemyStatuses,
+    collected: [...d.collected, ...newDrops],
+    bonesFound: d.bonesFound + bonesGain, capsFound: d.capsFound + capsGain,
+    log, rooms, roomCleared: true, autoDive: false,
+    roomEvent: `+${bonesGain} 🦴  +${capsGain} 🧴  ·  ${dropCount} item${dropCount > 1 ? "s" : ""}`,
+    shakeKey: ctx.shakeKey, shakeHard: ctx.shakeHard, enemyFlashKey: ctx.enemyFlashKey,
+    catFlashKey: ctx.catFlashKey, enemyDefeatKey: ctx.enemyDefeatKey + 1,
+    catPose: "victory", enemyPose: "ko", mangaFx: ctx.mangaFx, mangaWord: ctx.mangaWord, mangaFocus: ctx.mangaFocus,
+    combo: 0, comboLastAction: null, knockbackKey: ctx.knockbackKey, panelSplitKey: ctx.panelSplitKey,
+    bubble: ctx.bubble, inAction: false, enemyIntent: null, pounceCd: 0,
+  } });
+}
+
+// --- Dive status-effect helpers (shared shape with raid statuses) ---
+function tickDiveStatuses(list: import("./raidTypes").Status[]): { next: import("./raidTypes").Status[]; dot: number } {
+  let dot = 0;
+  for (const st of list) {
+    if (st.dotPower && st.sourceAtk) dot += Math.max(1, Math.round(st.sourceAtk * st.dotPower));
+  }
+  const next = list.map(st => ({ ...st, turnsLeft: st.turnsLeft - 1 })).filter(st => st.turnsLeft > 0);
+  return { next, dot };
+}
+function sumStatusMod(statuses: import("./raidTypes").Status[], key: "atkMod" | "defMod" | "spdMod"): number {
+  let m = 0;
+  for (const st of statuses) m += (st[key] ?? 0);
+  return m;
+}
+function applyStatusList(
+  list: import("./raidTypes").Status[],
+  sp: NonNullable<import("./raidTypes").Skill["applyStatus"]>,
+  sourceAtk: number,
+): import("./raidTypes").Status[] {
+  return [
+    ...list.filter(st => st.id !== sp.id),
+    { id: sp.id, turnsLeft: sp.turns, atkMod: sp.atkMod, defMod: sp.defMod, spdMod: sp.spdMod, dotPower: sp.dotPower, sourceAtk },
+  ];
+}
+
