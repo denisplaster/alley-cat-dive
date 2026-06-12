@@ -34,6 +34,10 @@ interface DiveState {
   enemies: Enemy[];
   catHp: number;
   catMaxHp: number;
+  catMp: number;
+  catMaxMp: number;
+  catStatuses: import("./raidTypes").Status[];
+  enemyStatuses: import("./raidTypes").Status[];
   timerSec: number;
   truckTimerStart: number;
   collected: Item[];
@@ -124,6 +128,7 @@ interface GameState {
   setActiveCat: (id: string) => void;
   startDive: () => void;
   doAction: (action: "scratch" | "pounce" | "block" | "item" | "flee") => void;
+  doSkill: (skillId: string) => void;
   goDeeper: () => void;
   resolveNonCombat: () => void;
   toggleAuto: () => void;
@@ -283,6 +288,77 @@ const seedInventory: Item[] = [
   { ...LOOT_POOL[8], id: newItemId() },
 ];
 
+// --- Award room-clear rewards when a SKILL lands the killing blow on the last foe. ---
+function clearDiveRoom(
+  get: () => GameState,
+  set: (partial: Partial<GameState>) => void,
+  ctx: {
+    enemy: Enemy; catHp: number; catMp: number;
+    catStatuses: import("./raidTypes").Status[]; enemyStatuses: import("./raidTypes").Status[];
+    log: CombatEntry[]; fx: Fx[];
+    shakeKey: number; shakeHard: boolean; enemyFlashKey: number; catFlashKey: number; enemyDefeatKey: number;
+    catPose: DiveState["catPose"]; mangaFx: DiveState["mangaFx"]; mangaWord: DiveState["mangaWord"]; mangaFocus: DiveState["mangaFocus"];
+    bubble: DiveState["bubble"]; knockbackKey: number; panelSplitKey: number;
+  },
+) {
+  const s = get();
+  const d = s.dive!;
+  const dump = s.dumpsters.find(x => x.id === d.dumpsterId)!;
+  const isBoss = d.currentKind === "boss";
+  const isMini = d.currentKind === "miniboss";
+  const dropCount = isBoss ? 3 : isMini ? 2 : 1;
+  const newDrops: Item[] = [];
+  for (let i = 0; i < dropCount; i++) newDrops.push(rollLoot(dump.expectedLoot));
+  const bonesGain = Math.round((dump.rewardBones / d.totalRooms) * (isBoss ? 1.8 : isMini ? 1.3 : 1));
+  const capsGain = Math.round((dump.rewardCaps / d.totalRooms) * (isBoss ? 1.8 : isMini ? 1.3 : 1));
+  let log = [...ctx.log];
+  newDrops.forEach(dr => { log = [...log, mklog(`✨ Looted ${dr.name}`, "loot")]; });
+  log = [...log, mklog(`Room cleared. +${bonesGain} 🦴 +${capsGain} 🧴`, "loot")];
+  const rooms = d.rooms.map((r, i) => i === d.room - 1 ? { ...r, cleared: true } : r);
+  set({
+    roomsCleared: s.roomsCleared + 1,
+    bossesBeaten: s.bossesBeaten + (isBoss ? 1 : 0),
+  });
+  set({ dive: { ...d,
+    enemy: { ...ctx.enemy }, catHp: ctx.catHp, catMp: ctx.catMp,
+    catStatuses: ctx.catStatuses, enemyStatuses: ctx.enemyStatuses,
+    collected: [...d.collected, ...newDrops],
+    bonesFound: d.bonesFound + bonesGain, capsFound: d.capsFound + capsGain,
+    log, rooms, roomCleared: true, autoDive: false,
+    roomEvent: `+${bonesGain} 🦴  +${capsGain} 🧴  ·  ${dropCount} item${dropCount > 1 ? "s" : ""}`,
+    shakeKey: ctx.shakeKey, shakeHard: ctx.shakeHard, enemyFlashKey: ctx.enemyFlashKey,
+    catFlashKey: ctx.catFlashKey, enemyDefeatKey: ctx.enemyDefeatKey + 1,
+    catPose: "victory", enemyPose: "ko", mangaFx: ctx.mangaFx, mangaWord: ctx.mangaWord, mangaFocus: ctx.mangaFocus,
+    combo: 0, comboLastAction: null, knockbackKey: ctx.knockbackKey, panelSplitKey: ctx.panelSplitKey,
+    bubble: ctx.bubble, inAction: false, enemyIntent: null, pounceCd: 0,
+  } });
+}
+
+// --- Dive status-effect helpers (shared shape with raid statuses) ---
+function tickDiveStatuses(list: import("./raidTypes").Status[]): { next: import("./raidTypes").Status[]; dot: number } {
+  let dot = 0;
+  for (const st of list) {
+    if (st.dotPower && st.sourceAtk) dot += Math.max(1, Math.round(st.sourceAtk * st.dotPower));
+  }
+  const next = list.map(st => ({ ...st, turnsLeft: st.turnsLeft - 1 })).filter(st => st.turnsLeft > 0);
+  return { next, dot };
+}
+function sumStatusMod(statuses: import("./raidTypes").Status[], key: "atkMod" | "defMod" | "spdMod"): number {
+  let m = 0;
+  for (const st of statuses) m += (st[key] ?? 0);
+  return m;
+}
+function applyStatusList(
+  list: import("./raidTypes").Status[],
+  sp: NonNullable<import("./raidTypes").Skill["applyStatus"]>,
+  sourceAtk: number,
+): import("./raidTypes").Status[] {
+  return [
+    ...list.filter(st => st.id !== sp.id),
+    { id: sp.id, turnsLeft: sp.turns, atkMod: sp.atkMod, defMod: sp.defMod, spdMod: sp.spdMod, dotPower: sp.dotPower, sourceAtk },
+  ];
+}
+
 export const useGame = create<GameState>((set, get) => ({
   playerLevel: 14,
   playerXp: 65,
@@ -372,6 +448,10 @@ export const useGame = create<GameState>((set, get) => ({
         enemies: rest,
         catHp: cat.hp,
         catMaxHp: cat.maxHp,
+        catMp: 30 + cat.level * 2,
+        catMaxMp: 30 + cat.level * 2,
+        catStatuses: [],
+        enemyStatuses: [],
         timerSec: dump.truckTimerSec,
         truckTimerStart: dump.truckTimerSec,
         collected: [],
@@ -676,7 +756,8 @@ export const useGame = create<GameState>((set, get) => ({
     }
 
     // Panel 1: cat-attacker view (enemy hurt). Damage already applied.
-    set({ dive: { ...d, catHp, enemy, collected, log: clog, fx, bonesFound, capsFound,
+    const regenMp = Math.min(d.catMaxMp ?? 0, (d.catMp ?? 0) + 3);
+    set({ dive: { ...d, catHp, enemy, collected, log: clog, fx, bonesFound, capsFound, catMp: regenMp,
       shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey, lastLootKey,
       catPose, enemyPose, mangaFx, mangaWord, mangaFocus,
       combo, comboLastAction, knockbackKey, catKnockbackKey, panelSplitKey, bubble,
@@ -722,6 +803,170 @@ export const useGame = create<GameState>((set, get) => ({
         } });
         if (willKo) get().endDive(false);
       }, 1800);
+    }
+  },
+
+  doSkill: (skillId) => {
+    const s = get();
+    if (!s.dive || s.dive.ended) return;
+    const d = s.dive;
+    if (d.roomCleared || !d.enemy || d.inAction) return;
+    const cat = s.cats.find(c => c.id === d.catId)!;
+    const skill = SKILLS[skillId];
+    if (!skill) return;
+    if ((d.catMp ?? 0) < skill.mpCost) {
+      set({ dive: { ...d, log: [...d.log, mklog(`Not enough MP for ${skill.name}!`, "warn")] } });
+      return;
+    }
+
+    let enemy = enemy0;
+    let catHp = d.catHp;
+    let catMp = Math.min(d.catMaxMp, (d.catMp - skill.mpCost) + 3);
+    let clog = [...d.log, ...preLog];
+    let fx = [...d.fx, ...preFx];
+    let { shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey,
+          knockbackKey, catKnockbackKey, panelSplitKey } = d;
+    let catStatuses = [...(d.catStatuses ?? [])];
+    let enemyStatuses = [...(d.enemyStatuses ?? [])];
+
+    // Tick existing statuses at the start of this exchange: DoT on the enemy,
+    // duration decrement on both sides.
+    let enemy0 = { ...d.enemy! };
+    let preFx: Fx[] = [];
+    let preLog: CombatEntry[] = [];
+    {
+      const tick = tickDiveStatuses(enemyStatuses);
+      if (tick.dot > 0) {
+        enemy0.hp = Math.max(0, enemy0.hp - tick.dot);
+        preFx.push({ id: nextFxId(), target: "enemy", kind: "dmg", amount: tick.dot });
+        preLog.push(mklog(`${enemy0.name} takes ${tick.dot} from poison/burn`, "warn"));
+      }
+      enemyStatuses = tick.next;
+      const ct = tickDiveStatuses(catStatuses);
+      catStatuses = ct.next; // (cats currently only receive buffs, no self-DoT)
+    }
+
+    const atk = cat.attack + sumStatusMod(catStatuses, "atkMod");
+
+    // A DoT may have finished the foe before the skill even lands.
+    if (enemy0.hp <= 0) {
+      if (d.enemies.length > 0) {
+        const [nextFoe, ...remaining] = d.enemies;
+        set({ dive: { ...d, enemy: nextFoe, enemies: remaining, catMp, catStatuses, enemyStatuses: [],
+          log: [...clog, mklog(`${enemy0.name} succumbs! ${nextFoe.name} steps up.`, "warn")],
+          fx, enemyDefeatKey: d.enemyDefeatKey + 1, inAction: false,
+          enemyIntent: pickEnemyIntent(d.currentKind) } });
+        return;
+      }
+      clearDiveRoom(get, set, {
+        enemy: enemy0, catHp, catMp, catStatuses, enemyStatuses, log: clog, fx,
+        shakeKey: d.shakeKey, shakeHard: true, enemyFlashKey: d.enemyFlashKey, catFlashKey: d.catFlashKey,
+        enemyDefeatKey: d.enemyDefeatKey, catPose: "victory", mangaFx: "crit", mangaWord: "crit",
+        mangaFocus: "enemy", bubble: null, knockbackKey: d.knockbackKey, panelSplitKey: d.panelSplitKey,
+      });
+      return;
+    }
+
+    let catPose: DiveState["catPose"] = skill.ultimate ? "combo" : "pounce";
+    let mangaFx: DiveState["mangaFx"] = skill.ultimate ? "crit" : skill.kind === "heal" ? "heal" : "slash";
+    let mangaWord: DiveState["mangaWord"] = skill.ultimate ? "crit" : skill.kind === "heal" ? null : "pow";
+    let mangaFocus: DiveState["mangaFocus"] = skill.kind === "heal" || skill.kind === "buff" ? "cat" : "enemy";
+
+    if (skill.kind === "heal") {
+      const heal = Math.round(Math.max(10, atk * skill.power * 1.2));
+      catHp = Math.min(d.catMaxHp, catHp + heal);
+      clog.push(mklog(`${cat.name} uses ${skill.name} — +${heal} HP`, "loot"));
+      fx.push({ id: nextFxId(), target: "cat", kind: "heal", amount: heal });
+      catPose = "item";
+    } else if (skill.kind === "buff") {
+      if (skill.applyStatus) catStatuses = applyStatusList(catStatuses, skill.applyStatus, atk);
+      clog.push(mklog(`${cat.name} uses ${skill.name}!`, "info"));
+      catPose = "block";
+    } else {
+      // damage / debuff — possibly multi-hit
+      const hits = Math.max(1, skill.hits ?? 1);
+      const enemyDef = sumStatusMod(enemyStatuses, "defMod"); // negative def = more dmg
+      let total = 0;
+      for (let h = 0; h < hits && enemy.hp > 0; h++) {
+        const isCrit = Math.random() < 0.15;
+        const real = Math.max(1, Math.round(
+          atk * skill.power * (isCrit ? 1.8 : 1) * (0.9 + Math.random() * 0.2) - enemyDef * 0.5));
+        enemy.hp = Math.max(0, enemy.hp - real);
+        total += real;
+        fx.push({ id: nextFxId(), target: "enemy", kind: isCrit ? "crit" : "dmg", amount: real });
+      }
+      enemyFlashKey += 1; shakeKey += 1; shakeHard = true;
+      if (skill.ultimate) { knockbackKey += 1; panelSplitKey += 1; }
+      clog.push(mklog(`${cat.name}'s ${skill.name} hits for ${total}${hits > 1 ? ` (${hits} hits)` : ""}!`, skill.ultimate ? "crit" : "hit"));
+      if (skill.applyStatus && enemy.hp > 0) {
+        enemyStatuses = applyStatusList(enemyStatuses, skill.applyStatus, atk);
+        clog.push(mklog(`${enemy.name} is afflicted by ${skill.name}!`, "info"));
+      }
+    }
+
+    const enemyDead = enemy.hp <= 0;
+    const bubble: DiveState["bubble"] = { side: "cat", text: skill.name + "!", key: nextBubbleKey() };
+
+    // Build the enemy counter (skills DO provoke a counter, except heals/buffs which are quicker — keep parity with item: no counter on support).
+    const isSupport = skill.kind === "heal" || skill.kind === "buff";
+    const nextIntent = pickEnemyIntent(d.currentKind);
+
+    if (enemyDead) {
+      // Defer to the same wave/clear handling used by doAction by writing state then calling the shared resolver path.
+      const cleared = d.enemies.length === 0;
+      if (!cleared) {
+        const [nextFoe, ...remaining] = d.enemies;
+        set({ dive: { ...d, enemy: nextFoe, enemies: remaining, catHp, catMp, catStatuses, enemyStatuses: [],
+          log: [...clog, mklog(`${enemy.name} drops! ${nextFoe.name} steps up.`, "warn")],
+          fx, shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey: enemyDefeatKey + 1,
+          catPose, enemyPose: "ko", mangaFx, mangaWord, mangaFocus, bubble, knockbackKey, panelSplitKey,
+          inAction: false, enemyIntent: nextIntent } });
+        return;
+      }
+      clearDiveRoom(get, set, {
+        enemy, catHp, catMp, catStatuses, enemyStatuses, log: clog, fx,
+        shakeKey, shakeHard, enemyFlashKey, catFlashKey, enemyDefeatKey,
+        catPose, mangaFx, mangaWord, mangaFocus, bubble, knockbackKey, panelSplitKey,
+      });
+      return;
+    }
+
+    // Enemy survives: write cat's panel, then schedule a counter (unless support).
+    const counterIncoming = isSupport ? 0 : (() => {
+      const heavy = d.enemyIntent === "heavy";
+      const raw = enemy.attack * (0.95 + Math.random() * 0.45) * (heavy ? 1.55 : 1)
+        - (cat.defense + sumStatusMod(catStatuses, "defMod")) * 0.28;
+      return Math.max(2, Math.round(raw));
+    })();
+
+    set({ dive: { ...d, enemy: { ...enemy }, catHp, catMp, catStatuses, enemyStatuses,
+      log: clog, fx, shakeKey, shakeHard, enemyFlashKey, catFlashKey,
+      catPose, enemyPose: enemyDead ? "ko" : "hurt", mangaFx, mangaWord, mangaFocus, bubble,
+      knockbackKey, panelSplitKey,
+      inAction: counterIncoming > 0,
+      enemyIntent: counterIncoming > 0 ? d.enemyIntent : nextIntent } });
+
+    if (counterIncoming > 0) {
+      setTimeout(() => {
+        const cur = get().dive;
+        if (!cur || cur.ended || cur.roomCleared) return;
+        const finalCatHp = Math.max(0, cur.catHp - counterIncoming);
+        const willKo = finalCatHp <= 0;
+        set({ dive: { ...cur,
+          catHp: finalCatHp,
+          fx: [...cur.fx, { id: nextFxId(), target: "cat" as const, kind: "dmg" as const, amount: counterIncoming }],
+          catPose: willKo ? "ko" : "hurt", enemyPose: "attack",
+          mangaFx: "impact", mangaWord: counterIncoming >= 12 ? "bam" : "pow", mangaFocus: "cat",
+          catFlashKey: cur.catFlashKey + 1,
+          log: willKo
+            ? [...cur.log, mklog(`${enemy.name} hits back for ${counterIncoming}`, "warn"), mklog(`💀 ${cat.name} went down!`, "warn")]
+            : [...cur.log, mklog(`${enemy.name} hits back for ${counterIncoming}`, "warn")],
+          ended: willKo ? true : cur.ended,
+          fled: willKo ? true : cur.fled,
+          inAction: false, enemyIntent: nextIntent,
+        } });
+        if (willKo) get().endDive(false);
+      }, 1500);
     }
   },
 
