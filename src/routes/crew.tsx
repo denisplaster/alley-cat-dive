@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useGame } from "@/lib/game/store";
+import { useGame, effectiveStats, xpForNextLevel } from "@/lib/game/store";
 import type { Cat } from "@/lib/game/types";
 import { EVOLUTIONS, computeEvolution } from "@/lib/game/evolution";
 import { STORY_CHAPTERS } from "@/lib/game/story";
@@ -119,11 +119,25 @@ function CatCard({ c, active, locked, onSelect }: { c: Cat; active: boolean; loc
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-1 text-center">
-        <S label="ATK" v={c.attack} />
-        <S label="DEF" v={c.defense} />
-        <S label="SPD" v={c.speed} />
+      <div className="mb-3">
+        <div className="mb-1 flex justify-between text-[10px] font-bold uppercase">
+          <span>XP</span><span>{c.xp}/{xpForNextLevel(c.level)}</span>
+        </div>
+        <div className="h-2 border-2 border-black bg-slate-900">
+          <div className="h-full bg-amber-400" style={{ width: `${Math.min(100, (c.xp / xpForNextLevel(c.level)) * 100)}%` }} />
+        </div>
       </div>
+
+      {(() => {
+        const eff = effectiveStats(c);
+        return (
+          <div className="grid grid-cols-3 gap-1 text-center">
+            <S label="ATK" v={eff.attack} bonus={eff.attack - c.attack} />
+            <S label="DEF" v={eff.defense} bonus={eff.defense - c.defense} />
+            <S label="SPD" v={eff.speed} bonus={eff.speed - c.speed} />
+          </div>
+        );
+      })()}
 
       <p className="mt-3 border-t-2 border-dashed border-white/10 pt-3 text-[11px] italic text-muted-foreground">{c.ability}</p>
 
@@ -144,11 +158,13 @@ function CatCard({ c, active, locked, onSelect }: { c: Cat; active: boolean; loc
   );
 }
 
-function S({ label, v }: { label: string; v: number }) {
+function S({ label, v, bonus = 0 }: { label: string; v: number; bonus?: number }) {
   return (
     <div className="border-2 border-black bg-slate-900 py-1">
       <div className="text-[9px] font-bold uppercase text-muted-foreground">{label}</div>
-      <div className="font-display text-lg leading-none text-primary">{v}</div>
+      <div className="font-display text-lg leading-none text-primary">
+        {v}{bonus > 0 && <span className="ml-0.5 text-[10px] text-emerald-400">+{bonus}</span>}
+      </div>
     </div>
   );
 }
