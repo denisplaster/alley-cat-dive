@@ -11,14 +11,26 @@ export const ELEMENT_META: Record<Element, { label: string; icon: string; color:
   stink: { label: "Stink", icon: "💨", color: "text-lime-400" },
 };
 
+export interface SkillStatus {
+  id: StatusId;
+  turns: number;
+  atkMod?: number;   // flat add to ATK while active (can be negative)
+  defMod?: number;
+  spdMod?: number;
+  dotPower?: number; // damage-over-time per turn = caster.atk * dotPower
+}
+
 export interface Skill {
   id: string;
   name: string;
   mpCost: number;
-  power: number;          // multiplier on attacker.atk
+  power: number;          // multiplier on attacker.atk (per hit)
   element: Element;
   target: "one" | "allEnemies" | "allAllies" | "self";
-  kind: "damage" | "heal" | "buff";
+  kind: "damage" | "heal" | "buff" | "debuff";
+  hits?: number;          // number of strikes (default 1) — multi-hit/combo
+  applyStatus?: SkillStatus; // buff/debuff/DoT applied to each target
+  ultimate?: boolean;     // signature move — bigger VFX, higher cost
   tickCost?: number;      // default 1
   description: string;
 }
@@ -53,9 +65,16 @@ export const OVERDRIVES: Record<OverdriveDef["id"], OverdriveDef> = {
 
 export type ActorSide = "party" | "enemy";
 
+export type StatusId = "defend" | "haste" | "slow" | "poison" | "guard_up" | "rally" | "weaken" | "burn";
+
 export interface Status {
-  id: "defend" | "haste" | "slow" | "poison";
+  id: StatusId;
   turnsLeft: number;
+  atkMod?: number;   // flat ATK modifier while active
+  defMod?: number;
+  spdMod?: number;
+  dotPower?: number; // per-turn damage = sourceAtk * dotPower
+  sourceAtk?: number; // attacker atk snapshot, for DoT scaling
 }
 
 export interface Actor {
