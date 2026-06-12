@@ -12,7 +12,7 @@ import type {
 } from "./raidTypes";
 import { OVERDRIVES } from "./raidTypes";
 import {
-  PARTY_TEMPLATES, RAID_ENEMIES, RAIDS, SKILLS, type RaidDef,
+  PARTY_TEMPLATES, RAID_ENEMIES, RAIDS, SKILLS, knownSkillIds, type RaidDef,
 } from "./raidData";
 import { ENEMY_SPRITES } from "./enemySprites";
 import {
@@ -847,11 +847,22 @@ export const useGame = create<GameState>((set, get) => ({
     if (!s.lastRewards) return;
     const newInv = [...s.inventory, ...s.lastRewards.items];
     const wasFled = s.dive?.fled ?? false;
+    let levelUpMsg: string | null = null;
     const updatedCats = s.cats.map(c => {
       if (c.id !== s.dive?.catId) return c;
-      return wasFled
-        ? { ...c, status: "injured" as const, recoverySecondsLeft: 300, hp: Math.max(1, Math.round(c.maxHp * 0.3)) }
-        : { ...c, hp: c.maxHp, xp: c.xp + 12 };
+      if (wasFled) {
+        return { ...c, status: "injured" as const, recoverySecondsLeft: 300, hp: Math.max(1, Math.round(c.maxHp * 0.3)) };
+      }
+      const before = c.level;
+      const beforeSkills = knownSkillIds(c.id, c.level);
+      const leveled = applyXp({ ...c, hp: c.maxHp }, 12);
+      if (leveled.level > before) {
+        const afterSkills = knownSkillIds(leveled.id, leveled.level);
+        const learned = afterSkills.filter(id => !beforeSkills.includes(id)).map(id => SKILLS[id]?.name).filter(Boolean);
+        levelUpMsg = `${leveled.name} reached Lv${leveled.level}!` +
+          (learned.length ? ` Learned ${learned.join(", ")}!` : "");
+      }
+      return leveled;
     });
     // If the current story chapter hasn't been completed, queue its outro.
     const chapter = STORY_CHAPTERS[s.storyChapterIdx];
@@ -864,6 +875,7 @@ export const useGame = create<GameState>((set, get) => ({
       dive: null,
       lastRewards: null,
       divesCompleted: s.divesCompleted + (wasFled ? 0 : 1),
+      roomEvent: levelUpMsg ?? s.roomEvent,
       activeCutscene: shouldPlayOutro
         ? { chapterId: chapter.id, phase: "outro", panel: 0 }
         : s.activeCutscene,
@@ -1137,18 +1149,35 @@ export const useGame = create<GameState>((set, get) => ({
       active.mp -= skill.mpCost;
       const targets = resolveTargets(skill, active, raid, targetUid);
       if (!targets.length) return null;
+      const hits = Math.max(1, skill.hits ?? 1);
+
       for (const t of targets) {
         if (skill.kind === "heal") {
           const amt = rollHeal(active, t, skill.power);
           t.hp = Math.min(t.maxHp, t.hp + amt);
           raid.floats.push(newFloat(t.uid, amt, "heal"));
           pushLog(raid, `${active.name} heals ${t.name} +${amt}`, "heal");
+        } else if (skill.kind === "buff" || skill.kind === "debuff") {
+          // pure (de)buff — no direct damage, just apply the status
+          if (skill.power > 0 && skill.kind === "debuff") {
+            const hit = rollDamage(active, t, skill.power, skill.element);
+            applyDamage(raid, active, t, hit);
+          }
+          applySkillStatus(raid, active, t, skill);
         } else {
-          const hit = rollDamage(active, t, skill.power, skill.element);
-          applyDamage(raid, active, t, hit);
+          // damage — possibly multi-hit
+          for (let h = 0; h < hits; h++) {
+            const hit = rollDamage(active, t, skill.power, skill.element);
+            applyDamage(raid, active, t, hit);
+            if (!t.alive) break;
+          }
+          if (skill.applyStatus && t.alive) applySkillStatus(raid, active, t, skill);
         }
       }
-      return { tickCost: skill.tickCost ?? 1 };
+      if (skill.kind === "buff" && (skill.target === "self" || skill.target === "allAllies")) {
+        pushLog(raid, `${active.name} uses ${skill.name}!`, "heal");
+      }
+      return { tickCost: skill.tickCost ?? (skill.ultimate ? 1.6 : 1) };
     });
   },
 
@@ -1307,6 +1336,24 @@ export const useGame = create<GameState>((set, get) => ({
 // Raid helpers (module-level)
 // ============================================================
 
+/** Apply a skill's status payload (buff/debuff/DoT) to a target. */
+function applySkillStatus(raid: RaidState, source: Actor, target: Actor, skill: import("./raidTypes").Skill) {
+  const sp = skill.applyStatus;
+  if (!sp) return;
+  // Replace any existing status of the same id (refresh duration/magnitude).
+  target.statuses = [
+    ...target.statuses.filter(st => st.id !== sp.id),
+    {
+      id: sp.id, turnsLeft: sp.turns,
+      atkMod: sp.atkMod, defMod: sp.defMod, spdMod: sp.spdMod,
+      dotPower: sp.dotPower, sourceAtk: source.atk,
+    },
+  ];
+  const verb = (sp.atkMod ?? 0) > 0 || (sp.defMod ?? 0) > 0 || (sp.spdMod ?? 0) > 0 ? "is empowered" :
+               sp.dotPower ? "is afflicted" : "is weakened";
+  pushLog(raid, `${target.name} ${verb} by ${skill.name}`, "info");
+}
+
 function newFloat(uid: string, amount: number, kind: FloatingNumber["kind"], element?: import("./raidTypes").Element): FloatingNumber {
   return { id: ++_fxId, uid, amount, kind, element };
 }
@@ -1315,22 +1362,66 @@ function pushLog(raid: RaidState, text: string, tone: RaidLogEntry["tone"] = "in
   raid.log.push({ id: ++_logId, text, tone });
 }
 
+export function xpForNextLevel(level: number): number {
+  return 30 + level * 10;
+}
+
+function levelGains(cat: Cat): { hp: number; atk: number; def: number; spd: number } {
+  switch (cat.catClass) {
+    case "Knight":      return { hp: 6, atk: 1, def: 2, spd: 0 };
+    case "Sneak":       return { hp: 3, atk: 2, def: 0, spd: 2 };
+    case "Moldmancer":  return { hp: 3, atk: 2, def: 1, spd: 1 };
+    case "Greasefang":  return { hp: 4, atk: 2, def: 1, spd: 1 };
+    case "Scrapper":
+    default:            return { hp: 5, atk: 2, def: 1, spd: 1 };
+  }
+}
+
+export function applyXp(cat: Cat, amount: number): Cat {
+  let { level, xp, attack, defense, speed, maxHp } = cat;
+  xp += amount;
+  let leveled = false;
+  while (xp >= xpForNextLevel(level)) {
+    xp -= xpForNextLevel(level);
+    level += 1;
+    const g = levelGains(cat);
+    maxHp += g.hp; attack += g.atk; defense += g.def; speed += g.spd;
+    leveled = true;
+  }
+  return { ...cat, level, xp, attack, defense, speed, maxHp, hp: leveled ? maxHp : cat.hp };
+}
+
+export function effectiveStats(cat: Cat): { attack: number; defense: number; speed: number; maxHp: number } {
+  let attack = cat.attack, defense = cat.defense, speed = cat.speed, maxHp = cat.maxHp;
+  for (const slot of ["weapon", "armor", "relic"] as const) {
+    const it = cat.equipment[slot];
+    if (!it) continue;
+    attack += it.attack ?? 0;
+    defense += it.defense ?? 0;
+    speed += it.speed ?? 0;
+    maxHp += it.health ?? 0;
+  }
+  return { attack, defense, speed, maxHp };
+}
+
 function buildPartyActor(s: GameState, catId: string, idx: number): Actor | null {
   const cat = s.cats.find(c => c.id === catId);
   if (!cat) return null;
   const tpl = PARTY_TEMPLATES[catId] ?? PARTY_TEMPLATES.scrapper;
-  const skills = tpl.skills.map(id => SKILLS[id]).filter(Boolean);
+  // Skills grow with the cat's level (template skills + level-gated learnset).
+  const skills = knownSkillIds(catId, cat.level).map(id => SKILLS[id]).filter(Boolean);
+  const eff = effectiveStats(cat);
   const agg = aggregateGrid(catId, s.catGrid[catId] ?? []);
   return {
     uid: `p${idx}-${cat.id}`,
     side: "party",
     name: cat.name,
     portrait: cat.portrait,
-    hp: cat.maxHp, maxHp: cat.maxHp,
+    hp: eff.maxHp, maxHp: eff.maxHp,
     mp: tpl.mp + agg.mp, maxMp: tpl.mp + agg.mp,
-    atk: cat.attack,
-    def: cat.defense,
-    spd: cat.speed,
+    atk: eff.attack,
+    def: eff.defense,
+    spd: eff.speed,
     od: 0, odMax: 100 - agg.od,
     element: tpl.element,
     weak: tpl.weak,
@@ -1494,14 +1585,24 @@ function advanceTurn(
   raid.enemies = normalized.slice(N);
   const next = pickActive([...raid.party, ...raid.enemies]);
   if (!next) return;
-  // Tick statuses at start of turn.
-  if (next.side === "party") {
-    raid.party = raid.party.map(p => p.uid === next.uid ? tickStatuses(p) : p);
-  } else {
-    raid.enemies = raid.enemies.map(e => e.uid === next.uid ? tickStatuses(e) : e);
-  }
+  // Tick statuses at start of turn (applies poison/burn DoT, expires buffs).
+  const applyTick = (arr: Actor[]) => arr.map(a => {
+    if (a.uid !== next.uid) return a;
+    const { actor, dotDamage } = tickStatuses(a);
+    if (dotDamage > 0) {
+      raid.floats.push(newFloat(actor.uid, dotDamage, "dmg"));
+      pushLog(raid, `${actor.name} takes ${dotDamage} from poison/burn`, "warn");
+      if (!actor.alive) pushLog(raid, `${actor.name} succumbs!`, "warn");
+    }
+    return actor;
+  });
+  raid.party = applyTick(raid.party);
+  raid.enemies = applyTick(raid.enemies);
   raid.activeUid = next.uid;
+  // A DoT may have killed the active actor — if so, skip its turn.
+  const stillAlive = [...raid.party, ...raid.enemies].find(a => a.uid === next.uid)?.alive;
   set({ raid });
+  if (!stillAlive) { setTimeout(() => finishTurnAndAdvance(get, set), 200); return; }
 
   if (next.side === "enemy") {
     raid.resolving = true;
@@ -1538,15 +1639,26 @@ function runEnemyTurn(
     const targets = decision.targets
       .map(t => (t.side === "enemy" ? raid.enemies : raid.party).find(a => a.uid === t.uid))
       .filter((a): a is Actor => !!a && a.alive);
+    const eHits = Math.max(1, decision.skill.hits ?? 1);
     for (const t of targets) {
       if (decision.skill.kind === "heal") {
         const amt = rollHeal(self, t, decision.skill.power);
         t.hp = Math.min(t.maxHp, t.hp + amt);
         raid.floats.push(newFloat(t.uid, amt, "heal"));
         pushLog(raid, `${self.name} heals ${t.name} +${amt}`, "heal");
+      } else if (decision.skill.kind === "buff" || decision.skill.kind === "debuff") {
+        if (decision.skill.power > 0) {
+          const hit = rollDamage(self, t, decision.skill.power, decision.skill.element);
+          applyDamage(raid, self, t, hit);
+        }
+        applySkillStatus(raid, self, t, decision.skill);
       } else {
-        const hit = rollDamage(self, t, decision.skill.power, decision.skill.element);
-        applyDamage(raid, self, t, hit);
+        for (let h = 0; h < eHits; h++) {
+          const hit = rollDamage(self, t, decision.skill.power, decision.skill.element);
+          applyDamage(raid, self, t, hit);
+          if (!t.alive) break;
+        }
+        if (decision.skill.applyStatus && t.alive) applySkillStatus(raid, self, t, decision.skill);
       }
     }
     tickCost = decision.skill.tickCost ?? 1;
