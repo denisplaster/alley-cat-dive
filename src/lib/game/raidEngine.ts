@@ -4,9 +4,20 @@ import type { Actor, Element, Skill, OverdriveDef } from "./raidTypes";
 
 export const BASE_TICK = 1000;
 
+/** Sum a flat stat modifier contributed by active statuses. */
+export function statusMod(actor: Actor, key: "atkMod" | "defMod" | "spdMod"): number {
+  let m = 0;
+  for (const st of actor.statuses) m += (st[key] ?? 0);
+  return m;
+}
+export function effAtk(a: Actor): number { return Math.max(1, a.atk + statusMod(a, "atkMod")); }
+export function effDef(a: Actor): number { return Math.max(0, a.def + statusMod(a, "defMod")); }
+export function effSpd(a: Actor): number { return Math.max(1, a.spd + statusMod(a, "spdMod")); }
+
+
 /** Lower tick = goes sooner. Returns `tick increment` for an action. */
 export function tickFor(actor: Actor, actionCost = 1): number {
-  const spd = Math.max(1, actor.spd);
+  const spd = Math.max(1, effSpd(actor));
   return Math.round((BASE_TICK / spd) * actionCost);
 }
 
@@ -27,7 +38,7 @@ export interface HitResult {
 
 /** Compute damage for a damage skill (or basic attack). */
 export function rollDamage(attacker: Actor, target: Actor, power: number, element: Element): HitResult {
-  const base = Math.max(1, attacker.atk * power - target.def * 0.7);
+  const base = Math.max(1, effAtk(attacker) * power - effDef(target) * 0.7);
   const crit = Math.random() < 0.10;
   const variance = 0.9 + Math.random() * 0.2;
   const em = elementMult(target, element);
@@ -62,12 +73,19 @@ export function normalizeTicks(actors: Actor[]): Actor[] {
 }
 
 /** Decrement status counters at the start of an actor's turn. */
-export function tickStatuses(actor: Actor): Actor {
-  if (!actor.statuses.length) return actor;
+export function tickStatuses(actor: Actor): { actor: Actor; dotDamage: number } {
+  if (!actor.statuses.length) return { actor, dotDamage: 0 };
+  let dot = 0;
+  for (const st of actor.statuses) {
+    if (st.dotPower && st.sourceAtk) {
+      dot += Math.max(1, Math.round(st.sourceAtk * st.dotPower - actor.def * 0.2));
+    }
+  }
+  const hp = Math.max(0, actor.hp - dot);
   const next = actor.statuses
     .map(s => ({ ...s, turnsLeft: s.turnsLeft - 1 }))
     .filter(s => s.turnsLeft > 0);
-  return { ...actor, statuses: next };
+  return { actor: { ...actor, hp, alive: hp > 0 ? actor.alive : false, statuses: next }, dotDamage: dot };
 }
 
 /** Returns the next 5-7 actors in queue order (for the side strip). */
