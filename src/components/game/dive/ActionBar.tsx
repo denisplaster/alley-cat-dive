@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { useGame } from "@/lib/game/store";
+import { SKILLS, LEARNSETS } from "@/lib/game/raidData";
 import type { RoomKind } from "@/lib/game/types";
 import { lifeStageFromHideout, type LifeStage } from "@/lib/game/lifestage";
 
@@ -31,6 +33,10 @@ export function ActionBar({ footerActions }: { footerActions?: React.ReactNode }
   const stage = lifeStageFromHideout(hideoutStage);
   const snackCount = useGame(s => s.inventory.filter(i => i.kind === "food").length);
   const doAction = useGame(s => s.doAction);
+  const doSkill = useGame(s => s.doSkill);
+  const cats = useGame(s => s.cats);
+  const activeCat = cats.find(c => c.id === dive.catId);
+  const [skillsOpen, setSkillsOpen] = useState(false);
   const goDeeper = useGame(s => s.goDeeper);
   const resolve = useGame(s => s.resolveNonCombat);
   const toggleAuto = useGame(s => s.toggleAuto);
@@ -141,6 +147,55 @@ export function ActionBar({ footerActions }: { footerActions?: React.ReactNode }
       <Btn label="Flee" onClick={() => doAction("flee")} tone="destructive" />
       <Btn label={dive.autoDive ? "Stop Auto" : "Auto"} onClick={toggleAuto} disabled={locked && !dive.autoDive} />
     </Bar>
+    {/* Learned skills — unlocked by level as the story progresses. */}
+    {(() => {
+      if (!activeCat) return null;
+      const learned = (LEARNSETS[activeCat.id] ?? [])
+        .filter(l => activeCat.level >= l.level)
+        .map(l => SKILLS[l.skillId])
+        .filter(Boolean);
+      const mp = dive.catMp ?? 0, maxMp = dive.catMaxMp ?? 0;
+      if (learned.length === 0) {
+        return (
+          <div className="rounded bg-slate-900/60 px-2 py-1 text-center text-[10px] uppercase tracking-wide text-muted-foreground">
+            ⚡ Skills unlock as {activeCat.name} levels up
+          </div>
+        );
+      }
+      return (
+        <div className="rounded bg-slate-900/60 p-1.5">
+          <div className="mb-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-wide text-cyan-300">
+            <button onClick={() => setSkillsOpen(o => !o)} className="uppercase">
+              {skillsOpen ? "▼" : "▶"} Skills ({learned.length})
+            </button>
+            <span>MP {mp}/{maxMp}</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded bg-black/50">
+            <div className="h-full bg-cyan-400" style={{ width: `${maxMp ? (mp / maxMp) * 100 : 0}%` }} />
+          </div>
+          {skillsOpen && (
+            <div className="mt-1.5 grid grid-cols-2 gap-1 md:grid-cols-3">
+              {learned.map(sk => {
+                const affordable = mp >= sk.mpCost && !locked;
+                return (
+                  <button
+                    key={sk.id}
+                    onClick={() => { if (affordable) { doSkill(sk.id); setSkillsOpen(false); } }}
+                    disabled={!affordable}
+                    title={sk.description}
+                    className={`chunky-button flex flex-col items-start px-2 py-1 text-left text-[11px] uppercase ${sk.ultimate ? "bg-amber-500 text-black" : "bg-slate-800 text-foreground"} ${!affordable ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    <span className="font-bold leading-tight">{sk.ultimate ? "★ " : ""}{sk.name}</span>
+                    <span className="text-[9px] text-cyan-300">{sk.mpCost} MP</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    })()}
+
     {/* Mid-fight snack vendor — buy a sardine with fishbones if the bag is dry. */}
     <div className="flex items-stretch gap-2">
       <button
