@@ -22,6 +22,63 @@ export const SKILLS: Record<string, Skill> = {
   heavy_paw:   { id: "heavy_paw",   name: "Heavy Paw",   mpCost: 6,  power: 2.4, element: "claw",
     target: "one", kind: "damage", tickCost: 1.5,
     description: "Big hit, big wind-up." },
+
+  // --- Scrapper: combo + ultimate ---
+  flurry_claws: { id: "flurry_claws", name: "Flurry Claws", mpCost: 10, power: 0.8, element: "claw",
+    target: "one", kind: "damage", hits: 3, tickCost: 1.2,
+    description: "Three rapid swipes at one foe." },
+  war_cry: { id: "war_cry", name: "War Cry", mpCost: 12, power: 0, element: "claw",
+    target: "allAllies", kind: "buff", applyStatus: { id: "rally", turns: 3, atkMod: 6 },
+    description: "Rally the crew — party ATK up for 3 turns." },
+  alley_finisher: { id: "alley_finisher", name: "Alley Finisher", mpCost: 22, power: 3.2, element: "claw",
+    target: "one", kind: "damage", hits: 2, ultimate: true, tickCost: 1.6,
+    description: "ULTIMATE: two devastating haymakers." },
+
+  // --- Sneakpaw: debuff + ultimate ---
+  frost_shiv: { id: "frost_shiv", name: "Frost Shiv", mpCost: 9, power: 1.4, element: "ice",
+    target: "one", kind: "debuff", applyStatus: { id: "slow", turns: 3, spdMod: -5 },
+    description: "Chilling stab that slows the target." },
+  shadow_dance: { id: "shadow_dance", name: "Shadow Dance", mpCost: 11, power: 0.7, element: "ice",
+    target: "one", kind: "damage", hits: 4, tickCost: 1.1,
+    description: "Four flickering strikes from the dark." },
+  assassinate: { id: "assassinate", name: "Assassinate", mpCost: 20, power: 4.0, element: "ice",
+    target: "one", kind: "damage", ultimate: true, tickCost: 1.5,
+    description: "ULTIMATE: one lethal precision strike." },
+
+  // --- Moldmancer: DoT + ultimate ---
+  rot_touch: { id: "rot_touch", name: "Rot Touch", mpCost: 10, power: 0.8, element: "stink",
+    target: "one", kind: "damage", applyStatus: { id: "poison", turns: 4, dotPower: 0.5 },
+    description: "Infects a foe — poison damage each turn." },
+  miasma: { id: "miasma", name: "Miasma", mpCost: 16, power: 0.6, element: "stink",
+    target: "allEnemies", kind: "damage", applyStatus: { id: "weaken", turns: 3, defMod: -5 }, tickCost: 1.3,
+    description: "Toxic fog: hits all foes and softens their armor." },
+  plague_bloom: { id: "plague_bloom", name: "Plague Bloom", mpCost: 24, power: 1.8, element: "stink",
+    target: "allEnemies", kind: "damage", hits: 2, applyStatus: { id: "poison", turns: 4, dotPower: 0.6 },
+    ultimate: true, tickCost: 1.7,
+    description: "ULTIMATE: a double burst that poisons every enemy." },
+
+  // --- Tin Knight: guard buff + ultimate ---
+  iron_wall: { id: "iron_wall", name: "Iron Wall", mpCost: 10, power: 0, element: "claw",
+    target: "allAllies", kind: "buff", applyStatus: { id: "guard_up", turns: 3, defMod: 8 },
+    description: "Raise the whole party's DEF for 3 turns." },
+  shield_bash: { id: "shield_bash", name: "Shield Bash", mpCost: 8, power: 1.8, element: "claw",
+    target: "one", kind: "damage", applyStatus: { id: "slow", turns: 2, spdMod: -4 },
+    description: "A heavy bash that staggers and slows." },
+  last_stand: { id: "last_stand", name: "Last Stand", mpCost: 22, power: 0, element: "claw",
+    target: "allAllies", kind: "buff", applyStatus: { id: "guard_up", turns: 4, defMod: 12 },
+    ultimate: true, description: "ULTIMATE: a fortress of fur — massive party DEF." },
+
+  // --- Greasefang: burn DoT + ultimate ---
+  ember_spit: { id: "ember_spit", name: "Ember Spit", mpCost: 9, power: 1.5, element: "fire",
+    target: "one", kind: "damage", applyStatus: { id: "burn", turns: 3, dotPower: 0.45 },
+    description: "Sets the target alight — burn damage each turn." },
+  grease_fire: { id: "grease_fire", name: "Grease Fire", mpCost: 15, power: 1.4, element: "fire",
+    target: "allEnemies", kind: "damage", applyStatus: { id: "burn", turns: 3, dotPower: 0.4 }, tickCost: 1.3,
+    description: "Ignites all foes with clinging flame." },
+  inferno_pounce: { id: "inferno_pounce", name: "Inferno Pounce", mpCost: 22, power: 3.6, element: "fire",
+    target: "one", kind: "damage", applyStatus: { id: "burn", turns: 3, dotPower: 0.6 },
+    ultimate: true, tickCost: 1.6,
+    description: "ULTIMATE: a blazing tackle that leaves the foe burning." },
 };
 
 // ---- Party archetype loadouts ----
@@ -47,6 +104,44 @@ export const PARTY_TEMPLATES: Record<string, PartyTemplate> = {
   greasefang: { catId: "greasefang", element: "fire",  weak: ["ice"],   resist: ["fire"],
     mp: 50, od: OVERDRIVES.hairball_cannon, skills: ["fire_claw", "static_hiss"] },
 };
+
+/** Skills a cat LEARNS as it levels. The cat's two template skills are always
+ *  known from the start; these unlock at the listed level. buildPartyActor only
+ *  grants entries whose level the cat has reached, so the menu grows over the story. */
+export const LEARNSETS: Record<string, { skillId: string; level: number }[]> = {
+  scrapper: [
+    { skillId: "flurry_claws",   level: 6 },
+    { skillId: "war_cry",        level: 12 },
+    { skillId: "alley_finisher", level: 18 },
+  ],
+  sneakpaw: [
+    { skillId: "frost_shiv",   level: 6 },
+    { skillId: "shadow_dance", level: 12 },
+    { skillId: "assassinate",  level: 18 },
+  ],
+  moldmancer: [
+    { skillId: "rot_touch",    level: 6 },
+    { skillId: "miasma",       level: 12 },
+    { skillId: "plague_bloom", level: 18 },
+  ],
+  tinknight: [
+    { skillId: "iron_wall",   level: 6 },
+    { skillId: "shield_bash", level: 12 },
+    { skillId: "last_stand",  level: 18 },
+  ],
+  greasefang: [
+    { skillId: "ember_spit",     level: 6 },
+    { skillId: "grease_fire",    level: 12 },
+    { skillId: "inferno_pounce", level: 18 },
+  ],
+};
+
+/** All skills a cat knows at a given level: template skills + learned skills. */
+export function knownSkillIds(catId: string, level: number): string[] {
+  const tpl = PARTY_TEMPLATES[catId] ?? PARTY_TEMPLATES.scrapper;
+  const learned = (LEARNSETS[catId] ?? []).filter(l => level >= l.level).map(l => l.skillId);
+  return [...tpl.skills, ...learned];
+}
 
 // ---- Enemy templates for raids ----
 export interface RaidEnemyTpl {
