@@ -290,8 +290,8 @@ const seedInventory: Item[] = [
 
 // --- Award room-clear rewards when a SKILL lands the killing blow on the last foe. ---
 export const useGame = create<GameState>((set, get) => ({
-  playerLevel: 14,
-  playerXp: 65,
+  playerLevel: 1,
+  playerXp: 0,
   fishbones: 1240,
   bottlecaps: 48,
   cats: INITIAL_CATS,
