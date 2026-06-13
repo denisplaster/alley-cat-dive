@@ -13,6 +13,7 @@ import { Route as StoryRouteImport } from './routes/story'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as RaidsRouteImport } from './routes/raids'
+import { Route as OrbitRouteImport } from './routes/orbit'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as LootRouteImport } from './routes/loot'
 import { Route as InventoryRouteImport } from './routes/inventory'
@@ -42,6 +43,11 @@ const ShopRoute = ShopRouteImport.update({
 const RaidsRoute = RaidsRouteImport.update({
   id: '/raids',
   path: '/raids',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrbitRoute = OrbitRouteImport.update({
+  id: '/orbit',
+  path: '/orbit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MapRoute = MapRouteImport.update({
@@ -104,6 +110,7 @@ export interface FileRoutesByFullPath {
   '/inventory': typeof InventoryRoute
   '/loot': typeof LootRoute
   '/map': typeof MapRoute
+  '/orbit': typeof OrbitRoute
   '/raids': typeof RaidsRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByTo {
   '/inventory': typeof InventoryRoute
   '/loot': typeof LootRoute
   '/map': typeof MapRoute
+  '/orbit': typeof OrbitRoute
   '/raids': typeof RaidsRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -137,6 +145,7 @@ export interface FileRoutesById {
   '/inventory': typeof InventoryRoute
   '/loot': typeof LootRoute
   '/map': typeof MapRoute
+  '/orbit': typeof OrbitRoute
   '/raids': typeof RaidsRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -155,6 +164,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/loot'
     | '/map'
+    | '/orbit'
     | '/raids'
     | '/shop'
     | '/sitemap.xml'
@@ -171,6 +181,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/loot'
     | '/map'
+    | '/orbit'
     | '/raids'
     | '/shop'
     | '/sitemap.xml'
@@ -187,6 +198,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/loot'
     | '/map'
+    | '/orbit'
     | '/raids'
     | '/shop'
     | '/sitemap.xml'
@@ -204,6 +216,7 @@ export interface RootRouteChildren {
   InventoryRoute: typeof InventoryRoute
   LootRoute: typeof LootRoute
   MapRoute: typeof MapRoute
+  OrbitRoute: typeof OrbitRoute
   RaidsRoute: typeof RaidsRoute
   ShopRoute: typeof ShopRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -240,6 +253,13 @@ declare module '@tanstack/react-router' {
       path: '/raids'
       fullPath: '/raids'
       preLoaderRoute: typeof RaidsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orbit': {
+      id: '/orbit'
+      path: '/orbit'
+      fullPath: '/orbit'
+      preLoaderRoute: typeof OrbitRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/map': {
@@ -324,6 +344,7 @@ const rootRouteChildren: RootRouteChildren = {
   InventoryRoute: InventoryRoute,
   LootRoute: LootRoute,
   MapRoute: MapRoute,
+  OrbitRoute: OrbitRoute,
   RaidsRoute: RaidsRoute,
   ShopRoute: ShopRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
