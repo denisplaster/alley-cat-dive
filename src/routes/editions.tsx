@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useOrbit } from "@/lib/orbit/store";
-import { orbitCover, ORBIT_CHAPTERS, ORBIT_SECTORS } from "@/lib/orbit/data";
+import { orbitCover, ORBIT_CHAPTERS, ORBIT_SECTORS, orbitProgressPct } from "@/lib/orbit/data";
 import alleyHero from "@/assets/hero-cat.png";
 
 export const Route = createFileRoute("/editions")({
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/editions")({
 function EditionsScreen() {
   const active = useOrbit(s => s.activeEdition);
   const setEdition = useOrbit(s => s.setEdition);
-  const progress = useOrbit(s => s.progressPct());
+  const progress = useOrbit(s => orbitProgressPct(s.completedChapters.length, s.clearedSectors.length));
   const completedCh = useOrbit(s => s.completedChapters.length);
   const clearedSec = useOrbit(s => s.clearedSectors.length);
   const navigate = useNavigate();

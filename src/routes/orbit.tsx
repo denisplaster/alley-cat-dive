@@ -4,7 +4,7 @@ import { useOrbit } from "@/lib/orbit/store";
 import { useGame } from "@/lib/game/store";
 import {
   ORBIT_CHAPTERS, ORBIT_SECTORS, ORBIT_ENEMIES, ORBIT_LOOT, ORBIT_ABILITIES,
-  RACCX_TAUNTS, RARITY_TINT, orbitBg, orbitRaccX,
+  RACCX_TAUNTS, RARITY_TINT, orbitBg, orbitRaccX, orbitProgressPct,
   type OrbitSector, type OrbitEnemy, type OrbitLoot,
   type OrbitChapter, type OrbitPanel,
 } from "@/lib/orbit/data";
@@ -62,7 +62,7 @@ function OrbitScreen() {
 }
 
 function OrbitHero() {
-  const progress = useOrbit(s => s.progressPct());
+  const progress = useOrbit(s => orbitProgressPct(s.completedChapters.length, s.clearedSectors.length));
   const next = useOrbit(s => {
     const nextCh = ORBIT_CHAPTERS[s.completedChapters.length];
     return nextCh?.title ?? "All chapters cleared";

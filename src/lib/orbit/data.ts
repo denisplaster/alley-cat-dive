@@ -269,6 +269,14 @@ export const ORBIT_SECTORS: OrbitSector[] = [
   },
 ];
 
+/**
+ * Edition completion %, derived purely from the given counts. Components compute
+ * it from field selectors (not a get()-based store method) so the SSR snapshot
+ * matches and the progress bar hydrates without a mismatch.
+ */
+export const orbitProgressPct = (completedChapters: number, clearedSectors: number) =>
+  Math.round(((completedChapters + clearedSectors) / (ORBIT_CHAPTERS.length + ORBIT_SECTORS.length)) * 100);
+
 export interface OrbitLoot {
   id: string;
   name: string;

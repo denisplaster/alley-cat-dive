@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { ORBIT_CHAPTERS, ORBIT_SECTORS, ORBIT_LOOT, type OrbitLoot } from "./data";
+import { ORBIT_CHAPTERS, ORBIT_SECTORS, ORBIT_LOOT, orbitProgressPct, type OrbitLoot } from "./data";
 
 export type EditionId = "alley" | "orbit";
 
@@ -95,9 +95,7 @@ export const useOrbit = create<OrbitState>()(
       },
       progressPct: () => {
         const s = get();
-        const total = ORBIT_CHAPTERS.length + ORBIT_SECTORS.length;
-        const done = s.completedChapters.length + s.clearedSectors.length;
-        return Math.round((done / total) * 100);
+        return orbitProgressPct(s.completedChapters.length, s.clearedSectors.length);
       },
     }),
     { name: "orbit-edition-v1" },
