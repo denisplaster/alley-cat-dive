@@ -184,6 +184,7 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
             fx={dive.fx.filter(f => f.target === "cat")}
             tone="primary"
             combo={dive.combo}
+            statuses={dive.catStatuses ?? []}
           />
           {enemy ? (
             <CombatantSprite
@@ -199,6 +200,7 @@ export function DungeonStage({ cat, enemy }: { cat: Cat; enemy: Enemy | null }) 
               defeatKey={enemy.hp <= 0 ? dive.enemyDefeatKey : 0}
               fx={dive.fx.filter(f => f.target === "enemy")}
               tone={dive.currentKind === "boss" ? "boss" : "destructive"}
+              statuses={dive.enemyStatuses ?? []}
             />
           ) : (
             <NonCombatPanel kind={dive.currentKind} cleared={dive.roomCleared} />
@@ -279,12 +281,13 @@ function MangaOverlay({ fxSrc, wordSrc, focus }: { fxSrc: string | null; wordSrc
 }
 
 function CombatantSprite({
-  name, sub, poses, activePose, hp, maxHp, side, knockbackKey = 0, defeatKey = 0, fx, tone, combo = 0,
+  name, sub, poses, activePose, hp, maxHp, side, knockbackKey = 0, defeatKey = 0, fx, tone, combo = 0, statuses = [],
 }: {
   name: string; sub: string;
   poses: Record<string, string>;
   activePose: string;
   hp: number; maxHp: number; side: "left" | "right";
+  statuses?: import("@/lib/game/raidTypes").Status[];
   knockbackKey?: number; defeatKey?: number; fx: Fx[];
   tone: "primary" | "destructive" | "boss";
   combo?: number;
@@ -340,6 +343,16 @@ function CombatantSprite({
           })}
         </div>
         <div className="mt-0.5 font-mono text-[10px] font-bold">{hp}/{maxHp}</div>
+        {statuses.length > 0 && (
+          <div className={`mt-1 flex flex-wrap gap-1 ${side === "right" ? "justify-end" : ""}`}>
+            {statuses.map((st, i) => (
+              <span key={i} title={statusLabel(st)}
+                className={`rounded px-1 py-[1px] text-[9px] font-bold uppercase ${statusTone(st)}`}>
+                {statusIcon(st)} {st.turnsLeft}
+              </span>
+            ))}
+          </div>
+        )}
         {combo > 0 && (
           <div className="mt-1">
             <div className="flex items-center justify-between text-[9px] uppercase tracking-widest">
@@ -575,4 +588,28 @@ function RoomTitleCard({ k, room, totalRooms, kind }: { k: number; room: number;
       </div>
     </div>
   );
+}
+
+
+// --- Status pip presentation (dive HUD) ---
+function statusIcon(st: import("@/lib/game/raidTypes").Status): string {
+  if (st.dotPower) return st.id === "burn" ? "🔥" : "☠️";
+  if ((st.atkMod ?? 0) > 0) return "⚔️";
+  if ((st.defMod ?? 0) > 0) return "🛡️";
+  if ((st.spdMod ?? 0) < 0) return "🐌";
+  if ((st.defMod ?? 0) < 0) return "💢";
+  return "✨";
+}
+function statusTone(st: import("@/lib/game/raidTypes").Status): string {
+  if (st.dotPower) return "bg-toxic/80 text-black";
+  if ((st.atkMod ?? 0) > 0 || (st.defMod ?? 0) > 0) return "bg-emerald-500/90 text-black";
+  return "bg-rose-600/90 text-white";
+}
+function statusLabel(st: import("@/lib/game/raidTypes").Status): string {
+  const parts: string[] = [];
+  if (st.atkMod) parts.push(`ATK ${st.atkMod > 0 ? "+" : ""}${st.atkMod}`);
+  if (st.defMod) parts.push(`DEF ${st.defMod > 0 ? "+" : ""}${st.defMod}`);
+  if (st.spdMod) parts.push(`SPD ${st.spdMod > 0 ? "+" : ""}${st.spdMod}`);
+  if (st.dotPower) parts.push(st.id === "burn" ? "Burning" : "Poisoned");
+  return `${parts.join(", ")} (${st.turnsLeft} turns)`;
 }
