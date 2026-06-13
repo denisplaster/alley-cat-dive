@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useOrbit } from "@/lib/orbit/store";
 import { useGame } from "@/lib/game/store";
 import {
@@ -130,44 +131,9 @@ function OrbitStory() {
     setActiveId(null);
   }
 
-  // --- Active chapter: webtoon flow ---
-  if (active) {
-    if (phase === "dive" && sector) {
-      return (
-        <OrbitDive
-          sector={sector}
-          onExit={() => { setPhase("intro"); setPanel(Math.max(0, active.intro.length - 1)); }}
-          onComplete={() => { setPhase("outro"); setPanel(0); }}
-        />
-      );
-    }
-    if (phase === "reward") {
-      return <StoryReward chapter={active} onClaim={claim} />;
-    }
-    const viewPhase: "intro" | "outro" = phase === "outro" ? "outro" : "intro";
-    const panels = viewPhase === "intro" ? active.intro : active.outro;
-    const p = panels[panel];
-    if (!p) return null;
-    const isLastIntro = viewPhase === "intro" && panel === panels.length - 1;
-    const nextLabel = panel < panels.length - 1
-      ? "Next ▸"
-      : viewPhase === "intro" ? (sector ? "Start Dive ▶" : "Continue ▸") : "Continue ▸";
-    return (
-      <StoryPanelView
-        chapter={active}
-        phase={viewPhase}
-        panels={panels}
-        idx={panel}
-        nextLabel={nextLabel}
-        highlightNext={isLastIntro && !!sector}
-        onNext={viewPhase === "intro" ? advanceIntro : advanceOutro}
-        onSkip={close}
-      />
-    );
-  }
-
-  // --- Chapter list ---
-  return (
+  // --- Chapter list (always the story-tab content; the active chapter plays in
+  //     a focused full-screen overlay on top, mirroring Edition 1's Cutscene). ---
+  const chapterList = (
     <div className="space-y-3">
       {ORBIT_CHAPTERS.map((ch, i) => {
         const done = completed.includes(ch.id);
@@ -202,6 +168,65 @@ function OrbitStory() {
         );
       })}
     </div>
+  );
+
+  if (!active) return chapterList;
+
+  // --- Active chapter: intro → dive → outro → reward, all in one focused overlay ---
+  let inner: ReactNode = null;
+  if (phase === "dive" && sector) {
+    // The battle fills the same width as Edition 1's dive (the app's max-w-7xl).
+    inner = (
+      <div className="w-full max-w-7xl">
+        <OrbitDive
+          sector={sector}
+          onExit={() => { setPhase("intro"); setPanel(Math.max(0, active.intro.length - 1)); }}
+          onComplete={() => { setPhase("outro"); setPanel(0); }}
+        />
+      </div>
+    );
+  } else if (phase === "reward") {
+    inner = <div className="w-full max-w-2xl"><StoryReward chapter={active} onClaim={claim} /></div>;
+  } else {
+    const viewPhase: "intro" | "outro" = phase === "outro" ? "outro" : "intro";
+    const panels = viewPhase === "intro" ? active.intro : active.outro;
+    const p = panels[panel];
+    if (p) {
+      const isLastIntro = viewPhase === "intro" && panel === panels.length - 1;
+      const nextLabel = panel < panels.length - 1
+        ? "Next ▸"
+        : viewPhase === "intro" ? (sector ? "Start Dive ▶" : "Continue ▸") : "Continue ▸";
+      inner = (
+        <div className="w-full max-w-3xl">
+          <StoryPanelView
+            chapter={active}
+            phase={viewPhase}
+            panels={panels}
+            idx={panel}
+            nextLabel={nextLabel}
+            highlightNext={isLastIntro && !!sector}
+            onNext={viewPhase === "intro" ? advanceIntro : advanceOutro}
+            onSkip={close}
+          />
+        </div>
+      );
+    }
+  }
+
+  return (
+    <>
+      {chapterList}
+      {/* Portal to <body> so the overlay escapes the page's stacking context and
+          covers the nav/header, exactly like Edition 1's root-level Cutscene. */}
+      {typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[60] overflow-y-auto bg-black/95 backdrop-blur-sm">
+          <div className="flex min-h-full items-center justify-center p-4">
+            {inner}
+          </div>
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }
 
