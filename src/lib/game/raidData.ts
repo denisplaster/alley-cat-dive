@@ -110,29 +110,29 @@ export const PARTY_TEMPLATES: Record<string, PartyTemplate> = {
  *  grants entries whose level the cat has reached, so the menu grows over the story. */
 export const LEARNSETS: Record<string, { skillId: string; level: number }[]> = {
   scrapper: [
-    { skillId: "flurry_claws",   level: 6 },
-    { skillId: "war_cry",        level: 12 },
-    { skillId: "alley_finisher", level: 18 },
+    { skillId: "flurry_claws",   level: 4 },
+    { skillId: "war_cry",        level: 9 },
+    { skillId: "alley_finisher", level: 15 },
   ],
   sneakpaw: [
-    { skillId: "frost_shiv",   level: 6 },
-    { skillId: "shadow_dance", level: 12 },
-    { skillId: "assassinate",  level: 18 },
+    { skillId: "frost_shiv",   level: 4 },
+    { skillId: "shadow_dance", level: 9 },
+    { skillId: "assassinate",  level: 15 },
   ],
   moldmancer: [
-    { skillId: "rot_touch",    level: 6 },
-    { skillId: "miasma",       level: 12 },
-    { skillId: "plague_bloom", level: 18 },
+    { skillId: "rot_touch",    level: 4 },
+    { skillId: "miasma",       level: 9 },
+    { skillId: "plague_bloom", level: 15 },
   ],
   tinknight: [
-    { skillId: "iron_wall",   level: 6 },
-    { skillId: "shield_bash", level: 12 },
-    { skillId: "last_stand",  level: 18 },
+    { skillId: "iron_wall",   level: 4 },
+    { skillId: "shield_bash", level: 9 },
+    { skillId: "last_stand",  level: 15 },
   ],
   greasefang: [
-    { skillId: "ember_spit",     level: 6 },
-    { skillId: "grease_fire",    level: 12 },
-    { skillId: "inferno_pounce", level: 18 },
+    { skillId: "ember_spit",     level: 4 },
+    { skillId: "grease_fire",    level: 9 },
+    { skillId: "inferno_pounce", level: 15 },
   ],
 };
 
