@@ -164,6 +164,8 @@ interface GameState {
   placeItem: (slotId: string, itemId: string) => void;
   unplaceItem: (slotId: string) => void;
   dismissReward: () => void;
+  /** Award player-account XP (the top HUD bar, 0–100 per level); rolls into playerLevel. */
+  awardPlayerXp: (amount: number) => void;
   /** Derived: current evolution from milestones. */
   getEvolution: () => EvolutionStage;
 
@@ -672,6 +674,7 @@ export const useGame = create<GameState>((set, get) => ({
       // milestone bookkeeping: every cleared combat room counts, bosses too.
       const isBossClear = d.currentKind === "boss";
       set({
+        ...rollPlayerXp(s.playerLevel, s.playerXp, isBoss ? 40 : isMini ? 24 : 14),
         roomsCleared: s.roomsCleared + 1,
         bossesBeaten: s.bossesBeaten + (isBossClear ? 1 : 0),
       });
@@ -1065,6 +1068,12 @@ export const useGame = create<GameState>((set, get) => ({
         ? { chapterId: chapter.id, phase: "outro", panel: 0 }
         : s.activeCutscene,
     });
+  },
+
+  awardPlayerXp: (amount) => {
+    if (amount <= 0) return;
+    const s = get();
+    set(rollPlayerXp(s.playerLevel, s.playerXp, amount));
   },
 
   equip: (itemId, catId) => {
@@ -1576,6 +1585,14 @@ export function applyXp(cat: Cat, amount: number): Cat {
   return { ...cat, level, xp, attack, defense, speed, maxHp, hp: leveled ? maxHp : cat.hp };
 }
 
+/** Roll the player-account XP bar (0–100 per level) and carry into levels. */
+export function rollPlayerXp(playerLevel: number, playerXp: number, amount: number): { playerLevel: number; playerXp: number } {
+  let level = playerLevel;
+  let xp = playerXp + amount;
+  while (xp >= 100) { xp -= 100; level += 1; }
+  return { playerLevel: level, playerXp: xp };
+}
+
 export function effectiveStats(cat: Cat): { attack: number; defense: number; speed: number; maxHp: number } {
   let attack = cat.attack, defense = cat.defense, speed = cat.speed, maxHp = cat.maxHp;
   for (const slot of ["weapon", "armor", "relic"] as const) {
@@ -1944,6 +1961,7 @@ function clearDiveRoom(
   log = [...log, mklog(`Room cleared. +${bonesGain} 🦴 +${capsGain} 🧴`, "loot")];
   const rooms = d.rooms.map((r, i) => i === d.room - 1 ? { ...r, cleared: true } : r);
   set({
+    ...rollPlayerXp(s.playerLevel, s.playerXp, isBoss ? 40 : isMini ? 24 : 14),
     roomsCleared: s.roomsCleared + 1,
     bossesBeaten: s.bossesBeaten + (isBoss ? 1 : 0),
   });
