@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import heroCat from "@/assets/hero-cat.png";
 import { useGame } from "@/lib/game/store";
-import { STORY_CHAPTERS } from "@/lib/game/story";
+import { STORY_CHAPTERS, isDumpsterUnlocked } from "@/lib/game/story";
 import { EVOLUTIONS, computeEvolution } from "@/lib/game/evolution";
 
 export const Route = createFileRoute("/")({
@@ -132,12 +132,11 @@ function AlleyHub() {
           <div className="chunky-panel rotate-[1deg] border-t-4 border-t-secondary/60 bg-black/80 p-2 md:p-3">
             <div className="mb-2 flex items-center justify-between">
               <span className="bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase text-black">Next Target</span>
-              {selected.status === "dangerous" && (
-                <span className="animate-pulse text-[10px] font-bold uppercase text-destructive">Dangerous</span>
-              )}
-              {selected.status === "locked" && (
-                <span className="text-[10px] font-bold uppercase text-muted-foreground">Locked</span>
-              )}
+              {isDumpsterUnlocked(selected.id, storyIdx)
+                ? selected.status === "dangerous" && (
+                    <span className="animate-pulse text-[10px] font-bold uppercase text-destructive">Dangerous</span>
+                  )
+                : <span className="text-[10px] font-bold uppercase text-muted-foreground">Locked</span>}
             </div>
             <h2 className="mb-0.5 font-display text-base uppercase leading-tight md:text-lg">{selected.name}</h2>
             <p className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">

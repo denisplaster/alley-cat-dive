@@ -6,7 +6,7 @@ import {
 import type {
   Cat, Dumpster, Enemy, Fx, HideoutUpgrade, Item, Rarity, Room, RoomKind,
 } from "./types";
-import { STORY_CHAPTERS, STAGE_ORDER, CHAPTER_DUMPSTER, type HideoutStage, chapterById } from "./story";
+import { STORY_CHAPTERS, STAGE_ORDER, CHAPTER_DUMPSTER, isDumpsterUnlocked, type HideoutStage, chapterById } from "./story";
 import { computeEvolution, type EvolutionStage } from "./evolution";
 import type {
   Actor, FloatingNumber, RaidLogEntry, RaidState, Skill,
@@ -335,36 +335,21 @@ export const useGame = create<GameState>()(
 
   startDive: () => {
     const s = get();
-    // While the player still has an unfinished story chapter, force the dive
-    // into that chapter's themed dumpster so every chapter shows different
-    // art and a different enemy pool. Free-roam picks (post-campaign or via
-    // the map) still honor selectedDumpsterId.
-    const currentChapter = STORY_CHAPTERS[s.storyChapterIdx];
-    const hasUnfinishedChapter = currentChapter && !s.completedChapters.includes(currentChapter.id);
-    if (hasUnfinishedChapter && s.activeCutscene?.phase === "intro") return;
-    if (hasUnfinishedChapter && !s.seenIntros.includes(currentChapter.id)) {
-      set({
-        activeCutscene: { chapterId: currentChapter.id, phase: "intro", panel: 0 },
-        seenIntros: [...s.seenIntros, currentChapter.id],
-      });
-      return;
-    }
-    const chapterDumpsterId = hasUnfinishedChapter
-      ? CHAPTER_DUMPSTER[currentChapter.id]
-      : null;
-    const dumpId = chapterDumpsterId ?? s.selectedDumpsterId;
-    // Auto-unlock the chapter's dumpster so a "locked" flag can't block the
-    // forced dive.
-    const dumpsters = chapterDumpsterId
-      ? s.dumpsters.map(d => d.id === chapterDumpsterId && d.status === "locked"
-          ? { ...d, status: "unlocked" as const } : d)
-      : s.dumpsters;
-    const dump = dumpsters.find(d => d.id === dumpId);
     const cat = s.cats.find(c => c.id === s.activeCatId);
-    if (!dump || !cat || dump.status === "locked") return;
-    if (chapterDumpsterId) {
-      set({ dumpsters, selectedDumpsterId: chapterDumpsterId });
+    if (!cat) return;
+    // Dive the bin the player picked (from the map or the story's Start Dive).
+    // If it's still story-locked (e.g. a stale selection), fall back to the
+    // current chapter's bin, which is always unlocked.
+    let dumpId = s.selectedDumpsterId;
+    if (!isDumpsterUnlocked(dumpId, s.storyChapterIdx)) {
+      const ch = STORY_CHAPTERS[s.storyChapterIdx];
+      dumpId = (ch && CHAPTER_DUMPSTER[ch.id])
+        ?? s.dumpsters.find(d => isDumpsterUnlocked(d.id, s.storyChapterIdx))?.id
+        ?? dumpId;
     }
+    const dump = s.dumpsters.find(d => d.id === dumpId);
+    if (!dump || !isDumpsterUnlocked(dump.id, s.storyChapterIdx)) return;
+    if (dumpId !== s.selectedDumpsterId) set({ selectedDumpsterId: dumpId });
     const rooms = generateRooms(dump.rooms, dump.bossRunsAway);
     const firstKind = rooms[0].kind;
     const wave = (firstKind === "enemy" || firstKind === "swarm" || firstKind === "elite" || firstKind === "miniboss" || firstKind === "boss")
@@ -1056,9 +1041,12 @@ export const useGame = create<GameState>()(
       }
       return leveled;
     });
-    // If the current story chapter hasn't been completed, queue its outro.
+    // Only diving the current chapter's bin advances the story; free re-dives of
+    // earlier bins just hand over loot. (Diving the current bin from the map
+    // still counts as playing that beat.)
     const chapter = STORY_CHAPTERS[s.storyChapterIdx];
-    const shouldPlayOutro = !wasFled && chapter && !s.completedChapters.includes(chapter.id);
+    const divedChapterBin = chapter && s.dive?.dumpsterId === CHAPTER_DUMPSTER[chapter.id];
+    const shouldPlayOutro = !wasFled && chapter && !s.completedChapters.includes(chapter.id) && divedChapterBin;
     set({
       inventory: newInv,
       fishbones: s.fishbones + s.lastRewards.bones,
@@ -1158,11 +1146,15 @@ export const useGame = create<GameState>()(
 
   openCutscene: (chapterId, phase) => {
     const s = get();
+    const chapterBin = CHAPTER_DUMPSTER[chapterId];
     set({
       activeCutscene: { chapterId, phase, panel: 0 },
       seenIntros: phase === "intro" && !s.seenIntros.includes(chapterId)
         ? [...s.seenIntros, chapterId]
         : s.seenIntros,
+      // Point the next dive at this chapter's bin so "Start Dive" plays the
+      // story beat — not whatever bin was last picked on the map.
+      selectedDumpsterId: phase === "intro" && chapterBin ? chapterBin : s.selectedDumpsterId,
     });
   },
   advanceCutscene: () => {

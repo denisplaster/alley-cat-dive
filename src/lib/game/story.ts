@@ -498,3 +498,25 @@ export const CHAPTER_DUMPSTER: Record<string, string> = {
   ch7_rally:        "subway",
   ch8_hero:         "luxury",
 };
+
+/** dumpster id -> the chapter id whose campaign beat dives it (reverse of CHAPTER_DUMPSTER). */
+export const DUMPSTER_CHAPTER: Record<string, string> = Object.fromEntries(
+  Object.entries(CHAPTER_DUMPSTER).map(([chapterId, dumpId]) => [dumpId, chapterId]),
+);
+
+/** dumpster id -> its chapter's index in campaign order. */
+export const DUMPSTER_CHAPTER_INDEX: Record<string, number> = {};
+STORY_CHAPTERS.forEach((ch, i) => {
+  const dumpId = CHAPTER_DUMPSTER[ch.id];
+  if (dumpId && DUMPSTER_CHAPTER_INDEX[dumpId] === undefined) DUMPSTER_CHAPTER_INDEX[dumpId] = i;
+});
+
+/**
+ * A dumpster unlocks once the story reaches its chapter — i.e. the chapter is
+ * the current one or already behind you (`chapterIdx <= storyChapterIdx`).
+ * Bins with no campaign chapter (none today) are always open.
+ */
+export function isDumpsterUnlocked(dumpsterId: string, storyChapterIdx: number): boolean {
+  const idx = DUMPSTER_CHAPTER_INDEX[dumpsterId];
+  return idx === undefined || idx <= storyChapterIdx;
+}
