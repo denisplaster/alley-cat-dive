@@ -1977,4 +1977,3 @@ function applyStatusList(
     { id: sp.id, turnsLeft: sp.turns, atkMod: sp.atkMod, defMod: sp.defMod, spdMod: sp.spdMod, dotPower: sp.dotPower, sourceAtk },
   ];
 }
-
