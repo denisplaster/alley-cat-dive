@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import {
   DUMPSTERS, ENEMIES, HIDEOUT_UPGRADES, INITIAL_CATS, LOOT_POOL, newItemId,
 } from "./data";
@@ -291,7 +292,9 @@ const seedInventory: Item[] = [
 ];
 
 // --- Award room-clear rewards when a SKILL lands the killing blow on the last foe. ---
-export const useGame = create<GameState>((set, get) => ({
+export const useGame = create<GameState>()(
+  persist(
+    (set, get) => ({
   playerLevel: 1,
   playerXp: 0,
   fishbones: 1240,
@@ -1524,7 +1527,44 @@ export const useGame = create<GameState>((set, get) => ({
       cats,
     });
   },
-}));
+    }),
+    {
+      name: "alley-cat-game-v1",
+      version: 1,
+      // skipHydration + manual rehydrate (in __root) keeps SSR and the first
+      // client render on defaults, so there's no hydration mismatch — real
+      // progress pops in just after mount.
+      skipHydration: true,
+      // Persist durable progression only — never the in-flight battle, active
+      // cutscene, or transient reward/FX state.
+      partialize: (s) => ({
+        playerLevel: s.playerLevel,
+        playerXp: s.playerXp,
+        fishbones: s.fishbones,
+        bottlecaps: s.bottlecaps,
+        cats: s.cats,
+        activeCatId: s.activeCatId,
+        inventory: s.inventory,
+        dumpsters: s.dumpsters,
+        selectedDumpsterId: s.selectedDumpsterId,
+        hideout: s.hideout,
+        storyChapterIdx: s.storyChapterIdx,
+        completedChapters: s.completedChapters,
+        seenIntros: s.seenIntros,
+        storyChoices: s.storyChoices,
+        hideoutStage: s.hideoutStage,
+        placedItems: s.placedItems,
+        spheres: s.spheres,
+        catGrid: s.catGrid,
+        raidTeam: s.raidTeam,
+        roomsCleared: s.roomsCleared,
+        bossesBeaten: s.bossesBeaten,
+        divesCompleted: s.divesCompleted,
+        skipStoryline: s.skipStoryline,
+      }),
+    },
+  ),
+);
 
 // ============================================================
 // Raid helpers (module-level)
