@@ -13,10 +13,12 @@ import { Route as StoryRouteImport } from './routes/story'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as RaidsRouteImport } from './routes/raids'
+import { Route as OrbitRouteImport } from './routes/orbit'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as LootRouteImport } from './routes/loot'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as HideoutRouteImport } from './routes/hideout'
+import { Route as EditionsRouteImport } from './routes/editions'
 import { Route as DiveRouteImport } from './routes/dive'
 import { Route as CrewRouteImport } from './routes/crew'
 import { Route as IndexRouteImport } from './routes/index'
@@ -43,6 +45,11 @@ const RaidsRoute = RaidsRouteImport.update({
   path: '/raids',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrbitRoute = OrbitRouteImport.update({
+  id: '/orbit',
+  path: '/orbit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MapRoute = MapRouteImport.update({
   id: '/map',
   path: '/map',
@@ -61,6 +68,11 @@ const InventoryRoute = InventoryRouteImport.update({
 const HideoutRoute = HideoutRouteImport.update({
   id: '/hideout',
   path: '/hideout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EditionsRoute = EditionsRouteImport.update({
+  id: '/editions',
+  path: '/editions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiveRoute = DiveRouteImport.update({
@@ -93,10 +105,12 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/crew': typeof CrewRoute
   '/dive': typeof DiveRoute
+  '/editions': typeof EditionsRoute
   '/hideout': typeof HideoutRoute
   '/inventory': typeof InventoryRoute
   '/loot': typeof LootRoute
   '/map': typeof MapRoute
+  '/orbit': typeof OrbitRoute
   '/raids': typeof RaidsRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -108,10 +122,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/crew': typeof CrewRoute
   '/dive': typeof DiveRoute
+  '/editions': typeof EditionsRoute
   '/hideout': typeof HideoutRoute
   '/inventory': typeof InventoryRoute
   '/loot': typeof LootRoute
   '/map': typeof MapRoute
+  '/orbit': typeof OrbitRoute
   '/raids': typeof RaidsRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -124,10 +140,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/crew': typeof CrewRoute
   '/dive': typeof DiveRoute
+  '/editions': typeof EditionsRoute
   '/hideout': typeof HideoutRoute
   '/inventory': typeof InventoryRoute
   '/loot': typeof LootRoute
   '/map': typeof MapRoute
+  '/orbit': typeof OrbitRoute
   '/raids': typeof RaidsRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -141,10 +159,12 @@ export interface FileRouteTypes {
     | '/'
     | '/crew'
     | '/dive'
+    | '/editions'
     | '/hideout'
     | '/inventory'
     | '/loot'
     | '/map'
+    | '/orbit'
     | '/raids'
     | '/shop'
     | '/sitemap.xml'
@@ -156,10 +176,12 @@ export interface FileRouteTypes {
     | '/'
     | '/crew'
     | '/dive'
+    | '/editions'
     | '/hideout'
     | '/inventory'
     | '/loot'
     | '/map'
+    | '/orbit'
     | '/raids'
     | '/shop'
     | '/sitemap.xml'
@@ -171,10 +193,12 @@ export interface FileRouteTypes {
     | '/'
     | '/crew'
     | '/dive'
+    | '/editions'
     | '/hideout'
     | '/inventory'
     | '/loot'
     | '/map'
+    | '/orbit'
     | '/raids'
     | '/shop'
     | '/sitemap.xml'
@@ -187,10 +211,12 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CrewRoute: typeof CrewRoute
   DiveRoute: typeof DiveRoute
+  EditionsRoute: typeof EditionsRoute
   HideoutRoute: typeof HideoutRoute
   InventoryRoute: typeof InventoryRoute
   LootRoute: typeof LootRoute
   MapRoute: typeof MapRoute
+  OrbitRoute: typeof OrbitRoute
   RaidsRoute: typeof RaidsRoute
   ShopRoute: typeof ShopRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -229,6 +255,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RaidsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/orbit': {
+      id: '/orbit'
+      path: '/orbit'
+      fullPath: '/orbit'
+      preLoaderRoute: typeof OrbitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/map': {
       id: '/map'
       path: '/map'
@@ -255,6 +288,13 @@ declare module '@tanstack/react-router' {
       path: '/hideout'
       fullPath: '/hideout'
       preLoaderRoute: typeof HideoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/editions': {
+      id: '/editions'
+      path: '/editions'
+      fullPath: '/editions'
+      preLoaderRoute: typeof EditionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dive': {
@@ -299,10 +339,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CrewRoute: CrewRoute,
   DiveRoute: DiveRoute,
+  EditionsRoute: EditionsRoute,
   HideoutRoute: HideoutRoute,
   InventoryRoute: InventoryRoute,
   LootRoute: LootRoute,
   MapRoute: MapRoute,
+  OrbitRoute: OrbitRoute,
   RaidsRoute: RaidsRoute,
   ShopRoute: ShopRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
