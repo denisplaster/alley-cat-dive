@@ -6,13 +6,32 @@ export { orbitCover, orbitBg, orbitRaccX };
 
 export type OrbitRarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
 
+export interface OrbitPanel {
+  image: string;
+  speaker?: string;
+  text: string;
+}
+
 export interface OrbitChapter {
   id: string;
   title: string;
   subtitle: string;
   unlocks: string;
-  panels: { speaker?: string; text: string }[];
+  /** Sector dive woven between this chapter's intro and outro. Omit for cinematic-only chapters. */
+  sectorId?: string;
+  intro: OrbitPanel[];
+  outro: OrbitPanel[];
 }
+
+// --- Placeholder panel art ---------------------------------------------------
+// Every story panel below points at one of the three existing Orbit images so
+// the edition is fully playable today. To ship real "image per sentence" art,
+// generate the shots listed in docs/orbit-shotlist.md, drop them into
+// src/assets/orbit-story/, and swap the placeholder here for the import
+// (e.g. `import c1p1 from "@/assets/orbit-story/ch1-01.jpg";`).
+const PH_STATION = orbitBg; // STAR-BIN 9 interior / general beats
+const PH_HERO = orbitCover; // Scrapper hero / cinematic moments
+const PH_BOSS = orbitRaccX; // Racc-X / pirate / boss beats
 
 export const ORBIT_CHAPTERS: OrbitChapter[] = [
   {
@@ -20,13 +39,19 @@ export const ORBIT_CHAPTERS: OrbitChapter[] = [
     title: "Chapter 1 — Wrong Dumpster",
     subtitle: "Behind the research lab, one bin glows blue.",
     unlocks: "Space Station Map · Zero-G Tutorial",
-    panels: [
-      { speaker: "Narrator", text: "Behind the research lab, the dumpster hummed like a fridge full of bees." },
-      { speaker: "Scrapper", text: "Sniff. Tuna. Electricity. Trouble." },
-      { speaker: "Narrator", text: "The crew voted no. Scrapper jumped in anyway." },
-      { speaker: "Narrator", text: "The lid slammed. The floor shook. The sky got very close." },
-      { speaker: "Narrator", text: "By morning, the alley was gone. The trash was floating." },
-      { speaker: "Narrator", text: "Welcome to STAR-BIN 9." },
+    // Cinematic opener — the fall into orbit. No dive.
+    intro: [
+      { image: PH_STATION, speaker: "Narrator", text: "Behind the research lab, the dumpster hummed like a fridge full of bees." },
+      { image: PH_HERO, speaker: "Scrapper", text: "Sniff. Tuna. Electricity. Trouble." },
+      { image: PH_STATION, speaker: "Narrator", text: "The crew voted no. Scrapper jumped in anyway." },
+      { image: PH_HERO, speaker: "Scrapper", text: "(Worst case, I find a snack. Best case, I find a BIG snack.)" },
+      { image: PH_STATION, speaker: "Narrator", text: "The lid slammed. The floor shook. The sky got very, very close." },
+      { image: PH_HERO, speaker: "Scrapper", text: "…that's not the floor. WHY ISN'T THAT THE FLOOR—" },
+    ],
+    outro: [
+      { image: PH_STATION, speaker: "Narrator", text: "By morning, the alley was gone. The trash was floating." },
+      { image: PH_HERO, speaker: "Scrapper", text: "Mew. Okay. New plan. Survive." },
+      { image: PH_STATION, speaker: "Narrator", text: "A hatch hissed open above a sea of drifting garbage. Welcome to STAR-BIN 9." },
     ],
   },
   {
@@ -34,10 +59,18 @@ export const ORBIT_CHAPTERS: OrbitChapter[] = [
     title: "Chapter 2 — Star-Bin 9",
     subtitle: "The trash is floating.",
     unlocks: "Galley Waste Ring",
-    panels: [
-      { speaker: "Narrator", text: "Alarms blink red. Trash drifts in midair like lazy snowflakes." },
-      { speaker: "Scrapper", text: "Crew. Stay close. Don't lick anything." },
-      { speaker: "Narrator", text: "Somewhere in the dark, something mechanical sorts garbage." },
+    sectorId: "galley",
+    intro: [
+      { image: PH_STATION, speaker: "Narrator", text: "Alarms blink red. Trash drifts in midair like lazy snowflakes." },
+      { image: PH_HERO, speaker: "Scrapper", text: "Crew. Stay close. Don't lick anything." },
+      { image: PH_STATION, speaker: "Narrator", text: "Somewhere in the dark, something mechanical sorts garbage. Click. Whirr. Crunch." },
+      { image: PH_HERO, speaker: "Scrapper", text: "That's a cafeteria. Where there's a cafeteria, there's leftovers." },
+      { image: PH_HERO, speaker: "Scrapper", text: "And where there's leftovers… there's me." },
+    ],
+    outro: [
+      { image: PH_STATION, speaker: "Narrator", text: "The galley ring went quiet. The snacks did not survive." },
+      { image: PH_HERO, speaker: "Scrapper", text: "Floating food. No gravity tax. I could get used to this." },
+      { image: PH_STATION, speaker: "Narrator", text: "But the station had noticed the cat. And it was hungry too." },
     ],
   },
   {
@@ -45,10 +78,18 @@ export const ORBIT_CHAPTERS: OrbitChapter[] = [
     title: "Chapter 3 — No Gravity, No Rules",
     subtitle: "Scrapper learns to pounce sideways.",
     unlocks: "Zero-G Dodge · Space Junk loot tier",
-    panels: [
-      { speaker: "Scrapper", text: "Rule one of the alley: land on your feet." },
-      { speaker: "Scrapper", text: "Up here? There are no feet. There is no down." },
-      { speaker: "Narrator", text: "He pounced sideways. It worked. Sort of." },
+    sectorId: "cargo",
+    intro: [
+      { image: PH_HERO, speaker: "Scrapper", text: "Rule one of the alley: always land on your feet." },
+      { image: PH_HERO, speaker: "Scrapper", text: "Up here? There are no feet. There is no down." },
+      { image: PH_STATION, speaker: "Narrator", text: "He pushed off a crate. He kept going. And going." },
+      { image: PH_HERO, speaker: "Scrapper", text: "(Okay. Okay. I totally meant to do that.)" },
+      { image: PH_STATION, speaker: "Narrator", text: "He pounced sideways off a conveyor. It worked. Sort of." },
+    ],
+    outro: [
+      { image: PH_STATION, speaker: "Narrator", text: "By the third crate, the sideways pounce looked almost graceful." },
+      { image: PH_HERO, speaker: "Scrapper", text: "Zero-G Dodge. Patent pending. Don't tell the raccoons." },
+      { image: PH_STATION, speaker: "Narrator", text: "The cargo chute spat him toward the luxury deck. Fancy." },
     ],
   },
   {
@@ -56,9 +97,17 @@ export const ORBIT_CHAPTERS: OrbitChapter[] = [
     title: "Chapter 4 — Luxury Trash",
     subtitle: "Rich people throw away the weirdest things.",
     unlocks: "Luxury Disposal · Premium Junk",
-    panels: [
-      { speaker: "Narrator", text: "Perfume clouds. Untouched lobster. Gold-trim wrappers." },
-      { speaker: "Scrapper", text: "Who throws this away?? Mew. I respect them. I also hate them." },
+    sectorId: "luxury",
+    intro: [
+      { image: PH_STATION, speaker: "Narrator", text: "Perfume clouds. Untouched lobster. Gold-trim wrappers, still warm." },
+      { image: PH_HERO, speaker: "Scrapper", text: "Who throws this away?? Mew. I respect them. I also hate them." },
+      { image: PH_STATION, speaker: "Narrator", text: "The luxury deck disposal was a buffet pretending to be garbage." },
+      { image: PH_HERO, speaker: "Scrapper", text: "Note to self: rich people are bad at finishing their food. Good for me." },
+    ],
+    outro: [
+      { image: PH_HERO, speaker: "Scrapper", text: "Premium junk. Tastes the same as regular junk. Just judgier." },
+      { image: PH_STATION, speaker: "Narrator", text: "Scrapper left three pounds heavier and twice as smug." },
+      { image: PH_STATION, speaker: "Narrator", text: "Beyond the gold doors, something growled. Something that hadn't eaten in a while." },
     ],
   },
   {
@@ -66,9 +115,18 @@ export const ORBIT_CHAPTERS: OrbitChapter[] = [
     title: "Chapter 5 — The Waste Ring",
     subtitle: "Raccoons got here first.",
     unlocks: "Raccoon Pirate enemy · Black Market Shop",
-    panels: [
-      { speaker: "Pirate", text: "Tribute time, fleabags. Caps. Snacks. Now." },
-      { speaker: "Scrapper", text: "We already did this back home. We won." },
+    sectorId: "biohazard",
+    intro: [
+      { image: PH_BOSS, speaker: "Pirate", text: "Tribute time, fleabags. Caps. Snacks. Now." },
+      { image: PH_HERO, speaker: "Scrapper", text: "We already did this back home. We won." },
+      { image: PH_STATION, speaker: "Narrator", text: "The waste ring crawled with raccoon pirates and things that used to be lunch." },
+      { image: PH_BOSS, speaker: "Pirate", text: "This is OUR bin, kitten. Float along." },
+      { image: PH_HERO, speaker: "Scrapper", text: "Make me, trash panda." },
+    ],
+    outro: [
+      { image: PH_STATION, speaker: "Narrator", text: "The pirates scattered. Their loot did not." },
+      { image: PH_HERO, speaker: "Scrapper", text: "Tell your captain the alley cat says hi." },
+      { image: PH_BOSS, speaker: "Pirate", text: "…you'll regret that. Racc-X eats cats for breakfast." },
     ],
   },
   {
@@ -76,9 +134,18 @@ export const ORBIT_CHAPTERS: OrbitChapter[] = [
     title: "Chapter 6 — Captain Racc-X",
     subtitle: "King of the orbital bins.",
     unlocks: "Boss Dive: Waste Throne",
-    panels: [
-      { speaker: "Racc-X", text: "This station's trash belongs to me, kitten." },
-      { speaker: "Scrapper", text: "Then I'll just take it twice." },
+    sectorId: "throne",
+    intro: [
+      { image: PH_BOSS, speaker: "Narrator", text: "Atop a throne of crushed satellites sat the king of the orbital bins." },
+      { image: PH_BOSS, speaker: "Racc-X", text: "This station's trash belongs to me, kitten." },
+      { image: PH_HERO, speaker: "Scrapper", text: "Then I'll just take it twice." },
+      { image: PH_BOSS, speaker: "Racc-X", text: "Cute claws. Bad orbit." },
+      { image: PH_STATION, speaker: "Narrator", text: "Six pirates. One crown. One very confident cat." },
+    ],
+    outro: [
+      { image: PH_STATION, speaker: "Narrator", text: "The crown drifted free. Scrapper snatched it out of the air." },
+      { image: PH_HERO, speaker: "Scrapper", text: "Heavy is the head. Good thing I skip leg day." },
+      { image: PH_BOSS, speaker: "Racc-X", text: "This isn't over, fleabag. The station won't let you leave." },
     ],
   },
   {
@@ -86,9 +153,17 @@ export const ORBIT_CHAPTERS: OrbitChapter[] = [
     title: "Chapter 7 — Core Compactor",
     subtitle: "The station wants everything smaller.",
     unlocks: "Timed Escape Dive",
-    panels: [
-      { speaker: "Narrator", text: "Klaxons. The walls move INWARD." },
-      { speaker: "Scrapper", text: "GO. GO. GO. Bring the snacks!" },
+    sectorId: "core",
+    intro: [
+      { image: PH_STATION, speaker: "Narrator", text: "Klaxons. Red light. The walls began to move INWARD." },
+      { image: PH_HERO, speaker: "Scrapper", text: "GO. GO. GO. Bring the snacks!" },
+      { image: PH_STATION, speaker: "Narrator", text: "STAR-BIN 9 had decided everything would be smaller. Including the cat." },
+      { image: PH_HERO, speaker: "Scrapper", text: "(Run. Don't look at the walls. Don't look at the WALLS.)" },
+    ],
+    outro: [
+      { image: PH_STATION, speaker: "Narrator", text: "The compactor groaned shut on empty air. The cat was already gone." },
+      { image: PH_HERO, speaker: "Scrapper", text: "Escape pod. Soda can. Same energy." },
+      { image: PH_STATION, speaker: "Narrator", text: "He grabbed the key, the crown, and a suspicious amount of snacks." },
     ],
   },
   {
@@ -96,11 +171,17 @@ export const ORBIT_CHAPTERS: OrbitChapter[] = [
     title: "Chapter 8 — Trash Moon",
     subtitle: "Home is very far away.",
     unlocks: "To be continued… (Edition #3)",
-    panels: [
-      { speaker: "Narrator", text: "The escape pod was made of a soda can and a dream." },
-      { speaker: "Scrapper", text: "That's not Earth." },
-      { speaker: "Narrator", text: "Below them, a moon made entirely of garbage rolled into view." },
-      { speaker: "Narrator", text: "TO BE CONTINUED…" },
+    // Cinematic finale — the cliffhanger. No dive.
+    intro: [
+      { image: PH_HERO, speaker: "Narrator", text: "The escape pod was made of a soda can and a dream." },
+      { image: PH_HERO, speaker: "Scrapper", text: "Wait. That's not Earth." },
+      { image: PH_STATION, speaker: "Narrator", text: "Below them, a moon made entirely of garbage rolled into view." },
+      { image: PH_HERO, speaker: "Scrapper", text: "…is it weird that I'm hungry again?" },
+    ],
+    outro: [
+      { image: PH_STATION, speaker: "Narrator", text: "Somewhere down there, a new alley waited. A bigger one." },
+      { image: PH_HERO, speaker: "Scrapper", text: "Crew. Buckle up. We're divin'." },
+      { image: PH_STATION, speaker: "Narrator", text: "TO BE CONTINUED… (Edition #3 — Trash Moon)" },
     ],
   },
 ];
