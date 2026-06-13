@@ -811,8 +811,18 @@ export const useGame = create<GameState>((set, get) => ({
       catPose = "item";
     } else if (skill.kind === "buff") {
       if (skill.applyStatus) catStatuses = applyStatusList(catStatuses, skill.applyStatus, atk);
-      clog.push(mklog(`${cat.name} uses ${skill.name}!`, "info"));
-      catPose = "block";
+      // Describe the buff so it clearly reads as "I got stronger".
+      const sp = skill.applyStatus;
+      const parts: string[] = [];
+      if (sp?.atkMod) parts.push(`ATK ${sp.atkMod > 0 ? "+" : ""}${sp.atkMod}`);
+      if (sp?.defMod) parts.push(`DEF ${sp.defMod > 0 ? "+" : ""}${sp.defMod}`);
+      if (sp?.spdMod) parts.push(`SPD ${sp.spdMod > 0 ? "+" : ""}${sp.spdMod}`);
+      clog.push(mklog(`${cat.name} uses ${skill.name}! ${parts.join(", ")} for ${sp?.turns ?? 0} turns`, "loot"));
+      // a green "+" float on the cat signals the power-up
+      fx.push({ id: nextFxId(), target: "cat", kind: "heal", amount: 0 });
+      catPose = "combo";       // flex/power-up pose, not a block
+      mangaFx = "combo";
+      mangaWord = "combo";
     } else {
       // damage / debuff — possibly multi-hit
       const hits = Math.max(1, skill.hits ?? 1);
