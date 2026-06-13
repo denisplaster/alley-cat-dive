@@ -1,0 +1,612 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useOrbit } from "@/lib/orbit/store";
+import {
+  ORBIT_CHAPTERS, ORBIT_SECTORS, ORBIT_ENEMIES, ORBIT_LOOT, ORBIT_ABILITIES,
+  RACCX_TAUNTS, RARITY_TINT, orbitBg, orbitRaccX,
+  type OrbitSector, type OrbitEnemy, type OrbitLoot,
+} from "@/lib/orbit/data";
+
+export const Route = createFileRoute("/orbit")({
+  head: () => ({
+    meta: [
+      { title: "Orbit Trash — Edition #2 — Alley Cat Dumpster Divers" },
+      { name: "description", content: "Dive into STAR-BIN 9 in Orbit Trash, Edition #2 of Alley Cat Dumpster Divers. Zero-G dumpsters, space raccoon pirates, mutant mold, and Captain Racc-X." },
+      { property: "og:title", content: "Orbit Trash — Edition #2" },
+      { property: "og:description", content: "Side-scroll through a sprawling orbital sanitation station. Loot. Fight. Escape." },
+      { property: "og:image", content: "https://alleycatdive.com/og-image.jpg" },
+    ],
+    links: [{ rel: "canonical", href: "https://alleycatdive.com/orbit" }],
+  }),
+  component: OrbitScreen,
+});
+
+type Tab = "story" | "map" | "codex";
+
+function OrbitScreen() {
+  const [tab, setTab] = useState<Tab>("story");
+  const [diveSector, setDiveSector] = useState<OrbitSector | null>(null);
+  const setEdition = useOrbit(s => s.setEdition);
+  useEffect(() => { setEdition("orbit"); }, [setEdition]);
+
+  if (diveSector) {
+    return <OrbitDive sector={diveSector} onExit={() => setDiveSector(null)} />;
+  }
+
+  return (
+    <div className="mt-6 space-y-4">
+      <OrbitHero />
+
+      <div className="flex flex-wrap gap-2">
+        {(["story","map","codex"] as Tab[]).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`chunky-button px-3 py-1.5 text-[11px] font-bold uppercase ${tab === t ? "bg-secondary text-black" : "bg-slate-900"}`}
+          >
+            {t === "story" ? "Story" : t === "map" ? "Station Map" : "Codex"}
+          </button>
+        ))}
+        <Link to="/editions" className="chunky-button bg-slate-900 px-3 py-1.5 text-[11px] font-bold uppercase ml-auto">
+          Switch Edition
+        </Link>
+      </div>
+
+      {tab === "story" && <OrbitStory />}
+      {tab === "map" && <OrbitMap onDive={setDiveSector} />}
+      {tab === "codex" && <OrbitCodex />}
+    </div>
+  );
+}
+
+function OrbitHero() {
+  const progress = useOrbit(s => s.progressPct());
+  const next = useOrbit(s => {
+    const nextCh = ORBIT_CHAPTERS[s.completedChapters.length];
+    return nextCh?.title ?? "All chapters cleared";
+  });
+  return (
+    <header className="chunky-panel relative overflow-hidden bg-black p-0">
+      <div className="relative aspect-[3/1] w-full">
+        <img src={orbitBg} alt="STAR-BIN 9 interior" width={1920} height={640} loading="lazy"
+             className="h-full w-full object-cover opacity-70" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black/40" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black" />
+        <div className="absolute left-4 top-4">
+          <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-secondary">Monthly Edition #2</div>
+          <h1 className="font-display text-3xl uppercase leading-tight text-white md:text-5xl">Orbit Trash</h1>
+          <p className="text-[11px] uppercase tracking-widest text-fuchsia-300">STAR-BIN 9 · Orbital Sanitation Station</p>
+        </div>
+        <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Next:</div>
+            <div className="font-display text-sm uppercase text-secondary">{next}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Edition progress</div>
+            <div className="chunky-panel h-3 w-40 bg-black p-[2px]">
+              <div className="h-full bg-secondary" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/* ===================== STORY (webtoon cutscene) ===================== */
+function OrbitStory() {
+  const completed = useOrbit(s => s.completedChapters);
+  const play = useOrbit(s => s.playChapter);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const active = ORBIT_CHAPTERS.find(c => c.id === activeId) ?? null;
+  const [panel, setPanel] = useState(0);
+
+  function openCh(id: string) { setActiveId(id); setPanel(0); }
+  function next() {
+    if (!active) return;
+    if (panel < active.panels.length - 1) setPanel(p => p + 1);
+    else { play(active.id); setActiveId(null); }
+  }
+
+  if (active) {
+    const p = active.panels[panel];
+    return (
+      <div className="chunky-panel relative overflow-hidden bg-black p-0">
+        <div className="absolute inset-0">
+          <img src={orbitBg} alt="" aria-hidden className="h-full w-full object-cover opacity-30" />
+          <ParallaxLayers speed={0.25} />
+        </div>
+        <div className="relative z-10 p-6">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="text-[10px] uppercase tracking-widest text-secondary">{active.title}</div>
+            <button onClick={() => setActiveId(null)} className="chunky-button bg-slate-900 px-2 py-1 text-[10px] font-bold uppercase">Close</button>
+          </div>
+          <div className="chunky-panel mx-auto max-w-2xl bg-slate-950/80 p-5">
+            {p.speaker && (
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-accent">{p.speaker}</div>
+            )}
+            <p className="font-display text-xl uppercase leading-snug text-white">{p.text}</p>
+          </div>
+          <div className="mt-4 flex items-center justify-between">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Panel {panel + 1} / {active.panels.length}</span>
+            <button onClick={next} className="chunky-button bg-secondary px-4 py-2 text-xs font-bold uppercase text-black">
+              {panel < active.panels.length - 1 ? "Next ▶" : "Finish Chapter"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {ORBIT_CHAPTERS.map((ch, i) => {
+        const done = completed.includes(ch.id);
+        const unlocked = i <= completed.length;
+        return (
+          <article key={ch.id} className={`chunky-panel p-4 ${unlocked && !done ? "bg-secondary/15 border-secondary" : "bg-black/80"}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1">
+                <h2 className="font-display text-lg uppercase leading-tight">{ch.title}</h2>
+                <p className="text-[11px] italic text-muted-foreground">{ch.subtitle}</p>
+                <div className="mt-2 inline-block border-2 border-black bg-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase">
+                  Unlocks: {ch.unlocks}
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                {done && <span className="border-2 border-black bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase text-black">Done</span>}
+                {!unlocked && <span className="text-[10px] font-bold uppercase text-muted-foreground">🔒 Locked</span>}
+                {unlocked && (
+                  <button onClick={() => openCh(ch.id)}
+                    className="chunky-button bg-primary px-3 py-2 text-xs font-bold uppercase text-black">
+                    {done ? "Replay" : "Play"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ===================== STATION MAP ===================== */
+function OrbitMap({ onDive }: { onDive: (s: OrbitSector) => void }) {
+  const isUnlocked = useOrbit(s => s.isSectorUnlocked);
+  const cleared = useOrbit(s => s.clearedSectors);
+  return (
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {ORBIT_SECTORS.map(sec => {
+        const unlocked = isUnlocked(sec.id);
+        const done = cleared.includes(sec.id);
+        return (
+          <div key={sec.id}
+               className={`chunky-panel relative overflow-hidden bg-black/80 p-3 ${done ? "ring-2 ring-secondary" : ""} ${!unlocked ? "opacity-60" : ""}`}>
+            <div className="mb-3 grid h-32 place-items-center overflow-hidden border-4 border-black bg-gradient-to-br from-slate-900 via-fuchsia-950 to-emerald-950">
+              <SectorArt id={sec.id} />
+              <span className="absolute right-2 top-2 border-2 border-black bg-fuchsia-700 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+                {sec.difficulty}
+              </span>
+              {done && <span className="absolute left-2 top-2 border-2 border-black bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase text-black">Cleared</span>}
+              {!unlocked && (
+                <div className="absolute inset-0 grid place-items-center bg-black/70 font-display text-2xl uppercase tracking-widest text-muted-foreground">
+                  🔒 Locked
+                </div>
+              )}
+            </div>
+            <h3 className="font-display text-lg uppercase leading-tight">{sec.name}</h3>
+            <p className="text-[11px] italic text-muted-foreground">{sec.subtitle}</p>
+            <ul className="mt-2 space-y-0.5 text-[11px] text-muted-foreground">
+              <li>Loot: <span className="text-accent">{sec.loot}</span></li>
+              <li>Enemies: <span className="text-foreground">{sec.enemies.map(id => ORBIT_ENEMIES[id].emoji).join(" ")}</span></li>
+              <li>Rooms: <span className="text-foreground">{sec.rooms}</span> · Mod: <span className="text-fuchsia-300">{sec.modifier}</span></li>
+            </ul>
+            <button
+              disabled={!unlocked}
+              onClick={() => onDive(sec)}
+              className="chunky-button mt-3 w-full bg-secondary px-3 py-2 text-xs font-bold uppercase text-black disabled:bg-slate-800 disabled:text-muted-foreground"
+            >
+              {unlocked ? (done ? "Re-Dive" : "Start Dive") : "Locked"}
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function SectorArt({ id }: { id: string }) {
+  const map: Record<string, string> = {
+    galley: "🍱", cargo: "📦", luxury: "🍷", biohazard: "☣️", throne: "👑", core: "⚙️",
+  };
+  return <span className="text-6xl drop-shadow-[0_0_12px_rgba(0,255,180,0.6)]">{map[id] ?? "🛰️"}</span>;
+}
+
+/* ===================== CODEX ===================== */
+function OrbitCodex() {
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <section className="chunky-panel bg-black/80 p-4">
+        <h2 className="font-display text-xl uppercase">Enemies</h2>
+        <ul className="mt-2 space-y-1.5">
+          {Object.values(ORBIT_ENEMIES).map(e => (
+            <li key={e.id} className="flex items-center gap-3 border-2 border-black bg-slate-900 px-3 py-2 text-[12px]">
+              <span className="text-2xl">{e.emoji}</span>
+              <div className="flex-1">
+                <div className="font-display uppercase">{e.name}</div>
+                <div className="text-[10px] italic text-muted-foreground">{e.blurb}</div>
+              </div>
+              <div className="text-right text-[10px] font-bold uppercase">
+                <div>HP {e.hp}</div>
+                <div>ATK {e.atk}</div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section className="space-y-4">
+        <div className="chunky-panel bg-black/80 p-4">
+          <h2 className="font-display text-xl uppercase">Abilities</h2>
+          <ul className="mt-2 space-y-1.5">
+            {ORBIT_ABILITIES.map(a => (
+              <li key={a.id} className="border-2 border-black bg-slate-900 px-3 py-2 text-[12px]">
+                <div className="font-display uppercase text-secondary">{a.name}</div>
+                <div className="text-[11px] text-muted-foreground">{a.desc}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="chunky-panel bg-black/80 p-4">
+          <h2 className="font-display text-xl uppercase">Loot Tiers</h2>
+          <div className="mt-2 flex flex-wrap gap-1">
+            {ORBIT_LOOT.map(l => (
+              <span key={l.id} className={`border-2 border-black px-2 py-0.5 text-[10px] font-bold uppercase ${RARITY_TINT[l.rarity]}`}>
+                {l.emoji} {l.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* ===================== DIVE (side-scrolling) ===================== */
+type DiveStatus = "combat" | "roomCleared" | "transitioning" | "lootRoom" | "hazardRoom" | "bossRoom" | "summary";
+
+function buildRoomPlan(sec: OrbitSector) {
+  const plan: { kind: "combat" | "loot" | "hazard" | "boss"; enemyId?: string }[] = [];
+  const rooms = sec.rooms;
+  for (let i = 0; i < rooms - 1; i++) {
+    const roll = Math.random();
+    if (roll < 0.2) plan.push({ kind: "loot" });
+    else if (roll < 0.32) plan.push({ kind: "hazard" });
+    else plan.push({ kind: "combat", enemyId: sec.enemies[Math.floor(Math.random() * sec.enemies.length)] });
+  }
+  plan.push(sec.bossId ? { kind: "boss", enemyId: sec.bossId } : { kind: "combat", enemyId: sec.enemies[sec.enemies.length - 1] });
+  return plan;
+}
+
+function OrbitDive({ sector, onExit }: { sector: OrbitSector; onExit: () => void }) {
+  const clearSector = useOrbit(s => s.clearSector);
+  const plan = useMemo(() => buildRoomPlan(sector), [sector.id]);
+
+  const [roomIdx, setRoomIdx] = useState(0);
+  const room = plan[roomIdx];
+  const [status, setStatus] = useState<DiveStatus>(() => initial(room.kind));
+  const [enemy, setEnemy] = useState<OrbitEnemy | null>(null);
+  const [enemyHp, setEnemyHp] = useState(0);
+  const [enemyMaxHp, setEnemyMaxHp] = useState(0);
+  const [catHp, setCatHp] = useState(100);
+  const [taunt, setTaunt] = useState<string | null>(null);
+  const [grab, setGrab] = useState<OrbitLoot[]>([]);
+  const [log, setLog] = useState<string[]>([`You enter ${sector.name}.`]);
+  const [parallaxRun, setParallaxRun] = useState(false);
+
+  function initial(kind: typeof room.kind): DiveStatus {
+    if (kind === "loot") return "lootRoom";
+    if (kind === "hazard") return "hazardRoom";
+    if (kind === "boss") return "bossRoom";
+    return "combat";
+  }
+
+  function pushLog(line: string) { setLog(l => [line, ...l].slice(0, 8)); }
+
+  // Initialize enemy for combat/boss rooms
+  useEffect(() => {
+    if (!room) return;
+    if (room.kind === "combat" || room.kind === "boss") {
+      const e = ORBIT_ENEMIES[room.enemyId!];
+      setEnemy(e);
+      setEnemyHp(e.hp);
+      setEnemyMaxHp(e.hp);
+      if (room.kind === "boss" && e.id === "raccx") {
+        setTaunt(RACCX_TAUNTS[Math.floor(Math.random() * RACCX_TAUNTS.length)]);
+      }
+    } else {
+      setEnemy(null);
+    }
+  }, [roomIdx]);
+
+  function attack(power: number, label: string) {
+    if (!enemy) return;
+    const dmg = power + Math.floor(Math.random() * 6);
+    const next = Math.max(0, enemyHp - dmg);
+    setEnemyHp(next);
+    pushLog(`${label} hits for ${dmg}.`);
+    if (next <= 0) {
+      pushLog(`${enemy.name} defeated!`);
+      setStatus("roomCleared");
+      return;
+    }
+    // Enemy retaliates (Zero-G dodge 20%)
+    const dodged = Math.random() < 0.2;
+    if (dodged) { pushLog(`Zero-G Dodge! Scrapper drifts aside.`); return; }
+    const taken = enemy.atk + Math.floor(Math.random() * 4);
+    setCatHp(h => Math.max(0, h - taken));
+    pushLog(`${enemy.name} hits Scrapper for ${taken}.`);
+    if (enemy.id === "raccx" && Math.random() < 0.4) {
+      setTaunt(RACCX_TAUNTS[Math.floor(Math.random() * RACCX_TAUNTS.length)]);
+    }
+  }
+
+  function grabLoot() {
+    const rolls = 1 + Math.floor(Math.random() * 2);
+    const out: OrbitLoot[] = [];
+    for (let i = 0; i < rolls; i++) {
+      const r = Math.random();
+      const tier = r < 0.55 ? "common" : r < 0.85 ? "uncommon" : r < 0.97 ? "rare" : "epic";
+      const pool = ORBIT_LOOT.filter(l => l.rarity === tier);
+      out.push(pool[Math.floor(Math.random() * pool.length)]);
+    }
+    setGrab(g => [...g, ...out]);
+    out.forEach(o => pushLog(`Grabbed ${o.emoji} ${o.name}`));
+    setStatus("roomCleared");
+  }
+
+  function ventHazard() {
+    setCatHp(h => Math.max(1, h - 8));
+    pushLog(`Hazard vents! Scrapper takes 8 from a leaky bin.`);
+    setStatus("roomCleared");
+  }
+
+  function goDeeper() {
+    if (roomIdx >= plan.length - 1) {
+      // Sector cleared
+      clearSector(sector.id, 4);
+      grab.forEach(() => {/* already added via clearSector roll separately */});
+      setStatus("summary");
+      return;
+    }
+    setStatus("transitioning");
+    setParallaxRun(true);
+    pushLog("Floating deeper…");
+    setTimeout(() => {
+      const nextIdx = roomIdx + 1;
+      setRoomIdx(nextIdx);
+      setStatus(initial(plan[nextIdx].kind));
+      setParallaxRun(false);
+    }, 1400);
+  }
+
+  // KO handling
+  useEffect(() => {
+    if (catHp <= 0 && status !== "summary") {
+      pushLog("Scrapper drifts into the dark. Run ended.");
+      setStatus("summary");
+    }
+  }, [catHp]);
+
+  return (
+    <div className="mt-6 space-y-3">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <div className="text-[10px] uppercase tracking-widest text-secondary">Orbit Trash · Dive</div>
+          <h1 className="font-display text-2xl uppercase">{sector.name}</h1>
+        </div>
+        <button onClick={onExit} className="chunky-button bg-slate-900 px-3 py-1.5 text-[11px] font-bold uppercase">
+          ← Abort Dive
+        </button>
+      </div>
+
+      {/* Stage */}
+      <div className="chunky-panel relative h-72 overflow-hidden bg-black p-0 md:h-96">
+        <div className="absolute inset-0">
+          <img src={orbitBg} alt="" aria-hidden className="h-full w-full object-cover opacity-50" />
+        </div>
+        <ParallaxLayers running speed={parallaxRun ? 1 : 0.18} />
+        <ScrapperSprite drifting={status === "transitioning"} hurt={catHp < 30} />
+
+        {/* Enemy / Room content */}
+        <div className="absolute inset-0 flex items-center justify-end p-6">
+          {status === "transitioning" && (
+            <div className="font-display text-2xl uppercase tracking-widest text-secondary animate-pulse">
+              Floating deeper…
+            </div>
+          )}
+          {status === "combat" && enemy && <EnemyBlock enemy={enemy} hp={enemyHp} max={enemyMaxHp} />}
+          {status === "bossRoom" && enemy && (
+            <div className="flex flex-col items-center gap-2 text-center">
+              <img src={orbitRaccX} alt="" width={160} height={160} loading="lazy"
+                   className="size-32 border-4 border-black object-cover shadow-[0_0_24px_rgba(255,80,200,0.6)] md:size-40" />
+              <EnemyBlock enemy={enemy} hp={enemyHp} max={enemyMaxHp} boss />
+              {taunt && (
+                <div className="chunky-panel max-w-xs bg-fuchsia-900/90 px-3 py-1.5 text-[11px] italic text-white">
+                  “{taunt}”
+                </div>
+              )}
+            </div>
+          )}
+          {status === "lootRoom" && (
+            <div className="chunky-panel bg-amber-500/90 px-4 py-3 text-center text-black">
+              <div className="font-display text-2xl uppercase">Loot Room</div>
+              <div className="text-[11px]">Drifting trash. Grab fast.</div>
+            </div>
+          )}
+          {status === "hazardRoom" && (
+            <div className="chunky-panel bg-destructive/90 px-4 py-3 text-center text-white">
+              <div className="font-display text-2xl uppercase">⚠ Hazard</div>
+              <div className="text-[11px]">Vacuum warning. Vent or escape.</div>
+            </div>
+          )}
+          {status === "roomCleared" && (
+            <div className="chunky-panel bg-secondary/90 px-4 py-3 text-center text-black">
+              <div className="font-display text-2xl uppercase">Room Clear</div>
+            </div>
+          )}
+        </div>
+
+        {/* Room path */}
+        <div className="absolute left-3 top-3 flex gap-1">
+          {plan.map((r, i) => (
+            <span key={i}
+              className={`size-3 border border-black ${i < roomIdx ? "bg-secondary" : i === roomIdx ? "bg-primary" : "bg-slate-700"} ${r.kind === "boss" ? "rounded-full" : ""}`}
+              title={`${i + 1}. ${r.kind}`}
+            />
+          ))}
+        </div>
+
+        {/* HP bar */}
+        <div className="absolute bottom-3 left-3 right-3 flex items-center gap-3">
+          <span className="font-display text-[10px] uppercase tracking-widest text-white">Scrapper</span>
+          <div className="chunky-panel h-3 flex-1 bg-black p-[2px]">
+            <div className="h-full bg-primary transition-all" style={{ width: `${catHp}%` }} />
+          </div>
+          <span className="font-display text-[10px] uppercase tracking-widest text-primary">{catHp} / 100</span>
+        </div>
+      </div>
+
+      {/* Action Bar */}
+      <div className="chunky-panel bg-black/80 p-3">
+        {status === "summary" ? (
+          <SummaryPanel sector={sector} loot={grab} onExit={onExit} />
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            {(status === "combat" || status === "bossRoom") && (
+              <>
+                <button onClick={() => attack(8, "Swat")} className="chunky-button bg-primary px-3 py-2 text-xs font-bold uppercase text-black">Swat</button>
+                <button onClick={() => attack(12, "Pounce")} className="chunky-button bg-accent px-3 py-2 text-xs font-bold uppercase text-black">Magnetic Pounce</button>
+                <button onClick={() => attack(5, "Bite")} className="chunky-button bg-slate-900 px-3 py-2 text-xs font-bold uppercase">Bite</button>
+              </>
+            )}
+            {status === "lootRoom" && (
+              <button onClick={grabLoot} className="chunky-button bg-amber-400 px-3 py-2 text-xs font-bold uppercase text-black">Grab Trash</button>
+            )}
+            {status === "hazardRoom" && (
+              <button onClick={ventHazard} className="chunky-button bg-destructive px-3 py-2 text-xs font-bold uppercase text-white">Vent Bin (-8 HP)</button>
+            )}
+            {status === "roomCleared" && (
+              <button onClick={goDeeper} className="chunky-button bg-secondary px-3 py-2 text-xs font-bold uppercase text-black">
+                {roomIdx >= plan.length - 1 ? "Escape Sector" : "Go Deeper ▶"}
+              </button>
+            )}
+            {status === "transitioning" && (
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Drifting…</span>
+            )}
+            <div className="ml-auto text-[10px] uppercase tracking-widest text-muted-foreground">
+              Room {roomIdx + 1} / {plan.length}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Log */}
+      <div className="chunky-panel bg-black/70 p-3">
+        <div className="text-[10px] font-bold uppercase tracking-widest text-secondary">Dive Log</div>
+        <ul className="mt-1 space-y-0.5 text-[11px] text-muted-foreground">
+          {log.map((l, i) => <li key={i}>· {l}</li>)}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function EnemyBlock({ enemy, hp, max, boss }: { enemy: OrbitEnemy; hp: number; max: number; boss?: boolean }) {
+  return (
+    <div className={`chunky-panel flex flex-col items-center gap-1 bg-black/80 p-3 ${boss ? "border-fuchsia-500" : ""}`}>
+      {!boss && <div className="text-5xl">{enemy.emoji}</div>}
+      <div className="font-display text-sm uppercase">{enemy.name}</div>
+      <div className="chunky-panel h-2 w-32 bg-black p-[2px]">
+        <div className="h-full bg-destructive transition-all" style={{ width: `${(hp / max) * 100}%` }} />
+      </div>
+      <div className="text-[10px] uppercase text-muted-foreground">{hp} / {max}</div>
+    </div>
+  );
+}
+
+function SummaryPanel({ sector, loot, onExit }: { sector: OrbitSector; loot: OrbitLoot[]; onExit: () => void }) {
+  return (
+    <div className="space-y-2 text-center">
+      <div className="font-display text-2xl uppercase text-secondary">Sector Resolved</div>
+      <div className="text-[12px] text-muted-foreground">{sector.name} — added to your conquered list.</div>
+      {loot.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-1">
+          {loot.map((l, i) => (
+            <span key={i} className={`border-2 border-black px-2 py-0.5 text-[10px] font-bold uppercase ${RARITY_TINT[l.rarity]}`}>
+              {l.emoji} {l.name}
+            </span>
+          ))}
+        </div>
+      )}
+      <button onClick={onExit} className="chunky-button bg-primary px-4 py-2 text-xs font-bold uppercase text-black">
+        Return to Station Map
+      </button>
+    </div>
+  );
+}
+
+/* ===================== PARALLAX ===================== */
+function ParallaxLayers({ running = true, speed = 0.2 }: { running?: boolean; speed?: number }) {
+  // CSS-driven layered parallax. We render 3 layers of emoji "trash" and scroll them via animation.
+  const baseDur = 18 / Math.max(0.1, speed);
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <Layer dur={baseDur * 2} symbols="✦ ⋆ · ✦ ⋆ · ✦" top="8%" size="text-xs" opacity={0.4} running={running} />
+      <Layer dur={baseDur} symbols="🛢️ 📦 🗑️ 🧪 ⚠️ 🛠️" top="30%" size="text-2xl" opacity={0.8} running={running} />
+      <Layer dur={baseDur * 0.6} symbols="🥫 🐟 🦴 🧢 🍿 🥄 🔩" top="60%" size="text-3xl" opacity={1} running={running} />
+      <Layer dur={baseDur * 0.45} symbols="✨ ✦ ⋆ ✨" top="78%" size="text-sm" opacity={0.6} running={running} />
+    </div>
+  );
+}
+
+function Layer({ symbols, top, dur, size, opacity, running }: {
+  symbols: string; top: string; dur: number; size: string; opacity: number; running: boolean;
+}) {
+  const arr = symbols.split(" ");
+  return (
+    <div
+      className={`absolute left-0 right-0 flex gap-12 whitespace-nowrap ${size}`}
+      style={{
+        top,
+        opacity,
+        animation: `orbit-scroll ${dur}s linear infinite`,
+        animationPlayState: running ? "running" : "paused",
+      }}
+    >
+      {Array.from({ length: 3 }).map((_, k) => (
+        <div key={k} className="flex gap-12">
+          {arr.map((s, i) => <span key={i} className="drop-shadow-[0_0_4px_rgba(0,255,180,0.4)]">{s}</span>)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ScrapperSprite({ drifting, hurt }: { drifting: boolean; hurt: boolean }) {
+  return (
+    <div
+      className="absolute left-6 bottom-12 select-none transition-transform"
+      style={{
+        transform: drifting ? "translateX(60px) rotate(8deg)" : "translateX(0) rotate(0deg)",
+        transitionDuration: "1.2s",
+      }}
+    >
+      <div className={`relative ${hurt ? "animate-pulse" : ""}`}>
+        <div className="text-6xl md:text-7xl drop-shadow-[0_0_10px_rgba(0,200,255,0.5)]">😼</div>
+        <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-2xl">🪖</div>
+      </div>
+    </div>
+  );
+}

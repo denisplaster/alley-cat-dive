@@ -17,6 +17,7 @@ import { Route as MapRouteImport } from './routes/map'
 import { Route as LootRouteImport } from './routes/loot'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as HideoutRouteImport } from './routes/hideout'
+import { Route as EditionsRouteImport } from './routes/editions'
 import { Route as DiveRouteImport } from './routes/dive'
 import { Route as CrewRouteImport } from './routes/crew'
 import { Route as IndexRouteImport } from './routes/index'
@@ -63,6 +64,11 @@ const HideoutRoute = HideoutRouteImport.update({
   path: '/hideout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EditionsRoute = EditionsRouteImport.update({
+  id: '/editions',
+  path: '/editions',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DiveRoute = DiveRouteImport.update({
   id: '/dive',
   path: '/dive',
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/crew': typeof CrewRoute
   '/dive': typeof DiveRoute
+  '/editions': typeof EditionsRoute
   '/hideout': typeof HideoutRoute
   '/inventory': typeof InventoryRoute
   '/loot': typeof LootRoute
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/crew': typeof CrewRoute
   '/dive': typeof DiveRoute
+  '/editions': typeof EditionsRoute
   '/hideout': typeof HideoutRoute
   '/inventory': typeof InventoryRoute
   '/loot': typeof LootRoute
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/crew': typeof CrewRoute
   '/dive': typeof DiveRoute
+  '/editions': typeof EditionsRoute
   '/hideout': typeof HideoutRoute
   '/inventory': typeof InventoryRoute
   '/loot': typeof LootRoute
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
     | '/'
     | '/crew'
     | '/dive'
+    | '/editions'
     | '/hideout'
     | '/inventory'
     | '/loot'
@@ -156,6 +166,7 @@ export interface FileRouteTypes {
     | '/'
     | '/crew'
     | '/dive'
+    | '/editions'
     | '/hideout'
     | '/inventory'
     | '/loot'
@@ -171,6 +182,7 @@ export interface FileRouteTypes {
     | '/'
     | '/crew'
     | '/dive'
+    | '/editions'
     | '/hideout'
     | '/inventory'
     | '/loot'
@@ -187,6 +199,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CrewRoute: typeof CrewRoute
   DiveRoute: typeof DiveRoute
+  EditionsRoute: typeof EditionsRoute
   HideoutRoute: typeof HideoutRoute
   InventoryRoute: typeof InventoryRoute
   LootRoute: typeof LootRoute
@@ -257,6 +270,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HideoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/editions': {
+      id: '/editions'
+      path: '/editions'
+      fullPath: '/editions'
+      preLoaderRoute: typeof EditionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dive': {
       id: '/dive'
       path: '/dive'
@@ -299,6 +319,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CrewRoute: CrewRoute,
   DiveRoute: DiveRoute,
+  EditionsRoute: EditionsRoute,
   HideoutRoute: HideoutRoute,
   InventoryRoute: InventoryRoute,
   LootRoute: LootRoute,
