@@ -123,6 +123,16 @@ function OrbitStory() {
             <button onClick={() => setActiveId(null)} className="chunky-button bg-slate-900 px-2 py-1 text-[10px] font-bold uppercase">Close</button>
           </div>
           <div className="chunky-panel mx-auto max-w-2xl bg-slate-950/80 p-5">
+            {p.image && (
+              <img
+                src={p.image}
+                alt=""
+                width={1024}
+                height={768}
+                loading="lazy"
+                className="mb-3 w-full border-2 border-black"
+              />
+            )}
             {p.speaker && (
               <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-accent">{p.speaker}</div>
             )}
