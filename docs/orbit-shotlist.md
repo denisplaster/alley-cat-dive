@@ -24,7 +24,7 @@ Panels are numbered flat per chapter: **intro panels first, then outro panels.**
 
 ---
 
-## Chapter 1 — Wrong Dumpster  *(cinematic, no dive)*
+## Chapter 1 — Wrong Dumpster  *(dive: Airlock Intake)*
 | File | Beat | Caption | Shot |
 |---|---|---|---|
 | ch1-01.jpg | intro | "Behind the research lab, the dumpster hummed like a fridge full of bees." | Night alley behind a research lab; one dumpster glowing eerie blue, steam rising; gray tabby approaching in silhouette. |
@@ -33,6 +33,7 @@ Panels are numbered flat per chapter: **intro panels first, then outro panels.**
 | ch1-04.jpg | intro | "(Worst case, I find a snack. Best case, I find a BIG snack.)" | Cat mid-leap into the blue light, cocky grin, paws outstretched. |
 | ch1-05.jpg | intro | "The lid slammed. The floor shook. The sky got very, very close." | Blinding flash; the lid slams, ground quakes, stars rushing in through a tearing sky. |
 | ch1-06.jpg | intro | "…that's not the floor. WHY ISN'T THAT THE FLOOR—" | Cat free-falling UP into space, fur on end, comically panicked, Earth shrinking below. |
+| ch1-07.jpg | intro | "He landed in a churning tangle of floating garbage — and it was already crawling toward him." | Cat crash-landed in a writhing heap of zero-G trash, mites/space-pigeons skittering toward him. |
 | ch1-07.jpg | outro | "By morning, the alley was gone. The trash was floating." | Dawn over an empty alley; the dumpster gone; a few wrappers drifting weightless. |
 | ch1-08.jpg | outro | "Mew. Okay. New plan. Survive." | The cat floating in zero-G among trash, helmet fogged, newly determined. |
 | ch1-09.jpg | outro | "A hatch hissed open above a sea of drifting garbage. Welcome to STAR-BIN 9." | A huge hatch hissing open above an ocean of floating garbage; epic establishing shot of the station. |
@@ -107,18 +108,19 @@ Panels are numbered flat per chapter: **intro panels first, then outro panels.**
 | ch7-06.jpg | outro | "Escape pod. Soda can. Same energy." | Cat squeezing into a ridiculous soda-can escape pod, grin. |
 | ch7-07.jpg | outro | "He grabbed the key, the crown, and a suspicious amount of snacks." | Cat clutching a glowing key, the crown, and armfuls of snacks. |
 
-## Chapter 8 — Trash Moon  *(cinematic, no dive)*
+## Chapter 8 — Trash Moon  *(dive: Junk Reentry)*
 | File | Beat | Caption | Shot |
 |---|---|---|---|
 | ch8-01.jpg | intro | "The escape pod was made of a soda can and a dream." | A tiny ridiculous escape pod made from a soda can, drifting in space. |
 | ch8-02.jpg | intro | "Wait. That's not Earth." | Cat at the porthole, confused, staring out. |
 | ch8-03.jpg | intro | "Below them, a moon made entirely of garbage rolled into view." | A giant moon made entirely of garbage rolling into view; awe. |
 | ch8-04.jpg | intro | "…is it weird that I'm hungry again?" | Cat licking his lips at the trash moon, hungry sparkle in eye. |
+| ch8-05.jpg | intro | "Then the debris field slammed the pod like a fist. Something out here was hungry too." | The soda-can pod rocked by a storm of space junk; a menacing debris-creature lunging from the dark. |
 | ch8-05.jpg | outro | "Somewhere down there, a new alley waited. A bigger one." | The trash moon's surface — a vast new alley awaiting. |
 | ch8-06.jpg | outro | "Crew. Buckle up. We're divin'." | Cat buckling a seatbelt, fierce grin, crew behind him. |
 | ch8-07.jpg | outro | "TO BE CONTINUED… (Edition #3 — Trash Moon)" | Dramatic "TO BE CONTINUED" card over the trash moon; Edition #3 tease. |
 
 ---
 
-**Total: 62 panels** (matches the ~per-sentence density of Edition 1). Until they're filled
+**Total: 64 panels** (matches the ~per-sentence density of Edition 1). Until they're filled
 in, the placeholders keep Orbit Trash fully playable.

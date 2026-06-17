@@ -39,7 +39,7 @@ export const ORBIT_CHAPTERS: OrbitChapter[] = [
     title: "Chapter 1 — Wrong Dumpster",
     subtitle: "Behind the research lab, one bin glows blue.",
     unlocks: "Space Station Map · Zero-G Tutorial",
-    // Cinematic opener — the fall into orbit. No dive.
+    sectorId: "intake",
     intro: [
       { image: PH_STATION, speaker: "Narrator", text: "Behind the research lab, the dumpster hummed like a fridge full of bees." },
       { image: PH_HERO, speaker: "Scrapper", text: "Sniff. Tuna. Electricity. Trouble." },
@@ -47,6 +47,7 @@ export const ORBIT_CHAPTERS: OrbitChapter[] = [
       { image: PH_HERO, speaker: "Scrapper", text: "(Worst case, I find a snack. Best case, I find a BIG snack.)" },
       { image: PH_STATION, speaker: "Narrator", text: "The lid slammed. The floor shook. The sky got very, very close." },
       { image: PH_HERO, speaker: "Scrapper", text: "…that's not the floor. WHY ISN'T THAT THE FLOOR—" },
+      { image: PH_STATION, speaker: "Narrator", text: "He landed in a churning tangle of floating garbage — and it was already crawling toward him." },
     ],
     outro: [
       { image: PH_STATION, speaker: "Narrator", text: "By morning, the alley was gone. The trash was floating." },
@@ -171,12 +172,13 @@ export const ORBIT_CHAPTERS: OrbitChapter[] = [
     title: "Chapter 8 — Trash Moon",
     subtitle: "Home is very far away.",
     unlocks: "To be continued… (Edition #3)",
-    // Cinematic finale — the cliffhanger. No dive.
+    sectorId: "reentry",
     intro: [
       { image: PH_HERO, speaker: "Narrator", text: "The escape pod was made of a soda can and a dream." },
       { image: PH_HERO, speaker: "Scrapper", text: "Wait. That's not Earth." },
       { image: PH_STATION, speaker: "Narrator", text: "Below them, a moon made entirely of garbage rolled into view." },
       { image: PH_HERO, speaker: "Scrapper", text: "…is it weird that I'm hungry again?" },
+      { image: PH_STATION, speaker: "Narrator", text: "Then the debris field slammed the pod like a fist. Something out here was hungry too." },
     ],
     outro: [
       { image: PH_STATION, speaker: "Narrator", text: "Somewhere down there, a new alley waited. A bigger one." },
@@ -224,6 +226,13 @@ export interface OrbitSector {
 
 export const ORBIT_SECTORS: OrbitSector[] = [
   {
+    id: "intake", name: "Airlock Intake",
+    subtitle: "Where the station swallows the trash — and the cat.",
+    difficulty: "Easy", loot: "Scrap Salvage",
+    enemies: ["mite", "pigeon"], rooms: 4, modifier: "Drifting Debris",
+    unlocksAfter: 0,
+  },
+  {
     id: "galley", name: "Galley Waste Ring",
     subtitle: "Cafeteria scraps in zero-G.",
     difficulty: "Easy", loot: "Space Snacks",
@@ -266,6 +275,13 @@ export const ORBIT_SECTORS: OrbitSector[] = [
     enemies: ["bot", "compactor"], rooms: 6, modifier: "Crusher Countdown",
     unlocksAfter: 6,
     bossId: "compactor",
+  },
+  {
+    id: "reentry", name: "Junk Reentry",
+    subtitle: "Punch through the trash moon's debris field.",
+    difficulty: "Hard", loot: "Moon Salvage",
+    enemies: ["bot", "drone", "pigeon"], rooms: 5, modifier: "Debris Field",
+    unlocksAfter: 7,
   },
 ];
 
