@@ -674,7 +674,7 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
               src={SCRAPPER_POSES[catPose]}
               name="Scrapper"
               bubble={catBubble}
-              drifting={status === "transitioning"}
+              drifting={false}
               boss={false}
             />
             <CombatantSprite
