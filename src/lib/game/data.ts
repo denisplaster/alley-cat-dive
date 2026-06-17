@@ -108,13 +108,13 @@ export const DUMPSTERS: Dumpster[] = [
   { id: "haunted", name: "Haunted Recycling Bin", image: dHaunted, difficulty: 5,
     expectedLoot: "legendary", enemyPool: ["spoiled_imp","trash_bag","feral_chihuahua","vent_wisp","antenna_imp","scrap_serpent"], rooms: 9,
     truckTimerSec: 260, recommendedPower: 150, status: "locked", rewardCaps: 45, rewardBones: 520 },
-  { id: "luxury", name: "Luxury Condo Trash Room", image: dLuxury, difficulty: 6,
+  { id: "luxury", name: "Luxury Condo Trash Room", image: dLuxury, difficulty: 8,
     expectedLoot: "mythic", enemyPool: ["antenna_imp","pigeon_lord","scrap_serpent","tunnel_ghoul","graffiti_wraith","condo_hound"], rooms: 10,
     truckTimerSec: 300, recommendedPower: 200, status: "locked", rewardCaps: 80, rewardBones: 900 },
-  { id: "rooftop", name: "Rooftop AC Bin", image: dRooftop, difficulty: 5,
+  { id: "rooftop", name: "Rooftop AC Bin", image: dRooftop, difficulty: 6,
     expectedLoot: "legendary", enemyPool: ["alley_crow","grease_sprite","vent_wisp","antenna_imp","spoiled_imp","pigeon_lord"], rooms: 9,
     truckTimerSec: 270, recommendedPower: 160, status: "locked", rewardCaps: 50, rewardBones: 560 },
-  { id: "subway", name: "Subway Platform Dumpster", image: dSubway, difficulty: 5,
+  { id: "subway", name: "Subway Platform Dumpster", image: dSubway, difficulty: 7,
     expectedLoot: "legendary", enemyPool: ["spoiled_imp","scrap_serpent","antenna_imp","feral_chihuahua","vent_wisp","subway_rat_king"], rooms: 9,
     truckTimerSec: 270, recommendedPower: 170, status: "locked", rewardCaps: 55, rewardBones: 620 },
 ];
@@ -122,15 +122,17 @@ export const DUMPSTERS: Dumpster[] = [
 let _itemId = 1000;
 export const newItemId = () => `it_${_itemId++}`;
 
+// Gear bonuses are kept in a fairly tight band (best weapon +14, not +24) so a
+// lucky legendary drop isn't 3× a common one — difficulty shouldn't swing on loot RNG.
 export const LOOT_POOL: Omit<Item, "id">[] = [
-  { name: "Rusty Can Lid Shield", rarity: "common",    kind: "armor",  defense: 4,  flavor: "Slightly tetanus-flavored.", sellPrice: 5 },
-  { name: "Shiny Fork Dagger",    rarity: "uncommon",  kind: "weapon", attack: 8,   flavor: "One tine missing. Still pokes.", sellPrice: 12 },
-  { name: "Half-Eaten Tuna Relic",rarity: "rare",      kind: "relic",  attack: 4, defense: 4, flavor: "Smells like victory.", sellPrice: 28 },
-  { name: "Bottle Cap Ring",      rarity: "rare",      kind: "relic",  speed: 6,    flavor: "Pops off the most stubborn fights.", sellPrice: 30 },
-  { name: "Grease-Stained Cape",  rarity: "epic",      kind: "armor",  defense: 14, speed: 4,  flavor: "Repels water. Attracts flies.", sellPrice: 70 },
+  { name: "Rusty Can Lid Shield", rarity: "common",    kind: "armor",  defense: 3,  flavor: "Slightly tetanus-flavored.", sellPrice: 5 },
+  { name: "Shiny Fork Dagger",    rarity: "uncommon",  kind: "weapon", attack: 6,   flavor: "One tine missing. Still pokes.", sellPrice: 12 },
+  { name: "Half-Eaten Tuna Relic",rarity: "rare",      kind: "relic",  attack: 3, defense: 3, flavor: "Smells like victory.", sellPrice: 28 },
+  { name: "Bottle Cap Ring",      rarity: "rare",      kind: "relic",  speed: 5,    flavor: "Pops off the most stubborn fights.", sellPrice: 30 },
+  { name: "Grease-Stained Cape",  rarity: "epic",      kind: "armor",  defense: 8, speed: 2,  flavor: "Repels water. Attracts flies.", sellPrice: 70 },
   { name: "Cursed Pizza Slice",   rarity: "epic",      kind: "food",   health: 40, attack: 6, flavor: "Pepperoni whispers.", sellPrice: 60 },
-  { name: "Cardboard Crown",      rarity: "legendary", kind: "relic",  attack: 10, defense: 10, speed: 4, flavor: "King of the alley. For tonight.", sellPrice: 180 },
-  { name: "Legendary Fishbone",   rarity: "legendary", kind: "weapon", attack: 24,  flavor: "Ancient. Stinky. Pointy.", sellPrice: 220 },
+  { name: "Cardboard Crown",      rarity: "legendary", kind: "relic",  attack: 6, defense: 6, speed: 2, flavor: "King of the alley. For tonight.", sellPrice: 180 },
+  { name: "Legendary Fishbone",   rarity: "legendary", kind: "weapon", attack: 14,  flavor: "Ancient. Stinky. Pointy.", sellPrice: 220 },
   { name: "Sardine of Healing",   rarity: "uncommon",  kind: "food",   health: 25, flavor: "Single use. Don't share.", sellPrice: 10 },
   { name: "Moldy Crouton Charm",  rarity: "common",    kind: "junk",   flavor: "It pulses, kind of.", sellPrice: 3 },
   { name: "Mythic Trash Goo Vial",rarity: "mythic",    kind: "crafting", attack: 18, defense: 18, health: 30, flavor: "DO NOT INGEST.", sellPrice: 500 },
@@ -138,13 +140,13 @@ export const LOOT_POOL: Omit<Item, "id">[] = [
 
 export const HIDEOUT_UPGRADES: HideoutUpgrade[] = [
   { id: "castle",   name: "Cardboard Castle",      level: 2, maxLevel: 10,
-    costBones: (l)=>120*l, costCaps:(l)=>4*l, benefit: "+8% max HP per level",
+    costBones: (l)=>120*l, costCaps:(l)=>4*l, benefit: "+5% max HP per level",
     description: "Layered boxes, duct-tape walls. The cats love it." },
   { id: "pantry",   name: "Tuna Can Pantry",       level: 1, maxLevel: 8,
     costBones: (l)=>80*l, costCaps:(l)=>2*l, benefit: "Food heals +20% per level",
     description: "Stockpile of slightly-dented tuna treasure." },
   { id: "gym",      name: "Scratching Post Gym",   level: 3, maxLevel: 10,
-    costBones: (l)=>150*l, costCaps:(l)=>5*l, benefit: "+5% attack per level",
+    costBones: (l)=>150*l, costCaps:(l)=>5*l, benefit: "+3% attack per level",
     description: "Hand-shredded for maximum claw sharpness." },
   { id: "bank",     name: "Bottle Cap Bank",       level: 1, maxLevel: 6,
     costBones: (l)=>200*l, costCaps:(l)=>0, benefit: "+10% caps from dives",

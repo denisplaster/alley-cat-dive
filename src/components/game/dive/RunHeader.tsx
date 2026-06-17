@@ -18,7 +18,7 @@ export function RunHeader({ dump, room, totalRooms }: { dump: Dumpster; room: nu
         </div>
         <Pill label="Diff" hideOnMobile>
           <span className="text-accent">
-            {"★".repeat(dump.difficulty)}<span className="text-muted-foreground/40">{"★".repeat(6 - dump.difficulty)}</span>
+            {"★".repeat(dump.difficulty)}<span className="text-muted-foreground/40">{"★".repeat(Math.max(0, 8 - dump.difficulty))}</span>
           </span>
         </Pill>
         <Pill label="Loot" hideOnMobile>

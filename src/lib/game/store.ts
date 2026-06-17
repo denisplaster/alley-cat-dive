@@ -246,8 +246,11 @@ const spawnEnemy = (dump: Dumpster, kind: RoomKind, roomIdx: number): Enemy => {
     ? dump.enemyPool[dump.enemyPool.length - 1]
     : regularPool[Math.floor(Math.random() * regularPool.length)] ?? dump.enemyPool[0];
   const tmpl = ENEMIES[enemyKey];
-  let hp = tmpl.baseHp + dump.difficulty * 10 + roomIdx * 4;
-  let atk = tmpl.attack;
+  // HP and ATK both scale with difficulty so enemies keep pace with a cat whose
+  // level + evolution + gear + hideout bonuses stack up across the campaign.
+  // (ATK used to be flat, which let a progressed cat shrug off late-game hits.)
+  let hp = Math.round(tmpl.baseHp * (1 + (dump.difficulty - 1) * 0.12)) + 6 + roomIdx * 4;
+  let atk = Math.round(tmpl.attack * (1 + (dump.difficulty - 1) * 0.075));
   let name = tmpl.name;
   let emoji = tmpl.emoji;
   // Boss/mini scaling ramps with dumpster difficulty so the first dumpster's
@@ -1783,8 +1786,8 @@ export function withCombatStats(s: GameState, cat: Cat, crewAssist = false): Cat
     roomsCleared: s.roomsCleared,
     bossesBeaten: s.bossesBeaten,
   })].statBonus;
-  const atkPct = 0.05 * hideoutLevel(s, "gym");
-  const hpPct = 0.08 * hideoutLevel(s, "castle");
+  const atkPct = 0.03 * hideoutLevel(s, "gym");
+  const hpPct = 0.05 * hideoutLevel(s, "castle");
   // Multi-Cat Dive Support (Ch7 reward): ready crewmates back the diver up.
   const allies = (crewAssist && s.completedChapters.includes("ch7_rally"))
     ? s.cats.filter(c => c.id !== cat.id && c.status === "ready").length : 0;
