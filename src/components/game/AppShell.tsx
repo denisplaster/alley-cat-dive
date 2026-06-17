@@ -8,7 +8,6 @@ const NAV = [
   { to: "/editions", label: "Editions" },
   { to: "/story", label: "Story" },
   { to: "/map", label: "Map" },
-  { to: "/orbit", label: "Orbit" },
   { to: "/raids", label: "Raids" },
   { to: "/crew", label: "Crew" },
   { to: "/inventory", label: "Stash" },
@@ -54,7 +53,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="mt-1 flex flex-col gap-1">
               <div className="font-display text-sm uppercase tracking-widest text-primary leading-none">Alley Cat</div>
               <div className="chunky-panel h-3 w-32 bg-black p-[2px]">
-                <div className="h-full bg-secondary" style={{ width: `${playerXp}%` }} />
+                <div className="h-full bg-secondary transition-[width] duration-500" style={{ width: `${playerXp}%` }} />
               </div>
             </div>
           </Link>

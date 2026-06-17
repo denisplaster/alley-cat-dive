@@ -1,10 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useOrbit } from "@/lib/orbit/store";
+import { useGame } from "@/lib/game/store";
 import {
   ORBIT_CHAPTERS, ORBIT_SECTORS, ORBIT_ENEMIES, ORBIT_LOOT, ORBIT_ABILITIES,
-  RACCX_TAUNTS, RARITY_TINT, orbitBg, orbitRaccX,
+  RACCX_TAUNTS, RARITY_TINT, orbitBg, orbitRaccX, orbitProgressPct,
   type OrbitSector, type OrbitEnemy, type OrbitLoot,
+  type OrbitChapter, type OrbitPanel,
 } from "@/lib/orbit/data";
 
 export const Route = createFileRoute("/orbit")({
@@ -18,23 +21,35 @@ export const Route = createFileRoute("/orbit")({
     ],
     links: [{ rel: "canonical", href: "https://alleycatdive.com/orbit" }],
   }),
-  component: OrbitScreen,
+  component: OrbitRoute,
 });
+
+// Legacy/deep-link route: Orbit no longer has its own page or nav tab, so open
+// the edition overlay and drop the player on the hub.
+function OrbitRoute() {
+  const openEdition = useOrbit(s => s.openEdition);
+  const navigate = useNavigate();
+  useEffect(() => {
+    openEdition();
+    navigate({ to: "/", replace: true });
+  }, [openEdition, navigate]);
+  return null;
+}
 
 type Tab = "story" | "map" | "codex";
 
-function OrbitScreen() {
+/** The full Orbit Trash edition UI, hosted inside the full-screen OrbitOverlay. */
+function OrbitEdition() {
   const [tab, setTab] = useState<Tab>("story");
   const [diveSector, setDiveSector] = useState<OrbitSector | null>(null);
-  const setEdition = useOrbit(s => s.setEdition);
-  useEffect(() => { setEdition("orbit"); }, [setEdition]);
+  const closeEdition = useOrbit(s => s.closeEdition);
 
   if (diveSector) {
     return <OrbitDive sector={diveSector} onExit={() => setDiveSector(null)} />;
   }
 
   return (
-    <div className="mt-6 space-y-4">
+    <div className="space-y-4">
       <OrbitHero />
 
       <div className="flex flex-wrap gap-2">
@@ -47,9 +62,9 @@ function OrbitScreen() {
             {t === "story" ? "Story" : t === "map" ? "Station Map" : "Codex"}
           </button>
         ))}
-        <Link to="/editions" className="chunky-button bg-slate-900 px-3 py-1.5 text-[11px] font-bold uppercase ml-auto">
-          Switch Edition
-        </Link>
+        <button onClick={closeEdition} className="chunky-button bg-slate-900 px-3 py-1.5 text-[11px] font-bold uppercase ml-auto">
+          ✕ Exit Edition
+        </button>
       </div>
 
       {tab === "story" && <OrbitStory />}
@@ -59,8 +74,26 @@ function OrbitScreen() {
   );
 }
 
+/** Full-screen overlay hosting the edition — covers the nav like Edition 1's
+ *  Cutscene. Mounted globally in __root; shown whenever an edition is launched. */
+export function OrbitOverlay() {
+  const isOpen = useOrbit(s => s.isOpen);
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-background">
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <img src={orbitBg} alt="" aria-hidden className="h-full w-full object-cover opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/70 to-background" />
+      </div>
+      <div className="mx-auto w-full max-w-7xl px-3 py-4 md:px-6">
+        <OrbitEdition />
+      </div>
+    </div>
+  );
+}
+
 function OrbitHero() {
-  const progress = useOrbit(s => s.progressPct());
+  const progress = useOrbit(s => orbitProgressPct(s.completedChapters.length, s.clearedSectors.length));
   const next = useOrbit(s => {
     const nextCh = ORBIT_CHAPTERS[s.completedChapters.length];
     return nextCh?.title ?? "All chapters cleared";
@@ -94,62 +127,43 @@ function OrbitHero() {
   );
 }
 
-/* ===================== STORY (webtoon cutscene) ===================== */
+/* ===================== STORY (webtoon: intro → dive → outro → reward) ===================== */
+type StoryPhase = "intro" | "dive" | "outro" | "reward";
+
 function OrbitStory() {
   const completed = useOrbit(s => s.completedChapters);
   const play = useOrbit(s => s.playChapter);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const active = ORBIT_CHAPTERS.find(c => c.id === activeId) ?? null;
+  const [phase, setPhase] = useState<StoryPhase>("intro");
   const [panel, setPanel] = useState(0);
 
-  function openCh(id: string) { setActiveId(id); setPanel(0); }
-  function next() {
+  const active = ORBIT_CHAPTERS.find(c => c.id === activeId) ?? null;
+  const sector = active?.sectorId ? ORBIT_SECTORS.find(s => s.id === active.sectorId) ?? null : null;
+
+  function openCh(id: string) { setActiveId(id); setPhase("intro"); setPanel(0); }
+  function close() { setActiveId(null); }
+
+  function advanceIntro() {
     if (!active) return;
-    if (panel < active.panels.length - 1) setPanel(p => p + 1);
-    else { play(active.id); setActiveId(null); }
+    if (panel < active.intro.length - 1) { setPanel(p => p + 1); return; }
+    // End of intro → into the dive if this chapter has one, else straight to outro.
+    if (sector) setPhase("dive");
+    else { setPhase("outro"); setPanel(0); }
+  }
+  function advanceOutro() {
+    if (!active) return;
+    if (panel < active.outro.length - 1) { setPanel(p => p + 1); return; }
+    setPhase("reward");
+  }
+  function claim() {
+    if (!active) return;
+    play(active.id);
+    setActiveId(null);
   }
 
-  if (active) {
-    const p = active.panels[panel];
-    return (
-      <div className="chunky-panel relative overflow-hidden bg-black p-0">
-        <div className="absolute inset-0">
-          <img src={orbitBg} alt="" aria-hidden className="h-full w-full object-cover opacity-30" />
-          <ParallaxLayers speed={0.25} />
-        </div>
-        <div className="relative z-10 p-6">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="text-[10px] uppercase tracking-widest text-secondary">{active.title}</div>
-            <button onClick={() => setActiveId(null)} className="chunky-button bg-slate-900 px-2 py-1 text-[10px] font-bold uppercase">Close</button>
-          </div>
-          <div className="chunky-panel mx-auto max-w-2xl bg-slate-950/80 p-5">
-            {p.image && (
-              <img
-                src={p.image}
-                alt=""
-                width={1024}
-                height={768}
-                loading="lazy"
-                className="mb-3 w-full border-2 border-black"
-              />
-            )}
-            {p.speaker && (
-              <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-accent">{p.speaker}</div>
-            )}
-            <p className="font-display text-xl uppercase leading-snug text-white">{p.text}</p>
-          </div>
-          <div className="mt-4 flex items-center justify-between">
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Panel {panel + 1} / {active.panels.length}</span>
-            <button onClick={next} className="chunky-button bg-secondary px-4 py-2 text-xs font-bold uppercase text-black">
-              {panel < active.panels.length - 1 ? "Next ▶" : "Finish Chapter"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
+  // --- Chapter list (always the story-tab content; the active chapter plays in
+  //     a focused full-screen overlay on top, mirroring Edition 1's Cutscene). ---
+  const chapterList = (
     <div className="space-y-3">
       {ORBIT_CHAPTERS.map((ch, i) => {
         const done = completed.includes(ch.id);
@@ -160,8 +174,13 @@ function OrbitStory() {
               <div className="flex-1">
                 <h2 className="font-display text-lg uppercase leading-tight">{ch.title}</h2>
                 <p className="text-[11px] italic text-muted-foreground">{ch.subtitle}</p>
-                <div className="mt-2 inline-block border-2 border-black bg-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase">
-                  Unlocks: {ch.unlocks}
+                <div className="mt-2 flex flex-wrap items-center gap-1">
+                  <span className="border-2 border-black bg-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase">
+                    Unlocks: {ch.unlocks}
+                  </span>
+                  {ch.sectorId
+                    ? <span className="border-2 border-black bg-fuchsia-900 px-2 py-0.5 text-[10px] font-bold uppercase text-fuchsia-100">⚔ Dive</span>
+                    : <span className="border-2 border-black bg-slate-800 px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">★ Cinematic</span>}
                 </div>
               </div>
               <div className="flex flex-col items-end gap-1">
@@ -178,6 +197,168 @@ function OrbitStory() {
           </article>
         );
       })}
+    </div>
+  );
+
+  if (!active) return chapterList;
+
+  // --- Active chapter: intro → dive → outro → reward, all in one focused overlay ---
+  let inner: ReactNode = null;
+  if (phase === "dive" && sector) {
+    // The battle fills the same width as Edition 1's dive (the app's max-w-7xl).
+    inner = (
+      <div className="w-full max-w-7xl">
+        <OrbitDive
+          sector={sector}
+          onExit={() => { setPhase("intro"); setPanel(Math.max(0, active.intro.length - 1)); }}
+          onComplete={() => { setPhase("outro"); setPanel(0); }}
+        />
+      </div>
+    );
+  } else if (phase === "reward") {
+    inner = <div className="w-full max-w-2xl"><StoryReward chapter={active} onClaim={claim} /></div>;
+  } else {
+    const viewPhase: "intro" | "outro" = phase === "outro" ? "outro" : "intro";
+    const panels = viewPhase === "intro" ? active.intro : active.outro;
+    const p = panels[panel];
+    if (p) {
+      const isLastIntro = viewPhase === "intro" && panel === panels.length - 1;
+      const nextLabel = panel < panels.length - 1
+        ? "Next ▸"
+        : viewPhase === "intro" ? (sector ? "Start Dive ▶" : "Continue ▸") : "Continue ▸";
+      inner = (
+        <div className="w-full max-w-3xl">
+          <StoryPanelView
+            chapter={active}
+            phase={viewPhase}
+            panels={panels}
+            idx={panel}
+            nextLabel={nextLabel}
+            highlightNext={isLastIntro && !!sector}
+            onNext={viewPhase === "intro" ? advanceIntro : advanceOutro}
+            onSkip={close}
+          />
+        </div>
+      );
+    }
+  }
+
+  return (
+    <>
+      {chapterList}
+      {/* Portal to <body> so the overlay escapes the page's stacking context and
+          covers the nav/header, exactly like Edition 1's root-level Cutscene. */}
+      {typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[60] overflow-y-auto bg-black/95 backdrop-blur-sm">
+          <div className="flex min-h-full items-center justify-center p-4">
+            {inner}
+          </div>
+        </div>,
+        document.body,
+      )}
+    </>
+  );
+}
+
+/** One webtoon panel: full-bleed art + a speech bubble, mirroring Edition 1's Cutscene. */
+function StoryPanelView({ chapter, phase, panels, idx, nextLabel, highlightNext, onNext, onSkip }: {
+  chapter: OrbitChapter; phase: "intro" | "outro"; panels: OrbitPanel[];
+  idx: number; nextLabel: string; highlightNext: boolean; onNext: () => void; onSkip: () => void;
+}) {
+  const p = panels[idx];
+  const isNarrator = !p.speaker || p.speaker.toLowerCase() === "narrator";
+  return (
+    <div className="space-y-3">
+      {/* Chapter banner */}
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-secondary">
+            {phase === "intro" ? "Chapter Begins" : "Chapter Ends"}
+          </div>
+          <h2 className="font-display text-2xl uppercase leading-tight md:text-3xl">{chapter.title}</h2>
+          <p className="text-[11px] italic text-muted-foreground">{chapter.subtitle}</p>
+        </div>
+        <button onClick={onSkip} className="chunky-button bg-slate-900 px-2 py-1 text-[10px] font-bold uppercase">Skip</button>
+      </div>
+
+      {/* Webtoon panel */}
+      <div className="chunky-panel relative aspect-[4/3] cursor-pointer overflow-hidden bg-black" onClick={onNext}>
+        <img
+          key={`${chapter.id}-${phase}-${idx}`}
+          src={p.image}
+          alt=""
+          className="h-full w-full animate-[fade-in_0.4s_ease-out] object-cover"
+        />
+        {p.text && (
+          <div className="absolute inset-x-3 bottom-3 md:inset-x-6 md:bottom-6">
+            {isNarrator ? (
+              <div className="chunky-panel border-2 border-black bg-black/85 px-4 py-3 text-sm leading-snug text-foreground md:text-base">
+                <p className="italic">{p.text}</p>
+              </div>
+            ) : (
+              <div className="chunky-panel relative bg-white px-4 py-3 text-black">
+                <div className="absolute -top-3 left-3 border-2 border-black bg-accent px-2 py-0.5 text-[10px] font-bold uppercase text-black">
+                  {p.speaker}
+                </div>
+                <p className="text-sm font-bold leading-snug md:text-base">{p.text}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Panel dots */}
+        <div className="absolute right-3 top-3 flex gap-1">
+          {panels.map((_, i) => (
+            <span key={i} className={`h-1.5 w-6 border border-black ${i <= idx ? "bg-secondary" : "bg-white/30"}`} />
+          ))}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <button onClick={onSkip} className="chunky-button bg-slate-900 px-3 py-2 text-[11px] font-bold uppercase">Skip</button>
+          <span className="text-[11px] uppercase tracking-widest text-muted-foreground">{idx + 1} / {panels.length}</span>
+        </div>
+        <button
+          onClick={onNext}
+          className={`chunky-button px-4 py-2 text-xs font-bold uppercase text-black ${highlightNext ? "animate-pulse bg-primary" : "bg-secondary"}`}
+        >
+          {nextLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Chapter-complete reward screen, mirroring Edition 1's reward panel. */
+function StoryReward({ chapter, onClaim }: { chapter: OrbitChapter; onClaim: () => void }) {
+  const unlocks = chapter.unlocks.split("·").map(s => s.trim()).filter(Boolean);
+  return (
+    <div className="mx-auto max-w-2xl space-y-4">
+      <div className="text-center">
+        <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-secondary animate-pulse">Chapter Complete</div>
+        <h2 className="font-display text-3xl uppercase leading-tight text-primary drop-shadow-[0_0_18px_rgba(74,222,128,0.55)] md:text-4xl">
+          {chapter.title.replace(/^Chapter \d+\s—\s/, "")}
+        </h2>
+        <p className="text-[11px] italic text-muted-foreground">{chapter.subtitle}</p>
+      </div>
+      <div className="chunky-panel bg-black/85 p-4">
+        <div className="mb-3 text-[10px] font-bold uppercase tracking-widest text-secondary">Unlocks</div>
+        <ul className="space-y-2">
+          {unlocks.map((u, i) => (
+            <li key={i} className="flex items-center gap-3 border-2 border-black bg-slate-900/80 p-2">
+              <span className="text-2xl">🛰️</span>
+              <div className="font-display text-sm uppercase leading-tight">{u}</div>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="flex justify-end">
+        <button onClick={onClaim} className="chunky-button bg-primary px-6 py-2 text-xs font-bold uppercase text-black">
+          Claim &amp; Continue
+        </button>
+      </div>
     </div>
   );
 }
@@ -299,8 +480,9 @@ function buildRoomPlan(sec: OrbitSector) {
   return plan;
 }
 
-function OrbitDive({ sector, onExit }: { sector: OrbitSector; onExit: () => void }) {
+function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit: () => void; onComplete?: () => void }) {
   const clearSector = useOrbit(s => s.clearSector);
+  const awardPlayerXp = useGame(s => s.awardPlayerXp);
   const plan = useMemo(() => buildRoomPlan(sector), [sector.id]);
 
   const [roomIdx, setRoomIdx] = useState(0);
@@ -347,7 +529,10 @@ function OrbitDive({ sector, onExit }: { sector: OrbitSector; onExit: () => void
     setEnemyHp(next);
     pushLog(`${label} hits for ${dmg}.`);
     if (next <= 0) {
-      pushLog(`${enemy.name} defeated!`);
+      // XP scales with the foe — a Vacuum Mite is a nibble, Racc-X is a feast.
+      const xp = Math.max(4, Math.round(enemy.hp / 4));
+      awardPlayerXp(xp);
+      pushLog(`${enemy.name} defeated! +${xp} XP`);
       setStatus("roomCleared");
       return;
     }
@@ -491,7 +676,7 @@ function OrbitDive({ sector, onExit }: { sector: OrbitSector; onExit: () => void
       {/* Action Bar */}
       <div className="chunky-panel bg-black/80 p-3">
         {status === "summary" ? (
-          <SummaryPanel sector={sector} loot={grab} onExit={onExit} />
+          <SummaryPanel sector={sector} loot={grab} onExit={onExit} onComplete={onComplete} />
         ) : (
           <div className="flex flex-wrap items-center gap-2">
             {(status === "combat" || status === "bossRoom") && (
@@ -546,7 +731,7 @@ function EnemyBlock({ enemy, hp, max, boss }: { enemy: OrbitEnemy; hp: number; m
   );
 }
 
-function SummaryPanel({ sector, loot, onExit }: { sector: OrbitSector; loot: OrbitLoot[]; onExit: () => void }) {
+function SummaryPanel({ sector, loot, onExit, onComplete }: { sector: OrbitSector; loot: OrbitLoot[]; onExit: () => void; onComplete?: () => void }) {
   return (
     <div className="space-y-2 text-center">
       <div className="font-display text-2xl uppercase text-secondary">Sector Resolved</div>
@@ -560,8 +745,8 @@ function SummaryPanel({ sector, loot, onExit }: { sector: OrbitSector; loot: Orb
           ))}
         </div>
       )}
-      <button onClick={onExit} className="chunky-button bg-primary px-4 py-2 text-xs font-bold uppercase text-black">
-        Return to Station Map
+      <button onClick={onComplete ?? onExit} className="chunky-button bg-primary px-4 py-2 text-xs font-bold uppercase text-black">
+        {onComplete ? "Continue Story ▸" : "Return to Station Map"}
       </button>
     </div>
   );
@@ -591,8 +776,7 @@ function Layer({ symbols, top, dur, size, opacity, running }: {
       style={{
         top,
         opacity,
-        animation: `orbit-scroll ${dur}s linear infinite`,
-        animationPlayState: running ? "running" : "paused",
+        animation: `orbit-scroll ${dur}s linear infinite ${running ? "running" : "paused"}`,
       }}
     >
       {Array.from({ length: 3 }).map((_, k) => (

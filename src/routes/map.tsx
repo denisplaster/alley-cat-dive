@@ -1,5 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useGame } from "@/lib/game/store";
+import { isDumpsterUnlocked, DUMPSTER_CHAPTER } from "@/lib/game/story";
 import type { Dumpster } from "@/lib/game/types";
 
 export const Route = createFileRoute("/map")({
@@ -21,51 +22,64 @@ export const Route = createFileRoute("/map")({
 function MapScreen() {
   const dumpsters = useGame(s => s.dumpsters);
   const selectedId = useGame(s => s.selectedDumpsterId);
+  const storyIdx = useGame(s => s.storyChapterIdx);
+  const completed = useGame(s => s.completedChapters);
   const select = useGame(s => s.selectDumpster);
-  const selected = dumpsters.find(d => d.id === selectedId)!;
+  const navigate = useNavigate();
+
+  function dive(id: string) {
+    select(id);
+    navigate({ to: "/dive" });
+  }
 
   return (
     <div className="mt-6">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-4xl uppercase md:text-5xl">Neighborhood Map</h1>
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">Pick your bin. Pick your fight.</p>
-        </div>
-        <Link to="/dive" className="chunky-button bg-primary px-6 py-3 font-display text-xl uppercase text-black">
-          Dive {selected.name.split(" ")[0]}
-        </Link>
+      <header className="mb-6">
+        <h1 className="font-display text-4xl uppercase md:text-5xl">Neighborhood Map</h1>
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">
+          Tap a bin to dive. New bins open as you push through the story.
+        </p>
       </header>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {dumpsters.map(d => (
-          <DumpsterCard key={d.id} d={d} selected={d.id === selectedId} onSelect={() => select(d.id)} />
+          <DumpsterCard
+            key={d.id}
+            d={d}
+            selected={d.id === selectedId}
+            unlocked={isDumpsterUnlocked(d.id, storyIdx)}
+            cleared={completed.includes(DUMPSTER_CHAPTER[d.id])}
+            onDive={() => dive(d.id)}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function DumpsterCard({ d, selected, onSelect }: { d: Dumpster; selected: boolean; onSelect: () => void }) {
-  const locked = d.status === "locked";
+function DumpsterCard({ d, selected, unlocked, cleared, onDive }: {
+  d: Dumpster; selected: boolean; unlocked: boolean; cleared: boolean; onDive: () => void;
+}) {
   return (
     <button
-      onClick={onSelect}
-      disabled={locked}
+      onClick={onDive}
+      disabled={!unlocked}
       className={`chunky-panel group relative overflow-hidden bg-black/80 p-3 text-left transition-transform ${
         selected ? "ring-4 ring-primary -translate-y-1" : ""
-      } ${locked ? "opacity-50" : "hover:-translate-y-1"}`}
+      } ${unlocked ? "hover:-translate-y-1" : "opacity-50"}`}
     >
       <div className="relative mb-3 aspect-video overflow-hidden border-4 border-black">
-        <img src={d.image} alt={d.name} width={512} height={288} loading="lazy" className={`h-full w-full object-cover ${locked ? "grayscale" : ""}`} />
-        {d.status === "dangerous" && (
-          <span className="absolute right-2 top-2 bg-destructive px-2 py-0.5 text-[10px] font-bold uppercase animate-pulse">Dangerous</span>
-        )}
-        {d.status === "completed" && (
+        <img src={d.image} alt={d.name} width={512} height={288} loading="lazy" className={`h-full w-full object-cover ${unlocked ? "" : "grayscale"}`} />
+        {unlocked && cleared && (
           <span className="absolute right-2 top-2 bg-primary px-2 py-0.5 text-[10px] font-bold uppercase text-black">Cleared</span>
         )}
-        {locked && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/70 font-display text-3xl uppercase tracking-widest text-muted-foreground">
-            Locked
+        {unlocked && !cleared && (
+          <span className="absolute right-2 top-2 bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase text-black">▶ Dive</span>
+        )}
+        {!unlocked && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/70 text-center font-display uppercase tracking-widest text-muted-foreground">
+            <span className="text-3xl">🔒</span>
+            <span className="text-[10px]">Locked · advance the story</span>
           </div>
         )}
       </div>

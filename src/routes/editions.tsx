@@ -1,6 +1,6 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useOrbit } from "@/lib/orbit/store";
-import { orbitCover, ORBIT_CHAPTERS, ORBIT_SECTORS } from "@/lib/orbit/data";
+import { orbitCover, ORBIT_CHAPTERS, ORBIT_SECTORS, orbitProgressPct } from "@/lib/orbit/data";
 import alleyHero from "@/assets/hero-cat.png";
 
 export const Route = createFileRoute("/editions")({
@@ -20,7 +20,8 @@ export const Route = createFileRoute("/editions")({
 function EditionsScreen() {
   const active = useOrbit(s => s.activeEdition);
   const setEdition = useOrbit(s => s.setEdition);
-  const progress = useOrbit(s => s.progressPct());
+  const openEdition = useOrbit(s => s.openEdition);
+  const progress = useOrbit(s => orbitProgressPct(s.completedChapters.length, s.clearedSectors.length));
   const completedCh = useOrbit(s => s.completedChapters.length);
   const clearedSec = useOrbit(s => s.clearedSectors.length);
   const navigate = useNavigate();
@@ -92,13 +93,12 @@ function EditionsScreen() {
             <li>Progress: <span className="text-foreground">{completedCh} chapters · {clearedSec} sectors cleared</span></li>
           </ul>
           <div className="flex flex-wrap gap-2">
-            <Link
-              to="/orbit"
-              onClick={() => setEdition("orbit")}
+            <button
+              onClick={() => { openEdition(); navigate({ to: "/" }); }}
               className="chunky-button bg-secondary px-4 py-2 text-xs font-bold uppercase text-black"
             >
               {clearedSec || completedCh ? "Continue Orbit Trash" : "Launch Edition 2"}
-            </Link>
+            </button>
             {active !== "orbit" && (
               <button onClick={() => setEdition("orbit")} className="chunky-button bg-slate-900 px-3 py-2 text-[11px] font-bold uppercase">
                 Set Active

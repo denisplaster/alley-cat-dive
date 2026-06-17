@@ -1,7 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import heroCat from "@/assets/hero-cat.png";
 import { useGame } from "@/lib/game/store";
-import { STORY_CHAPTERS } from "@/lib/game/story";
+import { STORY_CHAPTERS, isDumpsterUnlocked } from "@/lib/game/story";
 import { EVOLUTIONS, computeEvolution } from "@/lib/game/evolution";
 
 export const Route = createFileRoute("/")({
@@ -61,6 +61,8 @@ function AlleyHub() {
   const storyIdx = useGame(s => s.storyChapterIdx);
   const completed = useGame(s => s.completedChapters);
   const openCutscene = useGame(s => s.openCutscene);
+  const seenIntros = useGame(s => s.seenIntros);
+  const navigate = useNavigate();
   const roomsCleared = useGame(s => s.roomsCleared);
   const bossesBeaten = useGame(s => s.bossesBeaten);
   const skipStoryline = useGame(s => s.skipStoryline);
@@ -71,6 +73,9 @@ function AlleyHub() {
   const latest = inventory[inventory.length - 1];
   const currentChapter = STORY_CHAPTERS[storyIdx];
   const showStoryCta = currentChapter && !completed.includes(currentChapter.id);
+  // Haven't gone through this chapter's story yet → "Start Dive" plays its intro
+  // first (the map still dives bins directly).
+  const needsIntro = !!currentChapter && !completed.includes(currentChapter.id) && !seenIntros.includes(currentChapter.id);
 
   return (
     <div className="relative mt-1 md:mt-2">
@@ -132,12 +137,11 @@ function AlleyHub() {
           <div className="chunky-panel rotate-[1deg] border-t-4 border-t-secondary/60 bg-black/80 p-2 md:p-3">
             <div className="mb-2 flex items-center justify-between">
               <span className="bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase text-black">Next Target</span>
-              {selected.status === "dangerous" && (
-                <span className="animate-pulse text-[10px] font-bold uppercase text-destructive">Dangerous</span>
-              )}
-              {selected.status === "locked" && (
-                <span className="text-[10px] font-bold uppercase text-muted-foreground">Locked</span>
-              )}
+              {isDumpsterUnlocked(selected.id, storyIdx)
+                ? selected.status === "dangerous" && (
+                    <span className="animate-pulse text-[10px] font-bold uppercase text-destructive">Dangerous</span>
+                  )
+                : <span className="text-[10px] font-bold uppercase text-muted-foreground">Locked</span>}
             </div>
             <h2 className="mb-0.5 font-display text-base uppercase leading-tight md:text-lg">{selected.name}</h2>
             <p className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -163,12 +167,15 @@ function AlleyHub() {
             ▶ Continue Story · {currentChapter.title}
           </button>
         )}
-        <Link
-          to="/dive"
+        <button
+          onClick={() => {
+            if (needsIntro && currentChapter) openCutscene(currentChapter.id, "intro");
+            else navigate({ to: "/dive" });
+          }}
           className="chunky-button animate-pulse-glow rotate-[-1deg] bg-primary px-8 py-3 font-display text-2xl uppercase text-black md:px-12 md:py-4 md:text-3xl"
         >
           Start Dive
-        </Link>
+        </button>
         <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">
           {latest ? `Last find: ${latest.name}` : "Your stash is empty. Time to dive."}
         </p>

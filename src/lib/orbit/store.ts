@@ -1,17 +1,23 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { ORBIT_CHAPTERS, ORBIT_SECTORS, ORBIT_LOOT, type OrbitLoot } from "./data";
+import { ORBIT_CHAPTERS, ORBIT_SECTORS, ORBIT_LOOT, orbitProgressPct, type OrbitLoot } from "./data";
 
 export type EditionId = "alley" | "orbit";
 
 interface OrbitState {
   activeEdition: EditionId;
+  /** Transient (not persisted): is the full-screen edition overlay open. */
+  isOpen: boolean;
   chapterIdx: number;            // index of next chapter to play
   completedChapters: string[];
   clearedSectors: string[];
   defeatedBosses: string[];
   stash: OrbitLoot[];
   setEdition: (e: EditionId) => void;
+  /** Make Orbit the active edition and open its full-screen overlay. */
+  openEdition: () => void;
+  /** Close the edition overlay (back to the hub). */
+  closeEdition: () => void;
   playChapter: (id: string) => void;
   clearSector: (id: string, lootRolls?: number) => void;
   reset: () => void;
@@ -40,6 +46,7 @@ export const useOrbit = create<OrbitState>()(
   persist(
     (set, get) => ({
       activeEdition: "alley",
+      isOpen: false,
       chapterIdx: 0,
       completedChapters: [],
       clearedSectors: [],
@@ -47,6 +54,8 @@ export const useOrbit = create<OrbitState>()(
       stash: [],
 
       setEdition: (e) => set({ activeEdition: e }),
+      openEdition: () => set({ activeEdition: "orbit", isOpen: true }),
+      closeEdition: () => set({ isOpen: false }),
 
       playChapter: (id) => {
         const s = get();
@@ -95,11 +104,20 @@ export const useOrbit = create<OrbitState>()(
       },
       progressPct: () => {
         const s = get();
-        const total = ORBIT_CHAPTERS.length + ORBIT_SECTORS.length;
-        const done = s.completedChapters.length + s.clearedSectors.length;
-        return Math.round((done / total) * 100);
+        return orbitProgressPct(s.completedChapters.length, s.clearedSectors.length);
       },
     }),
-    { name: "orbit-edition-v1" },
+    {
+      name: "orbit-edition-v1",
+      // Persist progress only — never the transient overlay-open flag.
+      partialize: (s) => ({
+        activeEdition: s.activeEdition,
+        chapterIdx: s.chapterIdx,
+        completedChapters: s.completedChapters,
+        clearedSectors: s.clearedSectors,
+        defeatedBosses: s.defeatedBosses,
+        stash: s.stash,
+      }),
+    },
   ),
 );

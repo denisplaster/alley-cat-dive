@@ -13,6 +13,8 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppShell } from "../components/game/AppShell";
 import { Cutscene } from "../components/game/story/Cutscene";
+import { OrbitOverlay } from "./orbit";
+import { useGame } from "../lib/game/store";
 
 function NotFoundComponent() {
   return (
@@ -126,12 +128,19 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  // The game store uses skipHydration so SSR and the first client render stay on
+  // defaults (no hydration mismatch); saved progress is applied here after mount.
+  useEffect(() => {
+    useGame.persist.rehydrate();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AppShell>
         <Outlet />
       </AppShell>
       <Cutscene />
+      <OrbitOverlay />
     </QueryClientProvider>
   );
 }
