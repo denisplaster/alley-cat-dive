@@ -500,6 +500,28 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
   const [grab, setGrab] = useState<OrbitLoot[]>([]);
   const [log, setLog] = useState<string[]>([`You enter ${sector.name}.`]);
   const [parallaxRun, setParallaxRun] = useState(false);
+  const [catPose, setCatPose] = useState<ScrapperPose>("idle");
+  const [enemyPose, setEnemyPose] = useState<EnemyPose>("idle");
+  const [catBubble, setCatBubble] = useState<string | null>(null);
+  const [enemyBubble, setEnemyBubble] = useState<string | null>(null);
+  const [shakeKey, setShakeKey] = useState(0);
+
+  function flashCatPose(p: ScrapperPose, ms = 550) {
+    setCatPose(p);
+    setTimeout(() => setCatPose(prev => (prev === p ? "idle" : prev)), ms);
+  }
+  function flashEnemyPose(p: EnemyPose, ms = 550) {
+    setEnemyPose(p);
+    setTimeout(() => setEnemyPose(prev => (prev === p ? "idle" : prev)), ms);
+  }
+  function sayCat(line: string, ms = 1400) {
+    setCatBubble(line);
+    setTimeout(() => setCatBubble(prev => (prev === line ? null : prev)), ms);
+  }
+  function sayEnemy(line: string, ms = 1400) {
+    setEnemyBubble(line);
+    setTimeout(() => setEnemyBubble(prev => (prev === line ? null : prev)), ms);
+  }
 
   function initial(kind: typeof room.kind): DiveStatus {
     if (kind === "loot") return "lootRoom";
@@ -518,6 +540,8 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
       setEnemy(e);
       setEnemyHp(e.hp);
       setEnemyMaxHp(e.hp);
+      setEnemyPose("idle");
+      setCatPose("idle");
       if (room.kind === "boss" && e.id === "raccx") {
         setTaunt(RACCX_TAUNTS[Math.floor(Math.random() * RACCX_TAUNTS.length)]);
       }
@@ -526,13 +550,22 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
     }
   }, [roomIdx]);
 
-  function attack(power: number, label: string) {
+  function attack(power: number, label: "Swat" | "Pounce" | "Bite") {
     if (!enemy) return;
     const dmg = power + Math.floor(Math.random() * 6);
     const next = Math.max(0, enemyHp - dmg);
     setEnemyHp(next);
     pushLog(`${label} hits for ${dmg}.`);
+    const poseKey: ScrapperPose = label === "Swat" ? "swat" : label === "Pounce" ? "pounce" : "bite";
+    flashCatPose(poseKey, 600);
+    sayCat(randLine(SCRAPPER_LINES[poseKey]));
+    setTimeout(() => {
+      flashEnemyPose("hurt", 500);
+      setShakeKey(k => k + 1);
+    }, 180);
     if (next <= 0) {
+      setEnemyPose("ko");
+      sayCat(randLine(SCRAPPER_LINES.victory), 1800);
       // XP scales with the foe — a Vacuum Mite is a nibble, Racc-X is a feast.
       const xp = Math.max(4, Math.round(enemy.hp / 4));
       awardPlayerXp(xp);
@@ -542,10 +575,24 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
     }
     // Enemy retaliates (Zero-G dodge 20%)
     const dodged = Math.random() < 0.2;
-    if (dodged) { pushLog(`Zero-G Dodge! Scrapper drifts aside.`); return; }
+    if (dodged) {
+      pushLog(`Zero-G Dodge! Scrapper drifts aside.`);
+      setTimeout(() => { flashCatPose("block", 600); sayCat(randLine(SCRAPPER_LINES.block)); }, 500);
+      return;
+    }
     const taken = enemy.atk + Math.floor(Math.random() * 4);
     setCatHp(h => Math.max(0, h - taken));
     pushLog(`${enemy.name} hits Scrapper for ${taken}.`);
+    const lines = ENEMY_LINES[enemy.id];
+    setTimeout(() => {
+      flashEnemyPose("attack", 550);
+      if (lines) sayEnemy(randLine(lines.attack));
+    }, 650);
+    setTimeout(() => {
+      flashCatPose("hurt", 600);
+      sayCat(randLine(SCRAPPER_LINES.hurt));
+      setShakeKey(k => k + 1);
+    }, 1000);
     if (enemy.id === "raccx" && Math.random() < 0.4) {
       setTaunt(RACCX_TAUNTS[Math.floor(Math.random() * RACCX_TAUNTS.length)]);
     }
