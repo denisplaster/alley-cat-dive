@@ -9,6 +9,10 @@ import {
   type OrbitSector, type OrbitEnemy, type OrbitLoot,
   type OrbitChapter, type OrbitPanel,
 } from "@/lib/orbit/data";
+import {
+  SCRAPPER_POSES, getEnemyPoses, SCRAPPER_LINES, ENEMY_LINES, randLine,
+  type ScrapperPose, type EnemyPose,
+} from "@/lib/orbit/sprites";
 
 export const Route = createFileRoute("/orbit")({
   head: () => ({
