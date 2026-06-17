@@ -89,30 +89,33 @@ export const ENEMIES: Record<string, Omit<Enemy, "id" | "hp" | "maxHp"> & { base
   graffiti_wraith:{ name: "Graffiti Wraith",baseHp: 125, attack: 20, emoji: "🎨" },
 };
 
+// Enemy pools are tier-banded per difficulty: regular foes (all but the last
+// entry) sit in a tight attack band so a run's danger doesn't swing wildly on
+// which foe spawns; the last entry is the bin's signature boss.
 export const DUMPSTERS: Dumpster[] = [
   { id: "greasy", name: "Greasy Spoon Dumpster", image: dGreasy, difficulty: 1,
-    expectedLoot: "uncommon", enemyPool: ["litter_mouse","garbage_beetle","dust_bunny","rat_swarm","pigeon_thief","gull_raider","grease_sprite"], rooms: 5,
+    expectedLoot: "uncommon", enemyPool: ["trash_slime","rat_swarm","pigeon_thief","litter_mouse","dust_bunny","grease_sprite"], rooms: 5,
     truckTimerSec: 180, recommendedPower: 30, status: "unlocked", rewardCaps: 8, rewardBones: 60 },
   { id: "apartment", name: "Apartment Alley Bin", image: dApartment, difficulty: 2,
-    expectedLoot: "rare", enemyPool: ["garbage_beetle","rat_swarm","pigeon_thief","alley_crow","can_crab","raccoon"], rooms: 6,
+    expectedLoot: "rare", enemyPool: ["pigeon_thief","litter_mouse","dust_bunny","mold_goblin","gull_raider","raccoon"], rooms: 6,
     truckTimerSec: 200, recommendedPower: 55, status: "unlocked", rewardCaps: 14, rewardBones: 120 },
   { id: "mall", name: "Mall Food Court Compactor", image: dMall, difficulty: 3,
-    expectedLoot: "rare", enemyPool: ["raccoon","mold_goblin","trash_bag","feral_chihuahua","gull_raider","spoiled_imp"], rooms: 7,
+    expectedLoot: "rare", enemyPool: ["gull_raider","garbage_beetle","grease_sprite","raccoon","can_crab","spoiled_imp"], rooms: 7,
     truckTimerSec: 240, recommendedPower: 80, status: "dangerous", rewardCaps: 22, rewardBones: 220 },
   { id: "fish", name: "Fish Market Dumpster", image: dFish, difficulty: 4,
-    expectedLoot: "epic", enemyPool: ["pigeon_thief","trash_bag","raccoon","alley_crow","scrap_serpent","can_crab"], rooms: 8,
+    expectedLoot: "epic", enemyPool: ["can_crab","alley_crow","spoiled_imp","trash_bag","feral_chihuahua","scrap_serpent"], rooms: 8,
     truckTimerSec: 220, recommendedPower: 110, status: "unlocked", rewardCaps: 30, rewardBones: 340 },
   { id: "haunted", name: "Haunted Recycling Bin", image: dHaunted, difficulty: 5,
-    expectedLoot: "legendary", enemyPool: ["mold_goblin","trash_bag","raccoon","grease_sprite","scrap_serpent","spoiled_imp"], rooms: 9,
+    expectedLoot: "legendary", enemyPool: ["spoiled_imp","trash_bag","feral_chihuahua","vent_wisp","antenna_imp","scrap_serpent"], rooms: 9,
     truckTimerSec: 260, recommendedPower: 150, status: "locked", rewardCaps: 45, rewardBones: 520 },
   { id: "luxury", name: "Luxury Condo Trash Room", image: dLuxury, difficulty: 6,
-    expectedLoot: "mythic", enemyPool: ["raccoon","trash_bag","mold_goblin","condo_hound","spoiled_imp","scrap_serpent"], rooms: 10,
+    expectedLoot: "mythic", enemyPool: ["antenna_imp","pigeon_lord","scrap_serpent","tunnel_ghoul","graffiti_wraith","condo_hound"], rooms: 10,
     truckTimerSec: 300, recommendedPower: 200, status: "locked", rewardCaps: 80, rewardBones: 900 },
   { id: "rooftop", name: "Rooftop AC Bin", image: dRooftop, difficulty: 5,
-    expectedLoot: "legendary", enemyPool: ["vent_wisp","antenna_imp","alley_crow","gull_raider","grease_sprite","pigeon_lord"], rooms: 9,
+    expectedLoot: "legendary", enemyPool: ["alley_crow","grease_sprite","vent_wisp","antenna_imp","spoiled_imp","pigeon_lord"], rooms: 9,
     truckTimerSec: 270, recommendedPower: 160, status: "locked", rewardCaps: 50, rewardBones: 560 },
   { id: "subway", name: "Subway Platform Dumpster", image: dSubway, difficulty: 5,
-    expectedLoot: "legendary", enemyPool: ["tunnel_ghoul","graffiti_wraith","rat_swarm","mold_goblin","scrap_serpent","subway_rat_king"], rooms: 9,
+    expectedLoot: "legendary", enemyPool: ["spoiled_imp","scrap_serpent","antenna_imp","feral_chihuahua","vent_wisp","subway_rat_king"], rooms: 9,
     truckTimerSec: 270, recommendedPower: 170, status: "locked", rewardCaps: 55, rewardBones: 620 },
 ];
 
