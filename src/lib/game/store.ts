@@ -1219,7 +1219,8 @@ export const useGame = create<GameState>()(
       changed = true;
       const left = c.recoverySecondsLeft - seconds * napMult;
       if (left <= 0) return { ...c, status: "ready" as const, recoverySecondsLeft: 0, hp: c.maxHp };
-      return { ...c, recoverySecondsLeft: Math.ceil(left) };
+      return { ...c, recoverySecondsLeft: left }; // keep the float so the Nap Pile speedup isn't rounded away
+
     });
     if (changed) set({ cats });
   },
@@ -1252,7 +1253,7 @@ export const useGame = create<GameState>()(
       const left = c.recoverySecondsLeft - heal * 3;
       return left <= 0
         ? { ...c, status: "ready" as const, recoverySecondsLeft: 0, hp: c.maxHp }
-        : { ...c, recoverySecondsLeft: Math.ceil(left) };
+        : { ...c, recoverySecondsLeft: left };
     });
     set({ inventory: s.inventory.filter(i => i.id !== itemId), cats });
   },
@@ -1585,9 +1586,11 @@ export const useGame = create<GameState>()(
     const r = s.raid.rewards;
     const def = RAIDS.find(rd => rd.id === s.raid!.dungeonId);
     // Credit every room of the raid (counts toward the rooms-cleared evolution
-    // gate and Story counter) and level up the team that fought it.
+    // gate and Story counter) and level up the cats that actually fought it
+    // (derived from the party uids `p<idx>-<catId>`, robust to a stale team).
     const roomCredit = def?.rooms.length ?? 0;
-    const cats = s.cats.map(c => s.raidTeam.includes(c.id) ? applyXp({ ...c, hp: c.maxHp }, 30) : c);
+    const fought = new Set(s.raid.party.map(p => p.uid.replace(/^p\d+-/, "")));
+    const cats = s.cats.map(c => fought.has(c.id) ? applyXp({ ...c, hp: c.maxHp }, 30) : c);
     set({
       raid: null,
       spheres: s.spheres + r.spheres,

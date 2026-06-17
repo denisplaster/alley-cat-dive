@@ -87,8 +87,9 @@ const statusTone: Record<Cat["status"], string> = {
 };
 
 function CatCard({ c, active, locked, onSelect }: { c: Cat; active: boolean; locked: boolean; onSelect: () => void }) {
-  const recoverMin = Math.floor(c.recoverySecondsLeft / 60);
-  const recoverSec = c.recoverySecondsLeft % 60;
+  const secs = Math.ceil(c.recoverySecondsLeft); // stored as a float; show whole seconds
+  const recoverMin = Math.floor(secs / 60);
+  const recoverSec = secs % 60;
   return (
     <div className={`chunky-panel relative bg-black/80 p-4 ${active ? "ring-4 ring-primary" : ""} ${locked ? "opacity-60" : ""}`}>
       {locked && (

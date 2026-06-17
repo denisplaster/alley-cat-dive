@@ -24,6 +24,8 @@ function ShopScreen() {
   const buyShopItem = useGame(st => st.buyShopItem);
   const fishbones = useGame(s => s.fishbones);
   const caps = useGame(s => s.bottlecaps);
+  const hideout = useGame(s => s.hideout);
+  const disc = 1 - 0.05 * (hideout.find(h => h.id === "fence")?.level ?? 0); // Raccoon Fence discount
   const [flash, setFlash] = useState<string | null>(null);
 
   return (
@@ -45,7 +47,9 @@ function ShopScreen() {
           </header>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {SHOP_ITEMS.map(s => {
-              const canAfford = fishbones >= s.costBones && caps >= s.costCaps;
+              const cb = Math.ceil(s.costBones * disc);
+              const cc = Math.ceil(s.costCaps * disc);
+              const canAfford = fishbones >= cb && caps >= cc;
               return (
                 <div key={s.id} className="chunky-panel flex items-start justify-between gap-3 bg-black/80 p-4">
                   <div className="flex-1">
@@ -53,8 +57,8 @@ function ShopScreen() {
                     <h3 className="font-display text-lg uppercase leading-tight">{s.name}</h3>
                     <p className="text-[11px] italic text-muted-foreground">{s.description}</p>
                     <div className="mt-2 flex gap-2 text-[11px]">
-                      {s.costBones > 0 && <span className="border-2 border-black bg-slate-900 px-2 py-0.5">{s.costBones} 🦴</span>}
-                      {s.costCaps > 0 && <span className="border-2 border-black bg-slate-900 px-2 py-0.5">{s.costCaps} 🪙</span>}
+                      {cb > 0 && <span className="border-2 border-black bg-slate-900 px-2 py-0.5">{cb} 🦴{disc < 1 && s.costBones > cb ? ` (was ${s.costBones})` : ""}</span>}
+                      {cc > 0 && <span className="border-2 border-black bg-slate-900 px-2 py-0.5">{cc} 🪙{disc < 1 && s.costCaps > cc ? ` (was ${s.costCaps})` : ""}</span>}
                     </div>
                   </div>
                   <button
