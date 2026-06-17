@@ -640,6 +640,8 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
   // KO handling
   useEffect(() => {
     if (catHp <= 0 && status !== "summary") {
+      setCatPose("ko");
+      sayCat(randLine(SCRAPPER_LINES.ko), 2200);
       pushLog("Scrapper drifts into the dark. Run ended.");
       setStatus("summary");
     }
@@ -658,52 +660,87 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
       </div>
 
       {/* Stage */}
-      <div className="chunky-panel relative h-72 overflow-hidden bg-black p-0 md:h-96">
+      <div key={`shake-${shakeKey}`} className={`chunky-panel relative h-80 overflow-hidden bg-black p-0 md:h-[28rem] ${shakeKey > 0 ? "animate-shake" : ""}`}>
         <div className="absolute inset-0">
           <img src={orbitBg} alt="" aria-hidden className="h-full w-full object-cover opacity-50" />
         </div>
         <ParallaxLayers running speed={parallaxRun ? 1 : 0.18} />
-        <ScrapperSprite drifting={status === "transitioning"} hurt={catHp < 30} />
 
-        {/* Enemy / Room content */}
-        <div className="absolute inset-0 flex items-center justify-end p-6">
+        {/* Combatants */}
+        {(status === "combat" || status === "bossRoom" || status === "roomCleared") && enemy && (
+          <>
+            <CombatantSprite
+              side="left"
+              src={SCRAPPER_POSES[catPose]}
+              name="Scrapper"
+              bubble={catBubble}
+              drifting={status === "transitioning"}
+              boss={false}
+            />
+            <CombatantSprite
+              side="right"
+              src={getEnemyPoses(enemy.id)[enemyPose]}
+              name={enemy.name}
+              bubble={enemyBubble ?? (status === "bossRoom" && taunt ? taunt : null)}
+              drifting={false}
+              boss={status === "bossRoom"}
+            />
+          </>
+        )}
+
+        {/* Idle Scrapper for non-combat rooms */}
+        {(status === "lootRoom" || status === "hazardRoom" || status === "transitioning") && (
+          <CombatantSprite
+            side="left"
+            src={SCRAPPER_POSES[catHp < 30 ? "hurt" : "idle"]}
+            name="Scrapper"
+            bubble={catBubble}
+            drifting={status === "transitioning"}
+            boss={false}
+          />
+        )}
+
+        {/* Room content overlay */}
+        <div className="absolute inset-x-0 top-3 flex items-center justify-center p-2 pointer-events-none">
           {status === "transitioning" && (
-            <div className="font-display text-2xl uppercase tracking-widest text-secondary animate-pulse">
+            <div className="font-display text-xl uppercase tracking-widest text-secondary animate-pulse">
               Floating deeper…
             </div>
           )}
-          {status === "combat" && enemy && <EnemyBlock enemy={enemy} hp={enemyHp} max={enemyMaxHp} />}
-          {status === "bossRoom" && enemy && (
-            <div className="flex flex-col items-center gap-2 text-center">
-              <img src={orbitRaccX} alt="" width={160} height={160} loading="lazy"
-                   className="size-32 border-4 border-black object-cover shadow-[0_0_24px_rgba(255,80,200,0.6)] md:size-40" />
-              <EnemyBlock enemy={enemy} hp={enemyHp} max={enemyMaxHp} boss />
-              {taunt && (
-                <div className="chunky-panel max-w-xs bg-fuchsia-900/90 px-3 py-1.5 text-[11px] italic text-white">
-                  “{taunt}”
-                </div>
-              )}
-            </div>
-          )}
           {status === "lootRoom" && (
-            <div className="chunky-panel bg-amber-500/90 px-4 py-3 text-center text-black">
-              <div className="font-display text-2xl uppercase">Loot Room</div>
-              <div className="text-[11px]">Drifting trash. Grab fast.</div>
+            <div className="chunky-panel bg-amber-500/90 px-4 py-2 text-center text-black">
+              <div className="font-display text-xl uppercase">Loot Room</div>
+              <div className="text-[10px]">Drifting trash. Grab fast.</div>
             </div>
           )}
           {status === "hazardRoom" && (
-            <div className="chunky-panel bg-destructive/90 px-4 py-3 text-center text-white">
-              <div className="font-display text-2xl uppercase">⚠ Hazard</div>
-              <div className="text-[11px]">Vacuum warning. Vent or escape.</div>
+            <div className="chunky-panel bg-destructive/90 px-4 py-2 text-center text-white">
+              <div className="font-display text-xl uppercase">⚠ Hazard</div>
+              <div className="text-[10px]">Vacuum warning. Vent or escape.</div>
             </div>
           )}
           {status === "roomCleared" && (
-            <div className="chunky-panel bg-secondary/90 px-4 py-3 text-center text-black">
-              <div className="font-display text-2xl uppercase">Room Clear</div>
+            <div className="chunky-panel bg-secondary/90 px-4 py-2 text-center text-black">
+              <div className="font-display text-xl uppercase">Room Clear</div>
             </div>
           )}
         </div>
 
+        {/* HP bars for combatants */}
+        {(status === "combat" || status === "bossRoom") && enemy && (
+          <div className="absolute top-12 right-3 w-44 chunky-panel bg-black/80 p-2">
+            <div className="flex items-baseline justify-between gap-2">
+              <div className="font-display text-[11px] uppercase truncate">{enemy.name}</div>
+              <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
+                {status === "bossRoom" ? "BOSS" : "Foe"}
+              </div>
+            </div>
+            <div className="mt-1 chunky-panel h-2 bg-black p-[2px]">
+              <div className="h-full bg-destructive transition-all" style={{ width: `${(enemyHp / enemyMaxHp) * 100}%` }} />
+            </div>
+            <div className="text-[9px] uppercase text-muted-foreground">{enemyHp} / {enemyMaxHp}</div>
+          </div>
+        )}
         {/* Room path */}
         <div className="absolute left-3 top-3 flex gap-1">
           {plan.map((r, i) => (
