@@ -9,6 +9,10 @@ import {
   type OrbitSector, type OrbitEnemy, type OrbitLoot,
   type OrbitChapter, type OrbitPanel,
 } from "@/lib/orbit/data";
+import {
+  SCRAPPER_POSES, getEnemyPoses, SCRAPPER_LINES, ENEMY_LINES, randLine,
+  type ScrapperPose, type EnemyPose,
+} from "@/lib/orbit/sprites";
 
 export const Route = createFileRoute("/orbit")({
   head: () => ({
@@ -496,6 +500,28 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
   const [grab, setGrab] = useState<OrbitLoot[]>([]);
   const [log, setLog] = useState<string[]>([`You enter ${sector.name}.`]);
   const [parallaxRun, setParallaxRun] = useState(false);
+  const [catPose, setCatPose] = useState<ScrapperPose>("idle");
+  const [enemyPose, setEnemyPose] = useState<EnemyPose>("idle");
+  const [catBubble, setCatBubble] = useState<string | null>(null);
+  const [enemyBubble, setEnemyBubble] = useState<string | null>(null);
+  const [shakeKey, setShakeKey] = useState(0);
+
+  function flashCatPose(p: ScrapperPose, ms = 550) {
+    setCatPose(p);
+    setTimeout(() => setCatPose(prev => (prev === p ? "idle" : prev)), ms);
+  }
+  function flashEnemyPose(p: EnemyPose, ms = 550) {
+    setEnemyPose(p);
+    setTimeout(() => setEnemyPose(prev => (prev === p ? "idle" : prev)), ms);
+  }
+  function sayCat(line: string, ms = 1400) {
+    setCatBubble(line);
+    setTimeout(() => setCatBubble(prev => (prev === line ? null : prev)), ms);
+  }
+  function sayEnemy(line: string, ms = 1400) {
+    setEnemyBubble(line);
+    setTimeout(() => setEnemyBubble(prev => (prev === line ? null : prev)), ms);
+  }
 
   function initial(kind: typeof room.kind): DiveStatus {
     if (kind === "loot") return "lootRoom";
@@ -514,6 +540,8 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
       setEnemy(e);
       setEnemyHp(e.hp);
       setEnemyMaxHp(e.hp);
+      setEnemyPose("idle");
+      setCatPose("idle");
       if (room.kind === "boss" && e.id === "raccx") {
         setTaunt(RACCX_TAUNTS[Math.floor(Math.random() * RACCX_TAUNTS.length)]);
       }
@@ -522,13 +550,22 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
     }
   }, [roomIdx]);
 
-  function attack(power: number, label: string) {
+  function attack(power: number, label: "Swat" | "Pounce" | "Bite") {
     if (!enemy) return;
     const dmg = power + Math.floor(Math.random() * 6);
     const next = Math.max(0, enemyHp - dmg);
     setEnemyHp(next);
     pushLog(`${label} hits for ${dmg}.`);
+    const poseKey: ScrapperPose = label === "Swat" ? "swat" : label === "Pounce" ? "pounce" : "bite";
+    flashCatPose(poseKey, 600);
+    sayCat(randLine(SCRAPPER_LINES[poseKey]));
+    setTimeout(() => {
+      flashEnemyPose("hurt", 500);
+      setShakeKey(k => k + 1);
+    }, 180);
     if (next <= 0) {
+      setEnemyPose("ko");
+      sayCat(randLine(SCRAPPER_LINES.victory), 1800);
       // XP scales with the foe — a Vacuum Mite is a nibble, Racc-X is a feast.
       const xp = Math.max(4, Math.round(enemy.hp / 4));
       awardPlayerXp(xp);
@@ -538,10 +575,24 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
     }
     // Enemy retaliates (Zero-G dodge 20%)
     const dodged = Math.random() < 0.2;
-    if (dodged) { pushLog(`Zero-G Dodge! Scrapper drifts aside.`); return; }
+    if (dodged) {
+      pushLog(`Zero-G Dodge! Scrapper drifts aside.`);
+      setTimeout(() => { flashCatPose("block", 600); sayCat(randLine(SCRAPPER_LINES.block)); }, 500);
+      return;
+    }
     const taken = enemy.atk + Math.floor(Math.random() * 4);
     setCatHp(h => Math.max(0, h - taken));
     pushLog(`${enemy.name} hits Scrapper for ${taken}.`);
+    const lines = ENEMY_LINES[enemy.id];
+    setTimeout(() => {
+      flashEnemyPose("attack", 550);
+      if (lines) sayEnemy(randLine(lines.attack));
+    }, 650);
+    setTimeout(() => {
+      flashCatPose("hurt", 600);
+      sayCat(randLine(SCRAPPER_LINES.hurt));
+      setShakeKey(k => k + 1);
+    }, 1000);
     if (enemy.id === "raccx" && Math.random() < 0.4) {
       setTaunt(RACCX_TAUNTS[Math.floor(Math.random() * RACCX_TAUNTS.length)]);
     }
@@ -589,6 +640,8 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
   // KO handling
   useEffect(() => {
     if (catHp <= 0 && status !== "summary") {
+      setCatPose("ko");
+      sayCat(randLine(SCRAPPER_LINES.ko), 2200);
       pushLog("Scrapper drifts into the dark. Run ended.");
       setStatus("summary");
     }
@@ -607,52 +660,87 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
       </div>
 
       {/* Stage */}
-      <div className="chunky-panel relative h-72 overflow-hidden bg-black p-0 md:h-96">
+      <div key={`shake-${shakeKey}`} className={`chunky-panel relative h-80 overflow-hidden bg-black p-0 md:h-[28rem] ${shakeKey > 0 ? "animate-shake" : ""}`}>
         <div className="absolute inset-0">
           <img src={orbitBg} alt="" aria-hidden className="h-full w-full object-cover opacity-50" />
         </div>
         <ParallaxLayers running speed={parallaxRun ? 1 : 0.18} />
-        <ScrapperSprite drifting={status === "transitioning"} hurt={catHp < 30} />
 
-        {/* Enemy / Room content */}
-        <div className="absolute inset-0 flex items-center justify-end p-6">
+        {/* Combatants */}
+        {(status === "combat" || status === "bossRoom" || status === "roomCleared") && enemy && (
+          <>
+            <CombatantSprite
+              side="left"
+              src={SCRAPPER_POSES[catPose]}
+              name="Scrapper"
+              bubble={catBubble}
+              drifting={false}
+              boss={false}
+            />
+            <CombatantSprite
+              side="right"
+              src={getEnemyPoses(enemy.id)[enemyPose]}
+              name={enemy.name}
+              bubble={enemyBubble ?? (status === "bossRoom" && taunt ? taunt : null)}
+              drifting={false}
+              boss={status === "bossRoom"}
+            />
+          </>
+        )}
+
+        {/* Idle Scrapper for non-combat rooms */}
+        {(status === "lootRoom" || status === "hazardRoom" || status === "transitioning") && (
+          <CombatantSprite
+            side="left"
+            src={SCRAPPER_POSES[catHp < 30 ? "hurt" : "idle"]}
+            name="Scrapper"
+            bubble={catBubble}
+            drifting={status === "transitioning"}
+            boss={false}
+          />
+        )}
+
+        {/* Room content overlay */}
+        <div className="absolute inset-x-0 top-3 flex items-center justify-center p-2 pointer-events-none">
           {status === "transitioning" && (
-            <div className="font-display text-2xl uppercase tracking-widest text-secondary animate-pulse">
+            <div className="font-display text-xl uppercase tracking-widest text-secondary animate-pulse">
               Floating deeper…
             </div>
           )}
-          {status === "combat" && enemy && <EnemyBlock enemy={enemy} hp={enemyHp} max={enemyMaxHp} />}
-          {status === "bossRoom" && enemy && (
-            <div className="flex flex-col items-center gap-2 text-center">
-              <img src={orbitRaccX} alt="" width={160} height={160} loading="lazy"
-                   className="size-32 border-4 border-black object-cover shadow-[0_0_24px_rgba(255,80,200,0.6)] md:size-40" />
-              <EnemyBlock enemy={enemy} hp={enemyHp} max={enemyMaxHp} boss />
-              {taunt && (
-                <div className="chunky-panel max-w-xs bg-fuchsia-900/90 px-3 py-1.5 text-[11px] italic text-white">
-                  “{taunt}”
-                </div>
-              )}
-            </div>
-          )}
           {status === "lootRoom" && (
-            <div className="chunky-panel bg-amber-500/90 px-4 py-3 text-center text-black">
-              <div className="font-display text-2xl uppercase">Loot Room</div>
-              <div className="text-[11px]">Drifting trash. Grab fast.</div>
+            <div className="chunky-panel bg-amber-500/90 px-4 py-2 text-center text-black">
+              <div className="font-display text-xl uppercase">Loot Room</div>
+              <div className="text-[10px]">Drifting trash. Grab fast.</div>
             </div>
           )}
           {status === "hazardRoom" && (
-            <div className="chunky-panel bg-destructive/90 px-4 py-3 text-center text-white">
-              <div className="font-display text-2xl uppercase">⚠ Hazard</div>
-              <div className="text-[11px]">Vacuum warning. Vent or escape.</div>
+            <div className="chunky-panel bg-destructive/90 px-4 py-2 text-center text-white">
+              <div className="font-display text-xl uppercase">⚠ Hazard</div>
+              <div className="text-[10px]">Vacuum warning. Vent or escape.</div>
             </div>
           )}
           {status === "roomCleared" && (
-            <div className="chunky-panel bg-secondary/90 px-4 py-3 text-center text-black">
-              <div className="font-display text-2xl uppercase">Room Clear</div>
+            <div className="chunky-panel bg-secondary/90 px-4 py-2 text-center text-black">
+              <div className="font-display text-xl uppercase">Room Clear</div>
             </div>
           )}
         </div>
 
+        {/* HP bars for combatants */}
+        {(status === "combat" || status === "bossRoom") && enemy && (
+          <div className="absolute top-12 right-3 w-44 chunky-panel bg-black/80 p-2">
+            <div className="flex items-baseline justify-between gap-2">
+              <div className="font-display text-[11px] uppercase truncate">{enemy.name}</div>
+              <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
+                {status === "bossRoom" ? "BOSS" : "Foe"}
+              </div>
+            </div>
+            <div className="mt-1 chunky-panel h-2 bg-black p-[2px]">
+              <div className="h-full bg-destructive transition-all" style={{ width: `${(enemyHp / enemyMaxHp) * 100}%` }} />
+            </div>
+            <div className="text-[9px] uppercase text-muted-foreground">{enemyHp} / {enemyMaxHp}</div>
+          </div>
+        )}
         {/* Room path */}
         <div className="absolute left-3 top-3 flex gap-1">
           {plan.map((r, i) => (
@@ -727,6 +815,52 @@ function EnemyBlock({ enemy, hp, max, boss }: { enemy: OrbitEnemy; hp: number; m
         <div className="h-full bg-destructive transition-all" style={{ width: `${(hp / max) * 100}%` }} />
       </div>
       <div className="text-[10px] uppercase text-muted-foreground">{hp} / {max}</div>
+    </div>
+  );
+}
+
+/* ===================== COMBATANT SPRITE ===================== */
+function CombatantSprite({ side, src, name, bubble, drifting, boss }: {
+  side: "left" | "right";
+  src: string;
+  name: string;
+  bubble: string | null;
+  drifting: boolean;
+  boss: boolean;
+}) {
+  const pos = side === "left" ? "left-3 md:left-8" : "right-3 md:right-8";
+  const flip = side === "right" ? "-scale-x-100" : "";
+  const size = boss ? "w-44 h-44 md:w-64 md:h-64" : "w-36 h-36 md:w-52 md:h-52";
+  const bubbleSide = side === "left" ? "left-0 md:left-4" : "right-0 md:right-4";
+  const bubbleTail = side === "left" ? "after:left-6" : "after:right-6";
+  return (
+    <div
+      className={`pointer-events-none absolute bottom-12 ${pos} select-none`}
+      style={{
+        transform: drifting ? (side === "left" ? "translateX(60px) rotate(6deg)" : "") : "",
+        transition: "transform 1.2s ease-in-out",
+      }}
+    >
+      {bubble && (
+        <div
+          className={`absolute -top-14 ${bubbleSide} z-10 max-w-[180px] chunky-panel bg-white px-3 py-1.5 text-[11px] font-bold uppercase leading-tight text-black after:absolute after:-bottom-2 after:h-3 after:w-3 after:rotate-45 after:border-b-2 after:border-r-2 after:border-black after:bg-white ${bubbleTail} animate-[fade-in_0.18s_ease-out]`}
+        >
+          {bubble}
+        </div>
+      )}
+      <div className={`relative ${size} ${boss ? "drop-shadow-[0_0_28px_rgba(255,80,200,0.55)]" : "drop-shadow-[0_0_18px_rgba(0,255,180,0.35)]"} animate-floaty`}>
+        {src && (
+          <img
+            src={src}
+            alt={name}
+            draggable={false}
+            className={`absolute inset-0 size-full object-contain transition-opacity duration-150 ${flip}`}
+          />
+        )}
+      </div>
+      <div className={`mt-1 text-center font-display text-[10px] uppercase tracking-widest ${boss ? "text-fuchsia-300" : "text-white"}`}>
+        {name}
+      </div>
     </div>
   );
 }
