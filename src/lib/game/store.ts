@@ -4,10 +4,10 @@ import {
   DUMPSTERS, ENEMIES, HIDEOUT_UPGRADES, INITIAL_CATS, LOOT_POOL, newItemId,
 } from "./data";
 import type {
-  Cat, Dumpster, Enemy, Fx, HideoutUpgrade, Item, Rarity, Room, RoomKind,
+  Cat, Dumpster, Enemy, Fx, HideoutUpgrade, Item, Rarity, Room, RoomKind, ShopItem,
 } from "./types";
 import { STORY_CHAPTERS, STAGE_ORDER, CHAPTER_DUMPSTER, isDumpsterUnlocked, type HideoutStage, chapterById } from "./story";
-import { computeEvolution, type EvolutionStage } from "./evolution";
+import { computeEvolution, EVOLUTIONS, type EvolutionStage } from "./evolution";
 import type {
   Actor, FloatingNumber, RaidLogEntry, RaidState, Skill,
 } from "./raidTypes";
@@ -92,6 +92,10 @@ interface GameState {
   cats: Cat[];
   activeCatId: string;
   inventory: Item[];
+  /** Pending +HP buff from a Tuna Snack, applied & consumed at the next dive start. */
+  nextDiveHp: number;
+  /** Premium Dumpster Keys — each one lets a single dive into a story-locked bin. */
+  dumpsterKeys: number;
   dumpsters: Dumpster[];
   selectedDumpsterId: string;
   hideout: HideoutUpgrade[];
@@ -141,7 +145,13 @@ interface GameState {
   sell: (itemId: string) => void;
   upgrade: (id: string) => void;
   buy: (cost: { bones: number; caps: number }, granted: Item) => boolean;
+  /** Purchase a shop item by identity and apply its real effect. */
+  buyShopItem: (item: ShopItem) => boolean;
   buySnack: () => boolean;
+  /** Tick down resting/injured cats' recovery; flips them back to Ready at 0. */
+  tickRecovery: (seconds: number) => void;
+  /** Combine junk/crafting items into a relic (Trash Alchemy Table). */
+  craftRelic: () => boolean;
 
   // raid actions
   setRaidTeam: (catIds: string[]) => void;
@@ -302,6 +312,8 @@ export const useGame = create<GameState>()(
   cats: INITIAL_CATS,
   activeCatId: "scrapper",
   inventory: seedInventory,
+  nextDiveHp: 0,
+  dumpsterKeys: 0,
   dumpsters: DUMPSTERS,
   selectedDumpsterId: "greasy",
   hideout: HIDEOUT_UPGRADES,
@@ -335,28 +347,37 @@ export const useGame = create<GameState>()(
 
   startDive: () => {
     const s = get();
-    const cat = s.cats.find(c => c.id === s.activeCatId);
-    if (!cat) return;
+    const baseCat = s.cats.find(c => c.id === s.activeCatId);
+    if (!baseCat) return;
+    const cat = withCombatStats(s, baseCat);
     // Dive the bin the player picked (from the map or the story's Start Dive).
     // If it's still story-locked (e.g. a stale selection), fall back to the
     // current chapter's bin, which is always unlocked.
     let dumpId = s.selectedDumpsterId;
+    let usedKey = false;
     if (!isDumpsterUnlocked(dumpId, s.storyChapterIdx)) {
-      const ch = STORY_CHAPTERS[s.storyChapterIdx];
-      dumpId = (ch && CHAPTER_DUMPSTER[ch.id])
-        ?? s.dumpsters.find(d => isDumpsterUnlocked(d.id, s.storyChapterIdx))?.id
-        ?? dumpId;
+      if (s.dumpsterKeys > 0) {
+        usedKey = true; // a Premium Dumpster Key opens this story-locked bin for one run
+      } else {
+        const ch = STORY_CHAPTERS[s.storyChapterIdx];
+        dumpId = (ch && CHAPTER_DUMPSTER[ch.id])
+          ?? s.dumpsters.find(d => isDumpsterUnlocked(d.id, s.storyChapterIdx))?.id
+          ?? dumpId;
+      }
     }
     const dump = s.dumpsters.find(d => d.id === dumpId);
-    if (!dump || !isDumpsterUnlocked(dump.id, s.storyChapterIdx)) return;
+    if (!dump || (!usedKey && !isDumpsterUnlocked(dump.id, s.storyChapterIdx))) return;
     if (dumpId !== s.selectedDumpsterId) set({ selectedDumpsterId: dumpId });
+    if (usedKey) set({ dumpsterKeys: s.dumpsterKeys - 1 });
     const rooms = generateRooms(dump.rooms, dump.bossRunsAway);
     const firstKind = rooms[0].kind;
     const wave = (firstKind === "enemy" || firstKind === "swarm" || firstKind === "elite" || firstKind === "miniboss" || firstKind === "boss")
       ? spawnEnemies(dump, firstKind, 0) : [];
     const enemy = wave[0] ?? null;
     const rest = wave.slice(1);
+    const diveMaxHp = cat.maxHp + s.nextDiveHp; // Tuna Snack buff applies this dive
     set({
+      nextDiveHp: 0,
       dive: {
         dumpsterId: dump.id,
         catId: cat.id,
@@ -366,8 +387,8 @@ export const useGame = create<GameState>()(
         currentKind: firstKind,
         enemy,
         enemies: rest,
-        catHp: cat.hp,
-        catMaxHp: cat.maxHp,
+        catHp: diveMaxHp,
+        catMaxHp: diveMaxHp,
         catMp: 30 + cat.level * 2,
         catMaxMp: 30 + cat.level * 2,
         catStatuses: [],
@@ -451,7 +472,7 @@ export const useGame = create<GameState>()(
     const s = get();
     if (!s.dive || s.dive.ended) return;
     const d = s.dive;
-    const cat = s.cats.find(c => c.id === d.catId)!;
+    const cat = withCombatStats(s, s.cats.find(c => c.id === d.catId)!);
     const dump = s.dumpsters.find(x => x.id === d.dumpsterId)!;
 
     if (action === "flee") {
@@ -732,7 +753,7 @@ export const useGame = create<GameState>()(
     if (!s.dive || s.dive.ended) return;
     const d = s.dive;
     if (d.roomCleared || !d.enemy || d.inAction) return;
-    const cat = s.cats.find(c => c.id === d.catId)!;
+    const cat = withCombatStats(s, s.cats.find(c => c.id === d.catId)!);
     const skill = SKILLS[skillId];
     if (!skill) return;
     if ((d.catMp ?? 0) < skill.mpCost) {
@@ -1013,8 +1034,9 @@ export const useGame = create<GameState>()(
     const multiplier = escape ? 1 : 0.5;
     const baseBones = s.dive.bonesFound > 0 ? s.dive.bonesFound : dump.rewardBones;
     const baseCaps = s.dive.capsFound > 0 ? s.dive.capsFound : dump.rewardCaps;
+    const capMult = 1 + 0.1 * hideoutLevel(s, "bank"); // Bottle Cap Bank: +10% caps/level
     const bones = Math.round(baseBones * multiplier);
-    const caps = Math.round(baseCaps * multiplier);
+    const caps = Math.round(baseCaps * multiplier * capMult);
     const items = escape ? s.dive.collected : s.dive.collected.slice(0, Math.ceil(s.dive.collected.length / 2));
     set({ lastRewards: { items, bones, caps } });
   },
@@ -1141,6 +1163,71 @@ export const useGame = create<GameState>()(
       inventory: [...s.inventory, item],
       dive: s.dive && log ? { ...s.dive, log } : s.dive,
     });
+    return true;
+  },
+
+  buyShopItem: (item) => {
+    const s = get();
+    if (s.fishbones < item.costBones || s.bottlecaps < item.costCaps) return false;
+    const debit = { fishbones: s.fishbones - item.costBones, bottlecaps: s.bottlecaps - item.costCaps };
+    const mk = (it: Omit<Item, "id">): Item => ({ ...it, id: newItemId() });
+    const randOf = (pool: Omit<Item, "id">[]) => pool[Math.floor(Math.random() * pool.length)];
+
+    switch (item.id) {
+      case "tuna_snack": // +25 HP on the next dive
+        set({ ...debit, nextDiveHp: s.nextDiveHp + 25 });
+        return true;
+      case "healing_sardine": { // revive a fallen/resting cat
+        const idx = s.cats.findIndex(c => c.status === "injured" || c.status === "resting");
+        if (idx === -1) return false; // nobody to revive — don't waste the purchase
+        set({ ...debit, cats: s.cats.map((c, i) => i === idx
+          ? { ...c, status: "ready" as const, recoverySecondsLeft: 0, hp: c.maxHp } : c) });
+        return true;
+      }
+      case "premium_key": // unlock one locked-bin dive
+        set({ ...debit, dumpsterKeys: s.dumpsterKeys + 1 });
+        return true;
+      case "shiny_junk": { // five pieces of junk
+        const junk = LOOT_POOL.filter(i => i.kind === "junk");
+        const pool = junk.length ? junk : LOOT_POOL.filter(i => i.rarity === "common");
+        set({ ...debit, inventory: [...s.inventory, ...Array.from({ length: 5 }, () => mk(randOf(pool)))] });
+        return true;
+      }
+      case "random_relic": { // a real relic
+        const relics = LOOT_POOL.filter(i => i.kind === "relic");
+        set({ ...debit, inventory: [...s.inventory, mk(randOf(relics.length ? relics : LOOT_POOL))] });
+        return true;
+      }
+      case "mystery_bag":
+      default: // a genuine mystery — any item in the pool
+        set({ ...debit, inventory: [...s.inventory, mk(randOf(LOOT_POOL))] });
+        return true;
+    }
+  },
+
+  tickRecovery: (seconds) => {
+    const s = get();
+    const napMult = 1 + 0.25 * hideoutLevel(s, "nap"); // Nap Pile Recovery Zone
+    let changed = false;
+    const cats = s.cats.map(c => {
+      if (c.status !== "injured" && c.status !== "resting") return c;
+      changed = true;
+      const left = c.recoverySecondsLeft - seconds * napMult;
+      if (left <= 0) return { ...c, status: "ready" as const, recoverySecondsLeft: 0, hp: c.maxHp };
+      return { ...c, recoverySecondsLeft: Math.ceil(left) };
+    });
+    if (changed) set({ cats });
+  },
+
+  craftRelic: () => {
+    const s = get();
+    if (hideoutLevel(s, "alchemy") < 1) return false; // Trash Alchemy Table not built
+    const fodder = s.inventory.filter(i => i.kind === "junk" || i.kind === "crafting");
+    if (fodder.length < 3) return false;
+    const consumed = new Set(fodder.slice(0, 3).map(i => i.id));
+    const relics = LOOT_POOL.filter(i => i.kind === "relic");
+    const newRelic: Item = { ...relics[Math.floor(Math.random() * relics.length)], id: newItemId() };
+    set({ inventory: [...s.inventory.filter(i => !consumed.has(i.id)), newRelic] });
     return true;
   },
 
@@ -1537,6 +1624,8 @@ export const useGame = create<GameState>()(
         cats: s.cats,
         activeCatId: s.activeCatId,
         inventory: s.inventory,
+        nextDiveHp: s.nextDiveHp,
+        dumpsterKeys: s.dumpsterKeys,
         dumpsters: s.dumpsters,
         selectedDumpsterId: s.selectedDumpsterId,
         hideout: s.hideout,
@@ -1638,13 +1727,43 @@ export function effectiveStats(cat: Cat): { attack: number; defense: number; spe
   return { attack, defense, speed, maxHp };
 }
 
+/** Level of a hideout upgrade (0 if not built). */
+function hideoutLevel(s: GameState, id: string): number {
+  return s.hideout.find(h => h.id === id)?.level ?? 0;
+}
+
+/**
+ * A cat's full COMBAT stats: base (already includes level gains + sphere-grid)
+ * plus equipped gear, the account evolution bonus, and passive hideout upgrades
+ * (Cardboard Castle = +8% max HP/level, Scratching Post Gym = +5% ATK/level).
+ * Use this everywhere the game actually fights so gear/evolution/hideout are
+ * real, not just display text.
+ */
+function withCombatStats(s: GameState, cat: Cat): Cat {
+  const eff = effectiveStats(cat);
+  const evo = EVOLUTIONS[computeEvolution({
+    completedChapters: s.completedChapters,
+    roomsCleared: s.roomsCleared,
+    bossesBeaten: s.bossesBeaten,
+  })].statBonus;
+  const atkPct = 0.05 * hideoutLevel(s, "gym");
+  const hpPct = 0.08 * hideoutLevel(s, "castle");
+  return {
+    ...cat,
+    attack: Math.round((eff.attack + evo.atk) * (1 + atkPct)),
+    defense: eff.defense + evo.def,
+    speed: eff.speed,
+    maxHp: Math.round((eff.maxHp + evo.hp) * (1 + hpPct)),
+  };
+}
+
 function buildPartyActor(s: GameState, catId: string, idx: number): Actor | null {
   const cat = s.cats.find(c => c.id === catId);
   if (!cat) return null;
   const tpl = PARTY_TEMPLATES[catId] ?? PARTY_TEMPLATES.scrapper;
   // Skills grow with the cat's level (template skills + level-gated learnset).
   const skills = knownSkillIds(catId, cat.level).map(id => SKILLS[id]).filter(Boolean);
-  const eff = effectiveStats(cat);
+  const eff = withCombatStats(s, cat);
   const agg = aggregateGrid(catId, s.catGrid[catId] ?? []);
   return {
     uid: `p${idx}-${cat.id}`,

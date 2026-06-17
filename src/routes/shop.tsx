@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import raccoon from "@/assets/raccoon-merchant.png";
 import { useGame, rarityClass } from "@/lib/game/store";
-import { LOOT_POOL, newItemId } from "@/lib/game/data";
 import { SHOP_ITEMS } from "@/lib/game/data";
 
 export const Route = createFileRoute("/shop")({
@@ -22,7 +21,7 @@ export const Route = createFileRoute("/shop")({
 });
 
 function ShopScreen() {
-  const buy = useGame(s => s.buy);
+  const buyShopItem = useGame(st => st.buyShopItem);
   const fishbones = useGame(s => s.fishbones);
   const caps = useGame(s => s.bottlecaps);
   const [flash, setFlash] = useState<string | null>(null);
@@ -61,14 +60,9 @@ function ShopScreen() {
                   <button
                     disabled={!canAfford}
                     onClick={() => {
-                      // grant a random item matching shop rarity
-                      const pool = LOOT_POOL.filter(i => i.rarity === s.rarity);
-                      const pick = pool[Math.floor(Math.random() * pool.length)] ?? LOOT_POOL[0];
-                      const ok = buy({ bones: s.costBones, caps: s.costCaps }, { ...pick, id: newItemId() });
-                      if (ok) {
-                        setFlash(`Bought ${s.name}`);
-                        setTimeout(() => setFlash(null), 1500);
-                      }
+                      const ok = buyShopItem(s);
+                      setFlash(ok ? `Bought ${s.name}` : s.id === "healing_sardine" ? "No fallen cat to revive" : "Can't buy that");
+                      setTimeout(() => setFlash(null), 1500);
                     }}
                     className="chunky-button bg-primary px-4 py-2 text-xs font-bold uppercase text-black"
                   >
