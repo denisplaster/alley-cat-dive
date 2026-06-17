@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppShell } from "../components/game/AppShell";
 import { Cutscene } from "../components/game/story/Cutscene";
+import { OrbitOverlay } from "./orbit";
 import { useGame } from "../lib/game/store";
 
 function NotFoundComponent() {
@@ -139,6 +140,7 @@ function RootComponent() {
         <Outlet />
       </AppShell>
       <Cutscene />
+      <OrbitOverlay />
     </QueryClientProvider>
   );
 }

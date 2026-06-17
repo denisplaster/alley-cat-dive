@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useOrbit } from "@/lib/orbit/store";
@@ -21,23 +21,35 @@ export const Route = createFileRoute("/orbit")({
     ],
     links: [{ rel: "canonical", href: "https://alleycatdive.com/orbit" }],
   }),
-  component: OrbitScreen,
+  component: OrbitRoute,
 });
+
+// Legacy/deep-link route: Orbit no longer has its own page or nav tab, so open
+// the edition overlay and drop the player on the hub.
+function OrbitRoute() {
+  const openEdition = useOrbit(s => s.openEdition);
+  const navigate = useNavigate();
+  useEffect(() => {
+    openEdition();
+    navigate({ to: "/", replace: true });
+  }, [openEdition, navigate]);
+  return null;
+}
 
 type Tab = "story" | "map" | "codex";
 
-function OrbitScreen() {
+/** The full Orbit Trash edition UI, hosted inside the full-screen OrbitOverlay. */
+function OrbitEdition() {
   const [tab, setTab] = useState<Tab>("story");
   const [diveSector, setDiveSector] = useState<OrbitSector | null>(null);
-  const setEdition = useOrbit(s => s.setEdition);
-  useEffect(() => { setEdition("orbit"); }, [setEdition]);
+  const closeEdition = useOrbit(s => s.closeEdition);
 
   if (diveSector) {
     return <OrbitDive sector={diveSector} onExit={() => setDiveSector(null)} />;
   }
 
   return (
-    <div className="mt-6 space-y-4">
+    <div className="space-y-4">
       <OrbitHero />
 
       <div className="flex flex-wrap gap-2">
@@ -50,14 +62,32 @@ function OrbitScreen() {
             {t === "story" ? "Story" : t === "map" ? "Station Map" : "Codex"}
           </button>
         ))}
-        <Link to="/editions" className="chunky-button bg-slate-900 px-3 py-1.5 text-[11px] font-bold uppercase ml-auto">
-          Switch Edition
-        </Link>
+        <button onClick={closeEdition} className="chunky-button bg-slate-900 px-3 py-1.5 text-[11px] font-bold uppercase ml-auto">
+          ✕ Exit Edition
+        </button>
       </div>
 
       {tab === "story" && <OrbitStory />}
       {tab === "map" && <OrbitMap onDive={setDiveSector} />}
       {tab === "codex" && <OrbitCodex />}
+    </div>
+  );
+}
+
+/** Full-screen overlay hosting the edition — covers the nav like Edition 1's
+ *  Cutscene. Mounted globally in __root; shown whenever an edition is launched. */
+export function OrbitOverlay() {
+  const isOpen = useOrbit(s => s.isOpen);
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-background">
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <img src={orbitBg} alt="" aria-hidden className="h-full w-full object-cover opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/70 to-background" />
+      </div>
+      <div className="mx-auto w-full max-w-7xl px-3 py-4 md:px-6">
+        <OrbitEdition />
+      </div>
     </div>
   );
 }
