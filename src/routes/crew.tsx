@@ -28,9 +28,9 @@ function CrewScreen() {
   const roomsCleared = useGame(s => s.roomsCleared);
   const bossesBeaten = useGame(s => s.bossesBeaten);
   const evo = EVOLUTIONS[computeEvolution({ completedChapters: completed, roomsCleared, bossesBeaten })];
-  const storyComplete = STORY_CHAPTERS.every(ch => completed.includes(ch.id));
   const devMode = import.meta.env.DEV;
-  const crewUnlocked = storyComplete || devMode;
+  // The "Cat Crew System" reward (Chapter 5 — The Alley Pact) recruits the crew.
+  const crewUnlocked = completed.includes("ch5_alley_pact") || devMode;
 
   return (
     <div className="mt-6">
@@ -44,7 +44,7 @@ function CrewScreen() {
             🔒 Crew Locked
           </span>
           <span className="text-[11px] uppercase tracking-wider">
-            Only Scrapper is playable. Finish the story to unlock the full crew.
+            Only Scrapper is playable. Complete Chapter 5 — The Alley Pact to recruit the crew.
           </span>
           <span className="ml-auto text-[10px] uppercase text-muted-foreground">
             {completed.length} / {STORY_CHAPTERS.length} chapters
@@ -152,7 +152,7 @@ function CatCard({ c, active, locked, onSelect }: { c: Cat; active: boolean; loc
         onClick={onSelect}
         className={`chunky-button mt-4 w-full py-2 text-xs font-bold uppercase ${active ? "bg-primary text-black" : "bg-slate-800"}`}
       >
-        {locked ? "Locked — Finish Story" : active ? "Active Diver" : c.status === "ready" ? "Set Active" : "Unavailable"}
+        {locked ? "Locked — Reach Ch5" : active ? "Active Diver" : c.status === "ready" ? "Set Active" : "Unavailable"}
       </button>
     </div>
   );

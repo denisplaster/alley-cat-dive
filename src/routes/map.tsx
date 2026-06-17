@@ -25,6 +25,7 @@ function MapScreen() {
   const storyIdx = useGame(s => s.storyChapterIdx);
   const completed = useGame(s => s.completedChapters);
   const select = useGame(s => s.selectDumpster);
+  const keys = useGame(s => s.dumpsterKeys);
   const navigate = useNavigate();
 
   function dive(id: string) {
@@ -34,11 +35,18 @@ function MapScreen() {
 
   return (
     <div className="mt-6">
-      <header className="mb-6">
-        <h1 className="font-display text-4xl uppercase md:text-5xl">Neighborhood Map</h1>
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">
-          Tap a bin to dive. New bins open as you push through the story.
-        </p>
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h1 className="font-display text-4xl uppercase md:text-5xl">Neighborhood Map</h1>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">
+            Tap a bin to dive. New bins open as you push through the story.
+          </p>
+        </div>
+        {keys > 0 && (
+          <span className="chunky-panel bg-black/80 px-3 py-1.5 text-[11px] font-bold uppercase text-secondary">
+            🔑 {keys} Dumpster Key{keys > 1 ? "s" : ""}
+          </span>
+        )}
       </header>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -48,6 +56,7 @@ function MapScreen() {
             d={d}
             selected={d.id === selectedId}
             unlocked={isDumpsterUnlocked(d.id, storyIdx)}
+            keyable={keys > 0}
             cleared={completed.includes(DUMPSTER_CHAPTER[d.id])}
             onDive={() => dive(d.id)}
           />
@@ -57,16 +66,17 @@ function MapScreen() {
   );
 }
 
-function DumpsterCard({ d, selected, unlocked, cleared, onDive }: {
-  d: Dumpster; selected: boolean; unlocked: boolean; cleared: boolean; onDive: () => void;
+function DumpsterCard({ d, selected, unlocked, keyable, cleared, onDive }: {
+  d: Dumpster; selected: boolean; unlocked: boolean; keyable: boolean; cleared: boolean; onDive: () => void;
 }) {
+  const canDive = unlocked || keyable; // a Premium Dumpster Key opens a locked bin
   return (
     <button
       onClick={onDive}
-      disabled={!unlocked}
+      disabled={!canDive}
       className={`chunky-panel group relative overflow-hidden bg-black/80 p-3 text-left transition-transform ${
         selected ? "ring-4 ring-primary -translate-y-1" : ""
-      } ${unlocked ? "hover:-translate-y-1" : "opacity-50"}`}
+      } ${canDive ? "hover:-translate-y-1" : "opacity-50"}`}
     >
       <div className="relative mb-3 aspect-video overflow-hidden border-4 border-black">
         <img src={d.image} alt={d.name} width={512} height={288} loading="lazy" className={`h-full w-full object-cover ${unlocked ? "" : "grayscale"}`} />
@@ -78,8 +88,8 @@ function DumpsterCard({ d, selected, unlocked, cleared, onDive }: {
         )}
         {!unlocked && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/70 text-center font-display uppercase tracking-widest text-muted-foreground">
-            <span className="text-3xl">🔒</span>
-            <span className="text-[10px]">Locked · advance the story</span>
+            <span className="text-3xl">{keyable ? "🔑" : "🔒"}</span>
+            <span className="text-[10px]">{keyable ? "Use a key to dive" : "Locked · advance the story"}</span>
           </div>
         )}
       </div>

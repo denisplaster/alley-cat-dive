@@ -35,12 +35,18 @@ function InventoryScreen() {
   const activeCatId = useGame(s => s.activeCatId);
   const equip = useGame(s => s.equip);
   const sell = useGame(s => s.sell);
+  const eatFood = useGame(s => s.eatFood);
+  const craftRelic = useGame(s => s.craftRelic);
+  const hideout = useGame(s => s.hideout);
   const [filter, setFilter] = useState<ItemKind | "all">("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const items = inventory.filter(i => filter === "all" || i.kind === filter);
   const selected = inventory.find(i => i.id === selectedId);
   const activeCat = cats.find(c => c.id === activeCatId)!;
+  const alchemyBuilt = (hideout.find(h => h.id === "alchemy")?.level ?? 0) >= 1;
+  const fodderCount = inventory.filter(i => i.kind === "junk" || i.kind === "crafting").length;
+  const recovering = cats.some(c => c.status === "injured" || c.status === "resting");
 
   return (
     <div className="mt-6">
@@ -49,7 +55,7 @@ function InventoryScreen() {
         <p className="text-xs uppercase tracking-widest text-muted-foreground">{inventory.length} pieces of certified trash treasure</p>
       </header>
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         {FILTERS.map(f => (
           <button
             key={f.key}
@@ -59,6 +65,16 @@ function InventoryScreen() {
             {f.label}
           </button>
         ))}
+        {alchemyBuilt && (
+          <button
+            disabled={fodderCount < 3}
+            onClick={() => craftRelic()}
+            title="Trash Alchemy Table — consume 3 junk/crafting items"
+            className="chunky-button ml-auto bg-accent px-3 py-1.5 text-xs font-bold uppercase text-black disabled:bg-slate-800 disabled:text-muted-foreground"
+          >
+            🧪 Combine 3 → Relic ({fodderCount})
+          </button>
+        )}
       </div>
 
       <CharacterPanel cat={activeCat} />
@@ -104,13 +120,24 @@ function InventoryScreen() {
                 Sell value: <span className="text-accent">{selected.sellPrice} fishbones</span>
               </div>
               <div className="mt-4 flex gap-2">
-                <button
-                  disabled={!["weapon","armor","relic"].includes(selected.kind)}
-                  onClick={() => { equip(selected.id, activeCatId); setSelectedId(null); }}
-                  className="chunky-button flex-1 bg-primary py-2 text-xs font-bold uppercase text-black"
-                >
-                  Equip
-                </button>
+                {selected.kind === "food" ? (
+                  <button
+                    disabled={!recovering}
+                    onClick={() => { eatFood(selected.id); setSelectedId(null); }}
+                    title={recovering ? "Feed a recovering cat to cut its downtime" : "No cat is recovering right now"}
+                    className="chunky-button flex-1 bg-primary py-2 text-xs font-bold uppercase text-black disabled:bg-slate-800 disabled:text-muted-foreground"
+                  >
+                    Feed Crew
+                  </button>
+                ) : (
+                  <button
+                    disabled={!["weapon","armor","relic"].includes(selected.kind)}
+                    onClick={() => { equip(selected.id, activeCatId); setSelectedId(null); }}
+                    className="chunky-button flex-1 bg-primary py-2 text-xs font-bold uppercase text-black disabled:bg-slate-800 disabled:text-muted-foreground"
+                  >
+                    Equip
+                  </button>
+                )}
                 <button
                   onClick={() => { sell(selected.id); setSelectedId(null); }}
                   className="chunky-button flex-1 bg-destructive py-2 text-xs font-bold uppercase"

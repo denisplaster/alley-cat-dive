@@ -152,6 +152,8 @@ interface GameState {
   tickRecovery: (seconds: number) => void;
   /** Combine junk/crafting items into a relic (Trash Alchemy Table). */
   craftRelic: () => boolean;
+  /** Feed a food item to a recovering cat to cut its downtime. */
+  eatFood: (itemId: string) => void;
 
   // raid actions
   setRaidTeam: (catIds: string[]) => void;
@@ -349,7 +351,7 @@ export const useGame = create<GameState>()(
     const s = get();
     const baseCat = s.cats.find(c => c.id === s.activeCatId);
     if (!baseCat) return;
-    const cat = withCombatStats(s, baseCat);
+    const cat = withCombatStats(s, baseCat, true);
     // Dive the bin the player picked (from the map or the story's Start Dive).
     // If it's still story-locked (e.g. a stale selection), fall back to the
     // current chapter's bin, which is always unlocked.
@@ -472,7 +474,7 @@ export const useGame = create<GameState>()(
     const s = get();
     if (!s.dive || s.dive.ended) return;
     const d = s.dive;
-    const cat = withCombatStats(s, s.cats.find(c => c.id === d.catId)!);
+    const cat = withCombatStats(s, s.cats.find(c => c.id === d.catId)!, true);
     const dump = s.dumpsters.find(x => x.id === d.dumpsterId)!;
 
     if (action === "flee") {
@@ -753,7 +755,7 @@ export const useGame = create<GameState>()(
     if (!s.dive || s.dive.ended) return;
     const d = s.dive;
     if (d.roomCleared || !d.enemy || d.inAction) return;
-    const cat = withCombatStats(s, s.cats.find(c => c.id === d.catId)!);
+    const cat = withCombatStats(s, s.cats.find(c => c.id === d.catId)!, true);
     const skill = SKILLS[skillId];
     if (!skill) return;
     if ((d.catMp ?? 0) < skill.mpCost) {
@@ -1229,6 +1231,27 @@ export const useGame = create<GameState>()(
     const newRelic: Item = { ...relics[Math.floor(Math.random() * relics.length)], id: newItemId() };
     set({ inventory: [...s.inventory.filter(i => !consumed.has(i.id)), newRelic] });
     return true;
+  },
+
+  eatFood: (itemId) => {
+    const s = get();
+    const item = s.inventory.find(i => i.id === itemId);
+    if (!item || item.kind !== "food") return;
+    // Feed the cat who needs it most; cut their recovery downtime.
+    let idx = -1, worst = 0;
+    s.cats.forEach((c, i) => {
+      if ((c.status === "injured" || c.status === "resting") && c.recoverySecondsLeft > worst) { worst = c.recoverySecondsLeft; idx = i; }
+    });
+    if (idx === -1) return; // nobody recovering — keep the snack for a dive
+    const heal = item.health ?? 20;
+    const cats = s.cats.map((c, i) => {
+      if (i !== idx) return c;
+      const left = c.recoverySecondsLeft - heal * 3;
+      return left <= 0
+        ? { ...c, status: "ready" as const, recoverySecondsLeft: 0, hp: c.maxHp }
+        : { ...c, recoverySecondsLeft: Math.ceil(left) };
+    });
+    set({ inventory: s.inventory.filter(i => i.id !== itemId), cats });
   },
 
   openCutscene: (chapterId, phase) => {
@@ -1739,7 +1762,7 @@ function hideoutLevel(s: GameState, id: string): number {
  * Use this everywhere the game actually fights so gear/evolution/hideout are
  * real, not just display text.
  */
-function withCombatStats(s: GameState, cat: Cat): Cat {
+function withCombatStats(s: GameState, cat: Cat, crewAssist = false): Cat {
   const eff = effectiveStats(cat);
   const evo = EVOLUTIONS[computeEvolution({
     completedChapters: s.completedChapters,
@@ -1748,12 +1771,15 @@ function withCombatStats(s: GameState, cat: Cat): Cat {
   })].statBonus;
   const atkPct = 0.05 * hideoutLevel(s, "gym");
   const hpPct = 0.08 * hideoutLevel(s, "castle");
+  // Multi-Cat Dive Support (Ch7 reward): ready crewmates back the diver up.
+  const allies = (crewAssist && s.completedChapters.includes("ch7_rally"))
+    ? s.cats.filter(c => c.id !== cat.id && c.status === "ready").length : 0;
   return {
     ...cat,
-    attack: Math.round((eff.attack + evo.atk) * (1 + atkPct)),
+    attack: Math.round((eff.attack + evo.atk) * (1 + atkPct)) + allies,
     defense: eff.defense + evo.def,
     speed: eff.speed,
-    maxHp: Math.round((eff.maxHp + evo.hp) * (1 + hpPct)),
+    maxHp: Math.round((eff.maxHp + evo.hp) * (1 + hpPct)) + allies * 3,
   };
 }
 
