@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useGame, effectiveStats, xpForNextLevel } from "@/lib/game/store";
+import { useGame, withCombatStats, xpForNextLevel } from "@/lib/game/store";
 import type { Cat } from "@/lib/game/types";
 import { EVOLUTIONS, computeEvolution } from "@/lib/game/evolution";
 import { STORY_CHAPTERS } from "@/lib/game/story";
@@ -130,7 +130,7 @@ function CatCard({ c, active, locked, onSelect }: { c: Cat; active: boolean; loc
       </div>
 
       {(() => {
-        const eff = effectiveStats(c);
+        const eff = withCombatStats(useGame.getState(), c); // gear + evolution + hideout (no dive-only crew assist)
         return (
           <div className="grid grid-cols-3 gap-1 text-center">
             <S label="ATK" v={eff.attack} bonus={eff.attack - c.attack} />

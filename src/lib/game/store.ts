@@ -1767,7 +1767,7 @@ function hideoutLevel(s: GameState, id: string): number {
  * Use this everywhere the game actually fights so gear/evolution/hideout are
  * real, not just display text.
  */
-function withCombatStats(s: GameState, cat: Cat, crewAssist = false): Cat {
+export function withCombatStats(s: GameState, cat: Cat, crewAssist = false): Cat {
   const eff = effectiveStats(cat);
   const evo = EVOLUTIONS[computeEvolution({
     completedChapters: s.completedChapters,
