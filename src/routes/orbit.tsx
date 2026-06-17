@@ -819,6 +819,52 @@ function EnemyBlock({ enemy, hp, max, boss }: { enemy: OrbitEnemy; hp: number; m
   );
 }
 
+/* ===================== COMBATANT SPRITE ===================== */
+function CombatantSprite({ side, src, name, bubble, drifting, boss }: {
+  side: "left" | "right";
+  src: string;
+  name: string;
+  bubble: string | null;
+  drifting: boolean;
+  boss: boolean;
+}) {
+  const pos = side === "left" ? "left-3 md:left-8" : "right-3 md:right-8";
+  const flip = side === "right" ? "-scale-x-100" : "";
+  const size = boss ? "w-44 h-44 md:w-64 md:h-64" : "w-36 h-36 md:w-52 md:h-52";
+  const bubbleSide = side === "left" ? "left-0 md:left-4" : "right-0 md:right-4";
+  const bubbleTail = side === "left" ? "after:left-6" : "after:right-6";
+  return (
+    <div
+      className={`pointer-events-none absolute bottom-12 ${pos} select-none`}
+      style={{
+        transform: drifting ? (side === "left" ? "translateX(60px) rotate(6deg)" : "") : "",
+        transition: "transform 1.2s ease-in-out",
+      }}
+    >
+      {bubble && (
+        <div
+          className={`absolute -top-14 ${bubbleSide} z-10 max-w-[180px] chunky-panel bg-white px-3 py-1.5 text-[11px] font-bold uppercase leading-tight text-black after:absolute after:-bottom-2 after:h-3 after:w-3 after:rotate-45 after:border-b-2 after:border-r-2 after:border-black after:bg-white ${bubbleTail} animate-[fade-in_0.18s_ease-out]`}
+        >
+          {bubble}
+        </div>
+      )}
+      <div className={`relative ${size} ${boss ? "drop-shadow-[0_0_28px_rgba(255,80,200,0.55)]" : "drop-shadow-[0_0_18px_rgba(0,255,180,0.35)]"} animate-floaty`}>
+        {src && (
+          <img
+            src={src}
+            alt={name}
+            draggable={false}
+            className={`absolute inset-0 size-full object-contain transition-opacity duration-150 ${flip}`}
+          />
+        )}
+      </div>
+      <div className={`mt-1 text-center font-display text-[10px] uppercase tracking-widest ${boss ? "text-fuchsia-300" : "text-white"}`}>
+        {name}
+      </div>
+    </div>
+  );
+}
+
 function SummaryPanel({ sector, loot, onExit, onComplete }: { sector: OrbitSector; loot: OrbitLoot[]; onExit: () => void; onComplete?: () => void }) {
   return (
     <div className="space-y-2 text-center">
