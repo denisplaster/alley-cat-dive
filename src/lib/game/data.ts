@@ -140,7 +140,7 @@ export const HIDEOUT_UPGRADES: HideoutUpgrade[] = [
     costBones: (l)=>120*l, costCaps:(l)=>4*l, benefit: "+8% max HP per level",
     description: "Layered boxes, duct-tape walls. The cats love it." },
   { id: "pantry",   name: "Tuna Can Pantry",       level: 1, maxLevel: 8,
-    costBones: (l)=>80*l, costCaps:(l)=>2*l, benefit: "Unlocks better food drops",
+    costBones: (l)=>80*l, costCaps:(l)=>2*l, benefit: "Food heals +20% per level",
     description: "Stockpile of slightly-dented tuna treasure." },
   { id: "gym",      name: "Scratching Post Gym",   level: 3, maxLevel: 10,
     costBones: (l)=>150*l, costCaps:(l)=>5*l, benefit: "+5% attack per level",
@@ -155,7 +155,7 @@ export const HIDEOUT_UPGRADES: HideoutUpgrade[] = [
     costBones: (l)=>100*l, costCaps:(l)=>3*l, benefit: "Cats recover 25% faster per level",
     description: "A mound of warm laundry. Sacred." },
   { id: "fence",    name: "Raccoon Fence",         level: 0, maxLevel: 5,
-    costBones: (l)=>(l+1)*400, costCaps:(l)=>(l+1)*12, benefit: "Better shop rotations",
+    costBones: (l)=>(l+1)*400, costCaps:(l)=>(l+1)*12, benefit: "−5% shop prices per level",
     description: "Keeps the merchant honest. Ish." },
 ];
 

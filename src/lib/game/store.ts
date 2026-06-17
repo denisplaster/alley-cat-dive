@@ -514,7 +514,8 @@ export const useGame = create<GameState>()(
         return;
       }
       const food = s.inventory[foodIdx];
-      const heal = Math.max(10, food.health ?? 20);
+      const pantryMult = 1 + 0.2 * hideoutLevel(s, "pantry"); // Tuna Can Pantry
+      const heal = Math.round(Math.max(10, food.health ?? 20) * pantryMult);
       catHp = Math.min(d.catMaxHp, catHp + heal);
       clog = [...clog, mklog(`Munched ${food.name}. +${heal} HP`, "loot")];
       fx = [...fx, { id: nextFxId(), target: "cat", kind: "heal", amount: heal }];
@@ -1170,8 +1171,11 @@ export const useGame = create<GameState>()(
 
   buyShopItem: (item) => {
     const s = get();
-    if (s.fishbones < item.costBones || s.bottlecaps < item.costCaps) return false;
-    const debit = { fishbones: s.fishbones - item.costBones, bottlecaps: s.bottlecaps - item.costCaps };
+    const disc = 1 - 0.05 * hideoutLevel(s, "fence"); // Raccoon Fence: cheaper prices
+    const costBones = Math.ceil(item.costBones * disc);
+    const costCaps = Math.ceil(item.costCaps * disc);
+    if (s.fishbones < costBones || s.bottlecaps < costCaps) return false;
+    const debit = { fishbones: s.fishbones - costBones, bottlecaps: s.bottlecaps - costCaps };
     const mk = (it: Omit<Item, "id">): Item => ({ ...it, id: newItemId() });
     const randOf = (pool: Omit<Item, "id">[]) => pool[Math.floor(Math.random() * pool.length)];
 
@@ -1243,7 +1247,7 @@ export const useGame = create<GameState>()(
       if ((c.status === "injured" || c.status === "resting") && c.recoverySecondsLeft > worst) { worst = c.recoverySecondsLeft; idx = i; }
     });
     if (idx === -1) return; // nobody recovering — keep the snack for a dive
-    const heal = item.health ?? 20;
+    const heal = Math.round((item.health ?? 20) * (1 + 0.2 * hideoutLevel(s, "pantry")));
     const cats = s.cats.map((c, i) => {
       if (i !== idx) return c;
       const left = c.recoverySecondsLeft - heal * 3;
@@ -1588,12 +1592,19 @@ export const useGame = create<GameState>()(
       return;
     }
     const r = s.raid.rewards;
+    const def = RAIDS.find(rd => rd.id === s.raid!.dungeonId);
+    // Credit every room of the raid (counts toward the rooms-cleared evolution
+    // gate and Story counter) and level up the team that fought it.
+    const roomCredit = def?.rooms.length ?? 0;
+    const cats = s.cats.map(c => s.raidTeam.includes(c.id) ? applyXp({ ...c, hp: c.maxHp }, 30) : c);
     set({
       raid: null,
       spheres: s.spheres + r.spheres,
       fishbones: s.fishbones + r.bones,
       bottlecaps: s.bottlecaps + r.caps,
       bossesBeaten: s.bossesBeaten + 1,
+      roomsCleared: s.roomsCleared + roomCredit,
+      cats,
     });
   },
 
