@@ -179,8 +179,6 @@ interface GameState {
   dismissReward: () => void;
   /** Award player-account XP (the top HUD bar, 0–100 per level); rolls into playerLevel. */
   awardPlayerXp: (amount: number) => void;
-  /** Derived: current evolution from milestones. */
-  getEvolution: () => EvolutionStage;
 
   /** Toggle dev flag to skip storyline requirements. */
   toggleSkipStoryline: () => void;
@@ -224,7 +222,7 @@ const pickEnemyIntent = (kind?: RoomKind): "attack" | "heavy" | "block" => {
   return "attack";
 };
 
-const generateRooms = (totalRooms: number, _bossRunsAway = false): Room[] => {
+const generateRooms = (totalRooms: number): Room[] => {
   const arr: RoomKind[] = Array.from({ length: totalRooms }, () => "enemy" as RoomKind);
   // The chapter boss only shows up for the final fight of the dumpster.
   arr[totalRooms - 1] = "boss";
@@ -371,7 +369,7 @@ export const useGame = create<GameState>()(
     if (!dump || (!usedKey && !isDumpsterUnlocked(dump.id, s.storyChapterIdx))) return;
     if (dumpId !== s.selectedDumpsterId) set({ selectedDumpsterId: dumpId });
     if (usedKey) set({ dumpsterKeys: s.dumpsterKeys - 1 });
-    const rooms = generateRooms(dump.rooms, dump.bossRunsAway);
+    const rooms = generateRooms(dump.rooms);
     const firstKind = rooms[0].kind;
     const wave = (firstKind === "enemy" || firstKind === "swarm" || firstKind === "elite" || firstKind === "miniboss" || firstKind === "boss")
       ? spawnEnemies(dump, firstKind, 0) : [];
@@ -1038,8 +1036,9 @@ export const useGame = create<GameState>()(
     const baseBones = s.dive.bonesFound > 0 ? s.dive.bonesFound : dump.rewardBones;
     const baseCaps = s.dive.capsFound > 0 ? s.dive.capsFound : dump.rewardCaps;
     const capMult = 1 + 0.1 * hideoutLevel(s, "bank"); // Bottle Cap Bank: +10% caps/level
-    const bones = Math.round(baseBones * multiplier);
-    const caps = Math.round(baseCaps * multiplier * capMult);
+    const vetMult = 1 + 0.02 * (s.playerLevel - 1);    // Veteran scavenger: account level pays off
+    const bones = Math.round(baseBones * multiplier * vetMult);
+    const caps = Math.round(baseCaps * multiplier * capMult * vetMult);
     const items = escape ? s.dive.collected : s.dive.collected.slice(0, Math.ceil(s.dive.collected.length / 2));
     set({ lastRewards: { items, bones, caps } });
   },
@@ -1379,14 +1378,6 @@ export const useGame = create<GameState>()(
     set({ placedItems: next });
   },
   dismissReward: () => set({ pendingReward: null }),
-  getEvolution: () => {
-    const s = get();
-    return computeEvolution({
-      completedChapters: s.completedChapters,
-      roomsCleared: s.roomsCleared,
-      bossesBeaten: s.bossesBeaten,
-    });
-  },
   toggleSkipStoryline: () => set(s => ({ skipStoryline: !s.skipStoryline })),
 
   // ============================================================

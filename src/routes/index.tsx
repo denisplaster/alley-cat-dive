@@ -182,9 +182,9 @@ function AlleyHub() {
         <button
           onClick={toggleSkip}
           className={`mt-1 border-2 border-dashed px-2 py-1 text-[9px] font-bold uppercase tracking-wider ${skipStoryline ? "border-primary/60 text-primary" : "border-muted-foreground/30 text-muted-foreground hover:border-destructive/60 hover:text-destructive"}`}
-          title="Dev flag: bypass story requirements"
+          title="Dev flag: unlock the Raids screen without finishing the story"
         >
-          {skipStoryline ? "✓ Storyline Skipped" : "[Dev] Skip Storyline"}
+          {skipStoryline ? "✓ Raids Unlocked" : "[Dev] Unlock Raids"}
         </button>
       </div>
     </div>

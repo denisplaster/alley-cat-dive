@@ -74,10 +74,6 @@ export interface Dumpster {
   status: DumpsterStatus;
   rewardCaps: number;
   rewardBones: number;
-  /** If true, the chapter boss only appears for the final room (they're
-   *  taunting/escaping until the climactic fight). Otherwise the boss is
-   *  encountered multiple times across the dive. */
-  bossRunsAway?: boolean;
 }
 
 export interface HideoutUpgrade {
