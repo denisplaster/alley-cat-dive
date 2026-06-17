@@ -49,6 +49,21 @@ function GridScreen() {
         </div>
       </header>
 
+      {/* Switch between every cat's grid (not just the raid leader's). */}
+      <div className="flex flex-wrap gap-2">
+        {cats.filter(c => GRID_LAYOUTS[c.id]).map(c => (
+          <Link
+            key={c.id}
+            to="/grid/$catId"
+            params={{ catId: c.id }}
+            className={`chunky-button flex items-center gap-2 px-2 py-1 text-[11px] font-bold uppercase ${c.id === catId ? "bg-primary text-black" : "bg-slate-900"}`}
+          >
+            <img src={c.portrait} alt="" className="size-5 border border-black object-cover" />
+            {c.name}
+          </Link>
+        ))}
+      </div>
+
       <div className="chunky-panel flex flex-wrap gap-2 bg-black/80 p-2 text-[10px] uppercase tracking-wider">
         <Stat label="HP" v={agg.hp} />
         <Stat label="ATK" v={agg.atk} />

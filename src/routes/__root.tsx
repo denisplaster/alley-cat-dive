@@ -134,6 +134,13 @@ function RootComponent() {
     useGame.persist.rehydrate();
   }, []);
 
+  // Tick down injured/resting cats' recovery once a second so downed cats and
+  // Tin Knight/Greasefang actually become Ready again over time.
+  useEffect(() => {
+    const id = setInterval(() => useGame.getState().tickRecovery(1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AppShell>
