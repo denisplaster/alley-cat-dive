@@ -145,7 +145,7 @@ function AlleyHub() {
             </div>
             <h2 className="mb-0.5 font-display text-base uppercase leading-tight md:text-lg">{selected.name}</h2>
             <p className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-              Diff {"★".repeat(selected.difficulty)}{"☆".repeat(6 - selected.difficulty)}
+              Diff {"★".repeat(selected.difficulty)}{"☆".repeat(Math.max(0, 8 - selected.difficulty))}
             </p>
             <div className="mb-2 overflow-hidden border-2 border-black">
               <img src={selected.image} alt={selected.name} width={512} height={120} className="h-14 w-full object-cover md:h-20" loading="lazy" />

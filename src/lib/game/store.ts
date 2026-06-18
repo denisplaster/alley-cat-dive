@@ -246,8 +246,11 @@ const spawnEnemy = (dump: Dumpster, kind: RoomKind, roomIdx: number): Enemy => {
     ? dump.enemyPool[dump.enemyPool.length - 1]
     : regularPool[Math.floor(Math.random() * regularPool.length)] ?? dump.enemyPool[0];
   const tmpl = ENEMIES[enemyKey];
-  let hp = tmpl.baseHp + dump.difficulty * 10 + roomIdx * 4;
-  let atk = tmpl.attack;
+  // HP and ATK both scale with difficulty so enemies keep pace with a cat whose
+  // level + evolution + gear + hideout bonuses stack up across the campaign.
+  // (ATK used to be flat, which let a progressed cat shrug off late-game hits.)
+  let hp = Math.round(tmpl.baseHp * (1 + (dump.difficulty - 1) * 0.12)) + 6 + roomIdx * 4;
+  let atk = Math.round(tmpl.attack * (1 + (dump.difficulty - 1) * 0.075));
   let name = tmpl.name;
   let emoji = tmpl.emoji;
   // Boss/mini scaling ramps with dumpster difficulty so the first dumpster's
@@ -265,8 +268,11 @@ const spawnEnemy = (dump: Dumpster, kind: RoomKind, roomIdx: number): Enemy => {
   if (kind === "boss") {
     const isFinal = roomIdx >= dump.rooms - 1;
     // The signature boss only appears for the dumpster's final fight.
-    const hpMult = isFinal ? 1.45 + dump.difficulty * 0.18 : 1.05 + dump.difficulty * 0.08;
-    const atkMult = isFinal ? 1.15 + dump.difficulty * 0.06 : 1.0 + dump.difficulty * 0.03;
+    // Final-boss curve: gentle for the first bins (a fresh cat clears Greasy's
+    // boss ~92% of the time playing well) but ramps steeply so late bosses stay
+    // a wall. diff1 → hp×1.23/atk×1.04 … diff6 → hp×2.38/atk×1.34.
+    const hpMult = isFinal ? 1.0 + dump.difficulty * 0.23 : 1.05 + dump.difficulty * 0.08;
+    const atkMult = isFinal ? 0.98 + dump.difficulty * 0.06 : 1.0 + dump.difficulty * 0.03;
     hp = Math.round(hp * hpMult);
     atk = Math.round(atk * atkMult);
     name = (isFinal ? "FINAL BOSS — " : "BOSS — ") + name;
@@ -298,7 +304,8 @@ const seedInventory: Item[] = [
   { ...LOOT_POOL[0], id: newItemId() },
   { ...LOOT_POOL[1], id: newItemId() },
   { ...LOOT_POOL[4], id: newItemId() },
-  { ...LOOT_POOL[8], id: newItemId() },
+  { ...LOOT_POOL[8], id: newItemId() }, // Sardine of Healing
+  { ...LOOT_POOL[8], id: newItemId() }, // a second snack so a full dive has real sustain
 ];
 
 // --- Award room-clear rewards when a SKILL lands the killing blow on the last foe. ---
@@ -620,8 +627,8 @@ export const useGame = create<GameState>()(
     // Enemy only swings if its intent was attack/heavy AND it's still alive.
     // Healing doesn't provoke a counter (legacy behavior preserved).
     if (enemy.hp > 0 && action !== "item" && !enemyWillBlock) {
-      const heavyMult = heavyIntent ? 1.55 : 1;
-      const rawIncoming = enemy.attack * (0.95 + Math.random() * 0.45) * heavyMult - cat.defense * 0.28;
+      const heavyMult = heavyIntent ? 1.3 : 1;
+      const rawIncoming = enemy.attack * (0.95 + Math.random() * 0.45) * heavyMult - cat.defense * 0.5;
       // Cat's block soaks 75% of the incoming damage.
       const damageMult = catBlocking ? 0.25 : 1;
       const incoming = Math.max(catBlocking ? 1 : 2, Math.round(rawIncoming * damageMult));
@@ -888,8 +895,8 @@ export const useGame = create<GameState>()(
     // Enemy survives: write cat's panel, then schedule a counter (unless support).
     const counterIncoming = isSupport ? 0 : (() => {
       const heavy = d.enemyIntent === "heavy";
-      const raw = enemy.attack * (0.95 + Math.random() * 0.45) * (heavy ? 1.55 : 1)
-        - (cat.defense + sumStatusMod(catStatuses, "defMod")) * 0.28;
+      const raw = enemy.attack * (0.95 + Math.random() * 0.45) * (heavy ? 1.3 : 1)
+        - (cat.defense + sumStatusMod(catStatuses, "defMod")) * 0.5;
       return Math.max(2, Math.round(raw));
     })();
 
@@ -1006,14 +1013,19 @@ export const useGame = create<GameState>()(
         ? spawnEnemies(dump, nextKind, nextIdx) : [];
       const enemy = wave[0] ?? null;
       const rest = wave.slice(1);
+      // Breather between rooms: recover ~25% max HP so a long run is a survivable
+      // war of attrition, not a single fragile HP bar across every room.
+      const catHp = Math.min(cur.catMaxHp, cur.catHp + Math.round(cur.catMaxHp * 0.33));
+      const healed = catHp - cur.catHp;
       const log2 = [...cur.log,
+        ...(healed > 0 ? [mklog(`You catch your breath between rooms. +${healed} HP`, "loot")] : []),
         mklog(`Crawl deeper… Room ${nextRoom}/${cur.totalRooms} — ${roomLabel(nextKind)}`, "info"),
         enemy ? mklog(wave.length > 1
                 ? `${wave.length} foes appear — ${enemy.name} steps up first!`
                 : `A ${enemy.name} appears!`, "warn")
               : mklog(roomDescriptor(nextKind), "info"),
       ];
-      set({ dive: { ...cur, room: nextRoom, rooms, currentKind: nextKind, enemy, enemies: rest,
+      set({ dive: { ...cur, room: nextRoom, rooms, currentKind: nextKind, enemy, enemies: rest, catHp,
         roomCleared: false, roomEvent: null, log: log2,
         catPose: "idle", enemyPose: enemy ? "idle" : "ko", mangaFx: null, mangaWord: null, mangaFocus: null, bubble: null,
         transitioning: false, transitionMessage: null, nextKind: null, roomRevealKey: cur.roomRevealKey + 1,
@@ -1774,8 +1786,8 @@ export function withCombatStats(s: GameState, cat: Cat, crewAssist = false): Cat
     roomsCleared: s.roomsCleared,
     bossesBeaten: s.bossesBeaten,
   })].statBonus;
-  const atkPct = 0.05 * hideoutLevel(s, "gym");
-  const hpPct = 0.08 * hideoutLevel(s, "castle");
+  const atkPct = 0.03 * hideoutLevel(s, "gym");
+  const hpPct = 0.05 * hideoutLevel(s, "castle");
   // Multi-Cat Dive Support (Ch7 reward): ready crewmates back the diver up.
   const allies = (crewAssist && s.completedChapters.includes("ch7_rally"))
     ? s.cats.filter(c => c.id !== cat.id && c.status === "ready").length : 0;

@@ -96,7 +96,7 @@ function DumpsterCard({ d, selected, unlocked, keyable, cleared, onDive }: {
       <div className="mb-2 flex items-start justify-between gap-2">
         <h2 className="font-display text-lg uppercase leading-tight">{d.name}</h2>
         <span className="shrink-0 text-[10px] font-bold uppercase text-accent">
-          {"★".repeat(d.difficulty)}{"☆".repeat(6 - d.difficulty)}
+          {"★".repeat(d.difficulty)}{"☆".repeat(Math.max(0, 8 - d.difficulty))}
         </span>
       </div>
       <ul className="space-y-1 text-[11px] text-muted-foreground">
