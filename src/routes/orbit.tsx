@@ -13,6 +13,9 @@ import {
   SCRAPPER_POSES, getEnemyPoses, SCRAPPER_LINES, ENEMY_LINES, randLine,
   type ScrapperPose, type EnemyPose,
 } from "@/lib/orbit/sprites";
+import {
+  getOrbitBg, ORBIT_SECTOR_ACCENT, ORBIT_ROOM_TITLES,
+} from "@/lib/orbit/backgrounds";
 
 export const Route = createFileRoute("/orbit")({
   head: () => ({
