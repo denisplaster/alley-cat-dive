@@ -13,6 +13,9 @@ import {
   SCRAPPER_POSES, getEnemyPoses, SCRAPPER_LINES, ENEMY_LINES, randLine,
   type ScrapperPose, type EnemyPose,
 } from "@/lib/orbit/sprites";
+import {
+  getOrbitBg, ORBIT_SECTOR_ACCENT, ORBIT_ROOM_TITLES,
+} from "@/lib/orbit/backgrounds";
 
 export const Route = createFileRoute("/orbit")({
   head: () => ({
@@ -500,6 +503,15 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
   const [grab, setGrab] = useState<OrbitLoot[]>([]);
   const [log, setLog] = useState<string[]>([`You enter ${sector.name}.`]);
   const [parallaxRun, setParallaxRun] = useState(false);
+  // Side-scrolling room transition: we keep the previous sector/room kind
+  // around for one beat so the outgoing background can slide off-screen left
+  // while the next background slides in from the right.
+  const [outgoing, setOutgoing] = useState<{ bg: string; title: string } | null>(null);
+  const accent = ORBIT_SECTOR_ACCENT[sector.id] ?? "text-secondary";
+  const bg = getOrbitBg(sector.id, room.kind);
+  const roomTitle =
+    ORBIT_ROOM_TITLES[sector.id]?.[roomIdx] ??
+    (room.kind === "boss" ? `${sector.name} — Boss` : `${sector.name} ${roomIdx + 1}`);
   const [catPose, setCatPose] = useState<ScrapperPose>("idle");
   const [enemyPose, setEnemyPose] = useState<EnemyPose>("idle");
   const [catBubble, setCatBubble] = useState<string | null>(null);
@@ -626,6 +638,8 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
       setStatus("summary");
       return;
     }
+    // Snapshot the room we're leaving so it can slide off-screen.
+    setOutgoing({ bg, title: roomTitle });
     setStatus("transitioning");
     setParallaxRun(true);
     pushLog("Floating deeper…");
@@ -634,6 +648,9 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
       setRoomIdx(nextIdx);
       setStatus(initial(plan[nextIdx].kind));
       setParallaxRun(false);
+      // Clear the outgoing snapshot once the new room is live; this lets the
+      // incoming slide-in animation finish before we drop the previous layer.
+      setTimeout(() => setOutgoing(null), 200);
     }, 1400);
   }
 
@@ -651,8 +668,10 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
     <div className="mt-6 space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <div className="text-[10px] uppercase tracking-widest text-secondary">Orbit Trash · Dive</div>
-          <h1 className="font-display text-2xl uppercase">{sector.name}</h1>
+          <div className={`text-[10px] uppercase tracking-widest ${accent}`}>
+            Orbit Trash · {sector.name}
+          </div>
+          <h1 className="font-display text-2xl uppercase">{roomTitle}</h1>
         </div>
         <button onClick={onExit} className="chunky-button bg-slate-900 px-3 py-1.5 text-[11px] font-bold uppercase">
           ← Abort Dive
@@ -661,8 +680,17 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
 
       {/* Stage */}
       <div key={`shake-${shakeKey}`} className={`chunky-panel relative h-80 overflow-hidden bg-black p-0 md:h-[28rem] ${shakeKey > 0 ? "animate-shake" : ""}`}>
-        <div className="absolute inset-0">
-          <img src={orbitBg} alt="" aria-hidden className="h-full w-full object-cover opacity-50" />
+        {/* Outgoing background slides off to the left during the room
+            transition; current background slides in from the right. */}
+        {outgoing && (
+          <div className="absolute inset-0 bg-slide-out">
+            <img src={outgoing.bg} alt="" aria-hidden className="h-full w-full object-cover opacity-70" />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/70" />
+          </div>
+        )}
+        <div key={`bg-${roomIdx}`} className={`absolute inset-0 ${outgoing ? "bg-slide-in" : ""}`}>
+          <img src={bg} alt="" aria-hidden className="h-full w-full object-cover opacity-70" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/70" />
         </div>
         <ParallaxLayers running speed={parallaxRun ? 1 : 0.18} />
 
