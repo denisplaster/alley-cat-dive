@@ -503,6 +503,15 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
   const [grab, setGrab] = useState<OrbitLoot[]>([]);
   const [log, setLog] = useState<string[]>([`You enter ${sector.name}.`]);
   const [parallaxRun, setParallaxRun] = useState(false);
+  // Side-scrolling room transition: we keep the previous sector/room kind
+  // around for one beat so the outgoing background can slide off-screen left
+  // while the next background slides in from the right.
+  const [outgoing, setOutgoing] = useState<{ bg: string; title: string } | null>(null);
+  const accent = ORBIT_SECTOR_ACCENT[sector.id] ?? "text-secondary";
+  const bg = getOrbitBg(sector.id, room.kind);
+  const roomTitle =
+    ORBIT_ROOM_TITLES[sector.id]?.[roomIdx] ??
+    (room.kind === "boss" ? `${sector.name} — Boss` : `${sector.name} ${roomIdx + 1}`);
   const [catPose, setCatPose] = useState<ScrapperPose>("idle");
   const [enemyPose, setEnemyPose] = useState<EnemyPose>("idle");
   const [catBubble, setCatBubble] = useState<string | null>(null);
@@ -629,6 +638,8 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
       setStatus("summary");
       return;
     }
+    // Snapshot the room we're leaving so it can slide off-screen.
+    setOutgoing({ bg, title: roomTitle });
     setStatus("transitioning");
     setParallaxRun(true);
     pushLog("Floating deeper…");
@@ -637,6 +648,9 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
       setRoomIdx(nextIdx);
       setStatus(initial(plan[nextIdx].kind));
       setParallaxRun(false);
+      // Clear the outgoing snapshot once the new room is live; this lets the
+      // incoming slide-in animation finish before we drop the previous layer.
+      setTimeout(() => setOutgoing(null), 200);
     }, 1400);
   }
 
