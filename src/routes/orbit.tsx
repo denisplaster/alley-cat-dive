@@ -668,8 +668,10 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
     <div className="mt-6 space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <div className="text-[10px] uppercase tracking-widest text-secondary">Orbit Trash · Dive</div>
-          <h1 className="font-display text-2xl uppercase">{sector.name}</h1>
+          <div className={`text-[10px] uppercase tracking-widest ${accent}`}>
+            Orbit Trash · {sector.name}
+          </div>
+          <h1 className="font-display text-2xl uppercase">{roomTitle}</h1>
         </div>
         <button onClick={onExit} className="chunky-button bg-slate-900 px-3 py-1.5 text-[11px] font-bold uppercase">
           ← Abort Dive
@@ -678,8 +680,17 @@ function OrbitDive({ sector, onExit, onComplete }: { sector: OrbitSector; onExit
 
       {/* Stage */}
       <div key={`shake-${shakeKey}`} className={`chunky-panel relative h-80 overflow-hidden bg-black p-0 md:h-[28rem] ${shakeKey > 0 ? "animate-shake" : ""}`}>
-        <div className="absolute inset-0">
-          <img src={orbitBg} alt="" aria-hidden className="h-full w-full object-cover opacity-50" />
+        {/* Outgoing background slides off to the left during the room
+            transition; current background slides in from the right. */}
+        {outgoing && (
+          <div className="absolute inset-0 bg-slide-out">
+            <img src={outgoing.bg} alt="" aria-hidden className="h-full w-full object-cover opacity-70" />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/70" />
+          </div>
+        )}
+        <div key={`bg-${roomIdx}`} className={`absolute inset-0 ${outgoing ? "bg-slide-in" : ""}`}>
+          <img src={bg} alt="" aria-hidden className="h-full w-full object-cover opacity-70" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/70" />
         </div>
         <ParallaxLayers running speed={parallaxRun ? 1 : 0.18} />
 
